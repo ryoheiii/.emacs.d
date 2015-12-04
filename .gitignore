@@ -1,0 +1,21 @@
+# .emacs.d
+
+*.dat
+/README.txt
+inits/custom-theme-directory/
+auto-save-list/*
+elisp/elpa/*
+elisp/site-lisp/*
+eshell
+history
+image-dired
+my-data/snippets/*
+my-data/ac-dict/*
+my-functions/*
+undohist/
+#*#
+
+!.gitkeep
+
+# 個別ファイル
+20-aoj-submit.el
