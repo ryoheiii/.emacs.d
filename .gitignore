@@ -14,6 +14,7 @@ my-data/ac-dict/*
 my-functions/*
 undohist/
 #*#
+.mc-lists.el
 
 !.gitkeep
 
