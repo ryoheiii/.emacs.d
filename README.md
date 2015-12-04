@@ -1,6 +1,6 @@
 <!-- -*- gfm -*- -->
-# パス設定
-## 必要なもの
+# 必要なもの
+## パス設定
 - yasnippets: inits/20-ysnippets.el
 - auto-complete: inits/20-auto-complete.el
 - migemo: ./init/20-migemoへインストールディレクトリ内の辞書パス設定
@@ -17,16 +17,16 @@ sudo apt-get install cmigemo
 ~/.emacs.d/elisp/site-lisp, elpa 以下のものを全部読み込む
 
 # ~/.emacs.d/inits 以下の命名規則
-- 環境に依存しない設定はファイル名の最初に 2 桁の数字をつける
+- 環境に依存しない設定はファイル名の最初に 2 桁の数字
 - 番号は優先度で 00 が最初に読み込まれて， 99 が最後に読み込まれる
 - 同じ数字を付けても良い
 - 環境依存な設定はそれぞれの環境に対して以下のプレフィックスをファイル名の最初につける
-* 環境: prefix
-* Meadow: meadow
-* Carbon Emacs: carbon-emacs
-* Cocoa Emacs: cocoa-emacs
-* emacs -nw: nw
-* Windows: windows
-* Linux: linux
+0. 環境: prefix
+1. Meadow: meadow
+2. Carbon Emacs: carbon-emacs
+3. Cocoa Emacs: cocoa-emacs
+4. emacs -nw: nw
+5. Windows: windows
+6. Linux: linux
 - 例： 00-keybind.el とか cocoa-emacs-appearance.el のように "prefix-機能名.el" とファイル名をつける
 - package.el 周りの設定は 20 番台に書くことが多い
