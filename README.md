@@ -3,12 +3,16 @@
 ## パス設定
 * yasnippets: inits/20-ysnippets.el
 * auto-complete: inits/20-auto-complete.el
-* migemo: ./init/20-migemoへインストールディレクトリ内の辞書パス設定
+* migemo: ./init/20-migemo へインストールディレクトリ内の辞書パス設定
+
 ## font
 * sudo apt-get install fonts-inconsolata
+
 ## gtags
+
 ## migemo （ローマ字で日本語検索するツール）
 * sudo apt-get install cmigemo
+
 ## aspell (スペルチェック)
 * sudo apt-get install aspell
 * ~/.aspell.confも必要
