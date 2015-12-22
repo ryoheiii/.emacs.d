@@ -41,6 +41,7 @@
                 ("\\.hh$"   . c++-mode)
                 ("\\.c$"    . c-mode)
                 ("\\.h$"    . c++-mode)
+                ("\\.hpp$"    . c++-mode)
                 ("\\.txt$"    . text-mode)
                 ("\\.java$" . java-mode)
                 ("\\.rb$" . enh-ruby-mode)

@@ -5,8 +5,9 @@
 (ac-config-default)
 
 ;; トリガーキーを押さないと補完メニューを出さないようにする
-    ;(setq ac-auto-start nil)
-    ;(ac-set-trigger-key "TAB")
+; (setq ac-auto-start nil)
+; (ac-set-trigger-key "TAB")
+
 ;; 補完機能をC-n C-pで移動
 (setq ac-use-menu-map t)
 (define-key ac-menu-map "\C-n" 'ac-next)

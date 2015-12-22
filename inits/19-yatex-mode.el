@@ -1,43 +1,37 @@
 ;;; YaTeX
 ;; 140213
 (autoload 'yatex-mode "yatex" "Yet Another LaTeX mode" t)
-;(setq auto-mode-alist
-;      (append '(("\\.tex$" . yatex-mode)
-;                ("\\.ltx$" . yatex-mode)
-;                ("\\.cls$" . yatex-mode)
-;                ("\\.sty$" . yatex-mode)
-;                ("\\.clo$" . yatex-mode)
-;                ("\\.bbl$" . yatex-mode)) auto-mode-alist))
 (setq YaTeX-inhibit-prefix-letter t)
+;;;   nil=YaTeX-kanji-code が nil なら coding-system に感知しない
+;;;   0=no-converion -> Emacs 内部で使用されている文字コードで保存される (Emacs 23 以降では utf-8-emacs)
+;;;   1=Shift JIS (Shift_JIS)
+;;;   2=JIS (ISO-2022-JP)
+;;;   3=EUC (EUC-JP)
+;;;   4=UTF-8
 (setq YaTeX-kanji-code nil)
 (setq YaTeX-latex-message-code 'utf-8)
-(setq YaTeX-use-LaTeX2e t)
-(setq YaTeX-use-AMS-LaTeX t)
-(setq YaTeX-dvi2-command-ext-alist
-      '(("xdg-open\\|evince\\|okular\\|zathura\\|qpdfview\\|texworks\\|mupdf\\|firefox\\|chromium\\|acroread\\|pdfopen" . ".pdf")))
-;(setq tex-command "ptex2pdf -u -l -ot '-synctex=1'")
 (setq tex-command "ptex2pdf -u -l -ot \"-kanji=utf8 -no-guess-input-enc -synctex=1\"")
-;(setq tex-command "pdflatex -synctex=1")
-;(setq tex-command "lualatex -synctex=1")
-;(setq tex-command "luajitlatex -synctex=1")
-;(setq tex-command "xelatex -synctex=1")
-;(setq tex-command "latexmk")
-;(setq tex-command "latexmk -e '$latex=q/uplatex %O -synctex=1 %S/' -e '$bibtex=q/upbibtex %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/mendex %O -o %D %S/' -e '$dvipdf=q/dvipdfmx %O -o %D %S/' -norc -gg -pdfdvi")
-;(setq tex-command "latexmk -e '$latex=q/uplatex %O -synctex=1 %S/' -e '$bibtex=q/upbibtex %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/mendex %O -o %D %S/' -e '$dvips=q/dvips %O -z -f %S | convbkmk -u > %D/' -e '$ps2pdf=q/ps2pdf %O %S %D/' -norc -gg -pdfps")
-;(setq tex-command "latexmk -e '$pdflatex=q/pdflatex %O -synctex=1 %S/' -e '$bibtex=q/bibtex %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/makeindex %O -o %D %S/' -norc -gg -pdf")
-;(setq tex-command "latexmk -e '$pdflatex=q/lualatex %O -synctex=1 %S/' -e '$bibtex=q/bibtexu %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/texindy %O -o %D %S/' -norc -gg -pdf")
-;(setq tex-command "latexmk -e '$pdflatex=q/luajitlatex %O -synctex=1 %S/' -e '$bibtex=q/bibtexu %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/texindy %O -o %D %S/' -norc -gg -pdf")
-;(setq tex-command "latexmk -e '$pdflatex=q/xelatex %O -synctex=1 %S/' -e '$bibtex=q/bibtexu %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/texindy %O -o %D %S/' -norc -gg -pdf")
 (setq bibtex-command "latexmk -e '$latex=q/uplatex %O -synctex=1 %S/' -e '$bibtex=q/upbibtex %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/mendex %O -o %D %S/' -e '$dvipdf=q/dvipdfmx %O -o %D %S/' -norc -gg -pdfdvi")
 (setq makeindex-command  "latexmk -e '$latex=q/uplatex %O -synctex=1 %S/' -e '$bibtex=q/upbibtex %O %B/' -e '$biber=q/biber %O --bblencoding=utf8 -u -U --output_safechars %B/' -e '$makeindex=q/mendex %O -o %D %S/' -e '$dvipdf=q/dvipdfmx %O -o %D %S/' -norc -gg -pdfdvi")
-(setq dvi2-command "xdg-open")
-;(setq dvi2-command "evince")
-;(setq dvi2-command "okular --unique")
-;(setq dvi2-command "zathura -s -x \"emacsclient --no-wait +%{line} %{input}\"")
-;(setq dvi2-command "qpdfview --unique")
-;(setq dvi2-command "texworks")
+(setq dvi2-command "evince")
 (setq dviprint-command-format "acroread `echo %s | sed -e \"s/\\.[^.]*$/\\.pdf/\"`")
 (require 'dbus)
+
+;; color
+(add-hook 'yatex-mode-hook
+'(lambda () (require 'font-latex)
+            (font-latex-setup)
+            (progn
+              (modify-syntax-entry ?% "<" (syntax-table))
+              (modify-syntax-entry 10 ">" (syntax-table))
+              (make-variable-buffer-local 'outline-level)
+              (setq outline-level 'latex-outline-level)
+              (make-variable-buffer-local 'outline-regexp)
+              (setq outline-regexp
+                    (concat "[  \t]*\\\\\\(documentstyle\\|documentclass\\|chapter\\|"
+                           "section\\|subsection\\|subsubsection\\|paragraph\\)"
+                            "\\*?[ \t]*[[{]")
+                    ))))
 
 (defun un-urlify (fname-or-url)
   "A trivial function that replaces a prefix of file:/// with just /."
