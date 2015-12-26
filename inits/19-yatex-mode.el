@@ -18,20 +18,20 @@
 (require 'dbus)
 
 ;; color
-(add-hook 'yatex-mode-hook
-'(lambda () (require 'font-latex)
-            (font-latex-setup)
-            (progn
-              (modify-syntax-entry ?% "<" (syntax-table))
-              (modify-syntax-entry 10 ">" (syntax-table))
-              (make-variable-buffer-local 'outline-level)
-              (setq outline-level 'latex-outline-level)
-              (make-variable-buffer-local 'outline-regexp)
-              (setq outline-regexp
-                    (concat "[  \t]*\\\\\\(documentstyle\\|documentclass\\|chapter\\|"
-                           "section\\|subsection\\|subsubsection\\|paragraph\\)"
-                            "\\*?[ \t]*[[{]")
-                    ))))
+;; (add-hook 'yatex-mode-hook
+;; '(lambda () (require 'font-latex)
+;;             (font-latex-setup)
+;;             (progn
+;;               (modify-syntax-entry ?% "<" (syntax-table))
+;;               (modify-syntax-entry 10 ">" (syntax-table))
+;;               (make-variable-buffer-local 'outline-level)
+;;               (setq outline-level 'latex-outline-level)
+;;               (make-variable-buffer-local 'outline-regexp)
+;;               (setq outline-regexp
+;;                     (concat "[  \t]*\\\\\\(documentstyle\\|documentclass\\|chapter\\|"
+;;                            "section\\|subsection\\|subsubsection\\|paragraph\\)"
+;;                             "\\*?[ \t]*[[{]")
+;;                     ))))
 
 (defun un-urlify (fname-or-url)
   "A trivial function that replaces a prefix of file:/// with just /."

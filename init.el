@@ -36,6 +36,7 @@
     ;; Using packages
     init-loader
     auto-complete
+    fuzzy ; auto-completeの曖昧補完
     migemo ; ローマ字で日本語検索するツール, require cmigemo
     multiple-cursors
     smartrep
@@ -46,6 +47,7 @@
     ;; translate ;; C-c C-t
     google-translate
     popwin
+    codic ; 変数とかのネーミング（Alt-x codic）; http://futurismo.biz/archives/2538
     ;; window
     e2wm
     ;; mode
