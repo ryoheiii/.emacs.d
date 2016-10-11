@@ -82,7 +82,7 @@
 
 (require 'init-loader)
 (setq init-loader-show-log-after-init nil)
-(init-loader-load "~/.emacs.d/loads/inits")
+(init-loader-load "~/.emacs.d/loads/inits/")
 
 (provide 'init)
 ;;; init.el ends here
