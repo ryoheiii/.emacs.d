@@ -14,7 +14,7 @@
 ;; 個別の関数定義があったら読み込む
 (load "~/.emacs.d/loads/my-functions/local" t)
 
-;; ~/.emacs.d/elisp 以下全部読み込み
+;; ~/.emacs.d/loads/elisp 以下全部読み込み
 (let ((default-directory (expand-file-name "~/.emacs.d/loads/elisp/elpa/")))
   (add-to-list 'load-path default-directory)
   (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
