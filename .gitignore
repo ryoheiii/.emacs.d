@@ -2,16 +2,18 @@
 
 *.dat
 /README.txt
-inits/custom-theme-directory/
+/places
+loads/inits/custom-theme-directory/
+loads/my-functions/*
+loads/elisp/elpa/*
+loads/elisp/site-lisp/*
 auto-save-list/*
-elisp/elpa/*
-elisp/site-lisp/*
 eshell
 history
 image-dired
 my-data/snippets/*
 my-data/ac-dict/*
-my-functions/*
+
 undohist/
 #*#
 .mc-lists.el

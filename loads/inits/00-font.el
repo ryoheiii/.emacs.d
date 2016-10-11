@@ -7,3 +7,7 @@
                   'japanese-jisx0208
                   '("Takaoゴシック" . "unicode-bmp")
 )
+
+;; 半角と全角の比を1：2にする
+(setq face-font-rescale-alist
+      '((".*Hiragino_Mincho_pro.*" . 1.2)))

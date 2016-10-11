@@ -9,6 +9,7 @@
 * sudo apt-get install fonts-inconsolata
 
 ## gtags
+sudo apt-get install global
 
 ## migemo （ローマ字で日本語検索するツール）
 * sudo apt-get install cmigemo

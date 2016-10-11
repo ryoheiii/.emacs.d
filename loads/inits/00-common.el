@@ -25,30 +25,6 @@
 ;; Localeに合わせた環境の設定
 (set-locale-environment nil)
 
-;;; grep
-;; 再帰的にgrep
-;; 2011-02-18
-(require 'grep)
-(setq grep-command-before-query "grep -nH -r -e ")
-(defun grep-default-command ()
-  (if current-prefix-arg
-      (let ((grep-command-before-target
-             (concat grep-command-before-query
-                     (shell-quote-argument (grep-tag-default)))))
-        (cons (if buffer-file-name
-                  (concat grep-command-before-target
-                          " *."
-                          (file-name-extension buffer-file-name))
-                (concat grep-command-before-target " ."))
-              (+ (length grep-command-before-target) 1)))
-    (car grep-command)))
-(setq grep-command (cons (concat grep-command-before-query " .")
-                         (+ (length grep-command-before-query) 1)))
-
-;;; 画像
-;; 画像ファイルを表示
-(auto-image-file-mode t)
-
 ;;; バー
 ;; メニューバーを消す
 (menu-bar-mode -1)
@@ -69,12 +45,6 @@
 ;; ウィンドウ内に収まらないときだけ括弧内も光らせる。
 (setq show-paren-style 'mixed)
 ;; 括弧の範囲色
-(set-face-background 'show-paren-match-face "#500")
-;; 選択領域の色
-(set-face-background 'region "#555")
-;; 行末の空白を強調表示
-(setq-default show-trailing-whitespace t)
-(set-face-background 'trailing-whitespace "#b14770")
 
 ;;; 空白
 ;; 2011-10-27
@@ -112,39 +82,7 @@
 (setq whitespace-space-regexp "\\(\u3000+\\)")
 ;; デフォルトで視覚化を有効にする。
 (global-whitespace-mode 1)
-;; 色設定
-(defvar my/bg-color "#232323")
-(set-face-attribute 'whitespace-trailing nil
-                    :background my/bg-color
-                    :foreground "DeepPink"
-                    :underline t)
-(set-face-attribute 'whitespace-tab nil
-                    :background my/bg-color
-                    :foreground "LightSkyBlue"
-                    :underline t)
-(set-face-attribute 'whitespace-space nil
-                    :background my/bg-color
-                    :foreground "GreenYellow"
-                    :weight 'bold)
-(set-face-attribute 'whitespace-empty nil
-                    :background my/bg-color)
 
-
-
-;;; 位置
-;; 現在行を目立たせる(ハイライト)
-(defface hlline-face
-  '((((class color)
-      (background dark))
-     (:background "dark slate gray"))
-    (((class color)
-      (background light))
-     (:background  "#98FB98"))
-    (t
-     ()))
-  "*Face used by hl-line.")
-(setq hl-line-face 'hlline-face)
-(global-hl-line-mode)
 ;; カーソルの位置が何文字目かを表示する
 (column-number-mode t)
 ;; カーソルの位置が何行目かを表示する
@@ -193,23 +131,6 @@
 ;; 最近開いたファイルを保存する数を増やす
 (setq recentf-max-saved-items 10000)
 
-;;; 圧縮
-;; gzファイルも編集できるようにする
-(auto-compression-mode t)
-
-;;; diff
-;; ediffを1ウィンドウで実行
-(setq ediff-window-setup-function 'ediff-setup-windows-plain)
-;; diffのオプション
-(setq diff-switches '("-u" "-p" "-N"))
-
-;;; ディレクトリ
-;; diredを便利にする
-(require 'dired-x)
-;; diredから"r"でファイル名をインライン編集する
-(require 'wdired)
-(define-key dired-mode-map "r" 'wdired-change-to-wdired-mode)
-
 ;;; バッファ名
 ;; ファイル名が重複していたらディレクトリ名を追加する。
 (require 'uniquify)
@@ -245,6 +166,9 @@
 (set-language-environment       'Japanese)
 (prefer-coding-system           'utf-8)
 
+;;文字コード自動判別無効
+(setq auto-coding-functions nil)
+
 ;;; Macで日本語のファイル名を扱う場合の設定
 (when (eq system-type 'darwin)
   (require 'ucs-normalize)
@@ -259,10 +183,6 @@
 ;; 121209
 (fset 'yes-or-no-p 'y-or-n-p)
 
-;;; バッファ上にファイルをドロップした場合の動作
-;; 121209
-(define-key global-map [ns-drag-file] 'ns-find-file)
-
 ;;; 常時デバッグモード
 ;; 121209
 (setq debug-on-error t)
@@ -274,8 +194,6 @@
 (setq tab-width 4)
 (setq tab-stop-list '(4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
                       64 68 72 76 80 84 88 92 96 100 104 108 112 116 120))
-;;文字コード自動判別無効
-(setq auto-coding-functions nil)
 
 ;;; ページ送り
 ;; 121207
@@ -288,10 +206,6 @@
 (setq vc-follow-symlinks t)
 ;; 起動時のメッセージを表示しない
 (setq inhibit-startup-message t)
-
-;; 半角と全角の比を1：2にする
-(setq face-font-rescale-alist
-      '((".*Hiragino_Mincho_pro.*" . 1.2)))
 
 ;; M-TABのキーバインドを変更しない
 ;; 2011-03-27
@@ -307,7 +221,6 @@
 
 ;;; window関連
 ;; 131109
-
 (defun split-window-vertically-n (num_wins)
   (interactive "p")
   (if (= num_wins 2)
