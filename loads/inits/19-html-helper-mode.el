@@ -1,5 +1,5 @@
 ;;; web-modeを使用
-(setq load-path (cons "~/.emacs.d/elisp/site-lisp/html-helper-mode/" load-path))
+(setq load-path (cons "~/.emacs.d/loads/elisp/site-lisp/html-helper-mode/" load-path))
 (autoload 'html-helper-mode "html-helper-mode" "Yay HTML" t)
 
 (require 'html-helper-mode)
