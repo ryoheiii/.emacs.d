@@ -3,7 +3,7 @@
 ## パス設定
 * yasnippets: loads/inits/20-ysnippets.el
 * auto-complete: loads/inits/20-auto-complete.el
-* migemo: loads/init/20-migemo へインストールディレクトリ内の辞書パス設定
+* migemo: loads/inits/20-migemo.el へインストールディレクトリ内の辞書パス設定
 
 ## font
 * sudo apt-get install fonts-inconsolata
