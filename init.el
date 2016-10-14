@@ -1,26 +1,17 @@
 ;;; Code:
 ;;; ロードパス
-;; ロードパスの追加
- (setq load-path
-       (append
-        (list
-         (expand-file-name "~/.emacs.d/loads/")
-         )
-        load-path))
+;; load-pathの追加関数
+(defun add-to-load-path (&rest paths)
+  (let (path)
+    (dolist (path paths paths)
+      (let ((default-directory (expand-file-name (concat user-emacs-directory path))))
+        (add-to-list 'load-path default-directory)
+        (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
+            (normal-top-level-add-subdirs-to-load-path))))))
+;; load-pathに追加するディレクトリ
+(add-to-load-path "loads/elisp/" "loads/my-functions/")
 
-;;; 追加の関数定義
-;; 便利関数の定義
-(load "~/.emacs.d/loads/my-functions/convenience.el")
-;; 個別の関数定義があったら読み込む
-(load "~/.emacs.d/loads/my-functions/local" t)
-
-;; ~/.emacs.d/loads/elisp 以下全部読み込み
-(let ((default-directory (expand-file-name "~/.emacs.d/loads/elisp/elpa/")))
-  (add-to-list 'load-path default-directory)
-  (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
-      (normal-top-level-add-subdirs-to-load-path)))
-
-;; Package Manegement
+;;; Package Manegement
 (require 'package)
 ;; package.elでelispを入れるdirectoryの設定
 (setq package-user-dir "~/.emacs.d/loads/elisp/elpa/")
@@ -30,7 +21,6 @@
 
 ;;; 起動時に自動でインストール
 (require 'cl)
-
 (defvar installing-package-list
   '(
     ;; Using packages
@@ -73,12 +63,12 @@
     ))
 
 (let ((not-installed (loop for x in installing-package-list
-                            when (not (package-installed-p x))
-                            collect x)))
+                           when (not (package-installed-p x))
+                           collect x)))
   (when not-installed
     (package-refresh-contents)
     (dolist (pkg not-installed)
-        (package-install pkg))))
+      (package-install pkg))))
 
 (require 'init-loader)
 (setq init-loader-show-log-after-init nil)
