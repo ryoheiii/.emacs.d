@@ -34,6 +34,8 @@
     flycheck
     flycheck-pos-tip ; for flycheck
     exec-path-from-shell
+    highlight-symbol
+    auto-highlight-symbol
     ;; translate ;; C-c C-t
     google-translate
     popwin
@@ -47,6 +49,7 @@
     enh-ruby-mode
     js2-mode
     yatex
+    nlinum
     ;; for go language
     go-autocomplete
     go-eldoc
@@ -56,6 +59,7 @@
     redo+
     ;; sets of helm
     helm ; 旧anything
+    helm-open-github ; file等からgitのページopen
 ;    helm-git
     helm-gtags ; gtags
     yasnippet ; 将来は移植

@@ -1,3 +1,16 @@
+;;; 選択範囲をisearch
+(defadvice isearch-mode (around isearch-mode-default-string (forward &optional regexp op-fun recursive-edit word-p) activate)
+  (if (and transient-mark-mode mark-active (not (eq (mark) (point))))
+      (progn
+        (isearch-update-ring (buffer-substring-no-properties (mark) (point)))
+        (deactivate-mark)
+        ad-do-it
+        (if (not forward)
+            (isearch-repeat-backward)
+          (goto-char (mark))
+          (isearch-repeat-forward)))
+    ad-do-it))
+
 ;;; moveline
 (defun move-line (arg)
   (let ((col (current-column)))
@@ -128,8 +141,10 @@
 (setq history-length 10000)
 ;; ミニバッファの履歴を保存する
 (savehist-mode 1)
+;; 最近使ったファイルの表示数
+(setq recentf-max-menu-items 10)
 ;; 最近開いたファイルを保存する数を増やす
-(setq recentf-max-saved-items 10000)
+(setq recentf-max-saved-items 3000)
 
 ;;; バッファ名
 ;; ファイル名が重複していたらディレクトリ名を追加する。
@@ -155,7 +170,9 @@
 ;;;;; 全体のカスタマイズ
 ;;;タイトルバーにフルパスを表示
 ;; 130515
-(setq frame-title-fomat "%f")
+;; (setq frame-title-fomat "%f")
+(setq frame-title-format
+      (format "%%f - Emacs@%s" (system-name)))
 
 ;; 130515
 (put 'narrow-to-region 'disabled nil)
@@ -175,9 +192,9 @@
   (set-file-name-coding-system 'utf-8-hfs)
   (setq locale-coding-system 'utf-8-hfs))
 
-;;; 行番号表示
+;;; 行番号表示 -> nlinum.elへ移行
 ;; 121209
-(global-linum-mode)
+;; (global-linum-mode)
 
 ;;; yes no → y n
 ;; 121209
@@ -196,9 +213,13 @@
                       64 68 72 76 80 84 88 92 96 100 104 108 112 116 120))
 
 ;;; ページ送り
-;; 121207
-;; 1行ずつページ送りする
-(setq scroll-conservatively 1)
+;; ;; 1行ずつページ送りする
+;; (setq scroll-conservatively 1)
+;; 1行ずつスクロール
+(setq scroll-conservatively 35
+      scroll-margin 0
+      scroll-step 1)
+(setq comint-scroll-show-maximum-output t) ;; shell-mode
 
 ;;; 説明文等の表示
 ;; 121207
