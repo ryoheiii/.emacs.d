@@ -1,5 +1,5 @@
 (require 'e2wm)
-(global-set-key (kbd "C-+") 'e2wm:start-management)
+(global-set-key (kbd "C-c +") 'e2wm:start-management)
 
 ;;; パースペクティブカスタマイズ
 

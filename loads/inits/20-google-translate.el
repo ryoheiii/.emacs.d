@@ -11,5 +11,5 @@
   '(google-translate-default-source-language "en")
   '(google-translate-default-target-language "ja"))
 
-;; google-translate.elの翻訳バッファをポップアップで表示させる
-(push '("*Google Translate*") popwin:special-display-config)
+;; ;; google-translate.elの翻訳バッファをポップアップで表示させる
+;; (push '("*Google Translate*") popwin:special-display-config)

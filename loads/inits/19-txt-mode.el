@@ -1,8 +1,8 @@
 (add-hook
  'txt-mode-common-hook
  (lambda ()
-;; BSDスタイルをベースにする
-;   (c-set-style "bsd")
+   ;; ;; BSDスタイルをベースにする
+   ;;    (c-set-style "bsd")
 
    (setq c-indent-level 2)
 

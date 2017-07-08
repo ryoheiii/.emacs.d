@@ -1,6 +1,19 @@
 ;;; 文字列
 ;;; 2012-03-24
 
+;;; moveline
+(defun move-line (arg)
+  (let ((col (current-column)))
+    (save-excursion
+      (forward-line)
+      (transpose-lines arg))
+    (when (> arg 0)
+      (forward-line arg))
+    (move-to-column col)))
+
+(global-set-key (kbd "C-M-n") (lambda () (interactive) (move-line 1)))
+(global-set-key (kbd "C-M-p") (lambda () (interactive) (move-line -1)))
+
 ;; 文字列の先頭と最後にある一連の空白をすべて削除する
 ;; 2012-03-24
 (defun string-strip (string)
@@ -9,7 +22,6 @@
 
 ;;; パス
 ;;; 2011-03-19
-
 ;; directoryの中にbase-names内のパスが含まれていたらその絶対パスを返す。
 ;; 含まれていなかったらdirectoryの親のディレクトリを再帰的に探す。
 ;; 2011-03-19
@@ -24,9 +36,7 @@
           (find-path-in-parents parent-directory base-names)))))
 
 ;;; window resize
-;; 2015-01-26
 (global-set-key "\C-c\C-r" 'my-window-resizer)
-
 (defun my-window-resizer ()
   "Control window size and position."
   (interactive)
@@ -43,15 +53,17 @@
         (message "size[%dx%d]"
                  (window-width) (window-height))
         (setq c (read-char))
-        (cond ((= c ?l)
+        (cond ((= c ?f)
                (enlarge-window-horizontally dx))
-              ((= c ?h)
+              ((= c ?b)
                (shrink-window-horizontally dx))
-              ((= c ?j)
+              ((= c ?n)
                (enlarge-window dy))
-              ((= c ?k)
+              ((= c ?p)
                (shrink-window dy))
               ;; otherwise
               (t
                (message "Quit")
                (throw 'end-flag t)))))))
+
+

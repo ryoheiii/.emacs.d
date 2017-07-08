@@ -23,7 +23,6 @@
 (require 'cl)
 (defvar installing-package-list
   '(
-    ;; Using packages
     init-loader
     auto-complete
     fuzzy ; auto-completeの曖昧補完
@@ -36,30 +35,34 @@
     exec-path-from-shell
     highlight-symbol
     auto-highlight-symbol
+    recentf-ext
+    smooth-scroll
+    rainbow-delimiters
+    color-theme-modern
+
     ;; translate ;; C-c C-t
     google-translate
-    popwin
     codic ; 変数とかのネーミング（Alt-x codic）; http://futurismo.biz/archives/2538
+
     ;; window
     e2wm
+
     ;; mode
     go-mode
-    web-mode
-    diff-mode
     enh-ruby-mode
-    js2-mode
-    yatex
     nlinum
+
     ;; for go language
     go-autocomplete
     go-eldoc
+
     ;; undo/redo
     undo-tree
     undohist
     redo+
+
     ;; sets of helm
     helm ; 旧anything
-    helm-open-github ; file等からgitのページopen
 ;    helm-git
     helm-gtags ; gtags
     yasnippet ; 将来は移植
@@ -78,5 +81,5 @@
 (setq init-loader-show-log-after-init nil)
 (init-loader-load "~/.emacs.d/loads/inits/")
 
-(provide 'init)
-;;; init.el ends here
+;; (provide 'init)
+;; ;;; init.el ends here

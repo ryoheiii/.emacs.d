@@ -1,7 +1,25 @@
+;;;文字コードの設定
+(set-language-environment       'Japanese)
+(prefer-coding-system           'utf-8)
+
+;;; Macで日本語のファイル名を扱う場合の設定
+(when (eq system-type 'darwin)
+  (require 'ucs-normalize)
+  (set-file-name-coding-system 'utf-8-hfs)
+  (setq locale-coding-system 'utf-8-hfs))
+
+;;; window size
+(if window-system (progn
+  (setq initial-frame-alist '((width . 176)(height . 53)(top . 0)(left . 0)))
+  ;; (set-background-color "Black")
+  ;; (set-foreground-color "White")
+  ;; (set-cursor-color "Gray")
+))
+
 ;;; grep
-(define-key global-map (kbd "C-x C-g") 'grep)
+(define-key global-map (kbd "C-c g") 'grep)
 (require 'grep)
-(setq grep-command-before-query "grep -nH -ir -e ")
+(setq grep-command-before-query "grep -nri -e ")
 (defun grep-default-command ()
   (if current-prefix-arg
       (let ((grep-command-before-target
@@ -29,25 +47,6 @@
           (goto-char (mark))
           (isearch-repeat-forward)))
     ad-do-it))
-
-;;; moveline
-(defun move-line (arg)
-  (let ((col (current-column)))
-    (save-excursion
-      (forward-line)
-      (transpose-lines arg))
-    (when (> arg 0)
-      (forward-line arg))
-    (move-to-column col)))
-
-(global-set-key (kbd "C-M-n") (lambda () (interactive) (move-line 1)))
-(global-set-key (kbd "C-M-p") (lambda () (interactive) (move-line -1)))
-
-;;; 環境変数の整備
-;; go
-(require 'exec-path-from-shell)
-(let ((envs '("PATH" "GOPATH")))
- (exec-path-from-shell-copy-envs envs))
 
 ;;; 編集回帰
 ;; changed on disk; really edit the buffer? 対策(常にrでrevert)
@@ -77,43 +76,6 @@
 ;; ウィンドウ内に収まらないときだけ括弧内も光らせる。
 (setq show-paren-style 'mixed)
 ;; 括弧の範囲色
-
-;;; 空白
-;; 2011-10-27
-;; 参考: http://qiita.com/itiut@github/items/4d74da2412a29ef59c3a
-;; 空白や長すぎる行を視覚化する。
-(require 'whitespace)
-;; 1行が80桁を超えたら長すぎると判断する。; 無効
-;;; (setq whitespace-line-column 80)
-(setq whitespace-style '(face              ; faceを使って視覚化する。
-                         trailing          ; 行末の空白を対象とする。
-                         ;; lines-tail        ; 長すぎる行のうち
-                         ;;                   ; whitespace-line-column以降のみを
-                         ;;                   ; 対象とする。
-                         ;; indentation       ; indent-tabs-modeと逆のインデントを
-                         ;;                   ; 対象とする。
-                         ;;                   ; 2013-05-03
-                         ;;space-before-tab  ; タブの前にあるスペースを対象とする。
-                         ;;space-after-tab   ; タブの後にあるスペースを対象とする。
-                         tabs           ; タブ
-                         spaces         ; スペース
-                         empty          ; 先頭/末尾の空行
-                         space-mark     ; 表示のマッピング
-                         tab-mark
-                         ))
-(setq whitespace-display-mappings
-      '((space-mark ?\u3000 [?\u25a1])
-        ;; WARNING: the mapping below has a problem.
-        ;; When a TAB occupies exactly one column, it will display the
-        ;; character ?\xBB at that column followed by a TAB which goes to
-        ;; the next TAB column.
-        ;; If this is a problem for you, please, comment the line below.
-        (tab-mark ?\t [?\u00BB ?\t] [?\\ ?\t])))
-
-;; スペースは全角のみを可視化
-(setq whitespace-space-regexp "\\(\u3000+\\)")
-;; デフォルトで視覚化を有効にする。
-(global-whitespace-mode 1)
 
 ;; カーソルの位置が何文字目かを表示する
 (column-number-mode t)
@@ -160,10 +122,6 @@
 (setq history-length 10000)
 ;; ミニバッファの履歴を保存する
 (savehist-mode 1)
-;; 最近使ったファイルの表示数
-(setq recentf-max-menu-items 10)
-;; 最近開いたファイルを保存する数を増やす
-(setq recentf-max-saved-items 3000)
 
 ;;; バッファ名
 ;; ファイル名が重複していたらディレクトリ名を追加する。
@@ -197,19 +155,8 @@
 (put 'narrow-to-region 'disabled nil)
 ;;; narrowing を禁止
 
-;;;文字コードの設定
-;; 121205
-(set-language-environment       'Japanese)
-(prefer-coding-system           'utf-8)
-
 ;;文字コード自動判別無効
 (setq auto-coding-functions nil)
-
-;;; Macで日本語のファイル名を扱う場合の設定
-(when (eq system-type 'darwin)
-  (require 'ucs-normalize)
-  (set-file-name-coding-system 'utf-8-hfs)
-  (setq locale-coding-system 'utf-8-hfs))
 
 ;;; 行番号表示 -> nlinum.elへ移行
 ;; 121209
