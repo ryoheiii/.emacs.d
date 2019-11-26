@@ -29,4 +29,7 @@
              (local-set-key [f9] 'helm-gtags-find-symbol)
 ;              (local-set-key (kbd "M-s") 'helm-gtags-find-symbol)
              ;; gtagsでジャンプする一つ前の状態に戻る
-             (local-set-key "\C-t" 'helm-gtags-pop-stack)))
+             (local-set-key "\C-t" 'helm-gtags-pop-stack)
+
+             (local-set-key [f6] 'helm-gtags-find-files)
+             ))

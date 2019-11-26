@@ -48,10 +48,6 @@
           (isearch-repeat-forward)))
     ad-do-it))
 
-;;; 編集回帰
-;; changed on disk; really edit the buffer? 対策(常にrでrevert)
-(global-auto-revert-mode t)
-
 ;;; 日本語環境
 ;; Localeに合わせた環境の設定
 (set-locale-environment nil)

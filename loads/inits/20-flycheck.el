@@ -1,7 +1,7 @@
 ;;; flymakeより強力
 ; http://qiita.com/senda-akiha/items/cddb02cfdbc0c8c7bc2b
 
-(add-hook 'after-init-hook #'global-flycheck-mode)
+; (add-hook 'after-init-hook #'global-flycheck-mode)
 
 ;; c++11オプションのために追加
 ;; 19-cc-mode.elのフックでコール

@@ -12,18 +12,12 @@
 (add-to-load-path "loads/elisp/" "loads/my-functions/")
 
 ;;; Package Manegement
-(require 'package)
-;; package.elでelispを入れるdirectoryの設定
-(setq package-user-dir "~/.emacs.d/loads/elisp/elpa/")
-(add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/") t)
-(add-to-list 'package-archives '("marmalade" . "http://marmalade-repo.org/packages/") t)
-(package-initialize)
-
-;;; 起動時に自動でインストール
-(require 'cl)
+;; Install packages list
 (defvar installing-package-list
   '(
     init-loader
+    dash
+    async
     auto-complete
     fuzzy ; auto-completeの曖昧補完
     migemo ; ローマ字で日本語検索するツール, require cmigemo
@@ -59,7 +53,6 @@
     ;; undo/redo
     undo-tree
     undohist
-    redo+
 
     ;; sets of helm
     helm ; 旧anything
@@ -67,15 +60,64 @@
     helm-gtags ; gtags
     yasnippet ; 将来は移植
 ;    helm-c-yasnippet
-    ))
+    )
+  "上記に起動時に melpa からインストールしたい Emacs Lisp パッケージを並べる"
+  )
 
-(let ((not-installed (loop for x in installing-package-list
-                           when (not (package-installed-p x))
-                           collect x)))
-  (when not-installed
-    (package-refresh-contents)
-    (dolist (pkg not-installed)
-      (package-install pkg))))
+(require 'package)
+;; package.elでelispを入れるdirectoryの設定
+(setq package-user-dir "~/.emacs.d/loads/elisp/elpa/")
+(setq package-archives
+      '(
+        ("gnu" . "https://elpa.gnu.org/packages/")
+        ("melpa" . "https://melpa.org/packages/")
+        ("melpa-stable" . "https://stable.melpa.org/packages/")
+        ("marmalade" . "http://marmalade-repo.org/packages/")
+        ("org" . "http://orgmode.org/elpa/")
+        ))
+(setq package-pinned-packages
+      '(
+        (init-loader           . "melpa-stable")
+        (dash                  . "melpa-stable")
+        (async                 . "melpa-stable")
+        (eieio                 . "melpa-stable")
+        (auto-complete         . "melpa-stable")
+        (fuzzy                 . "melpa-stable")
+        (migemo                . "melpa-stable")
+        (multiple-cursors      . "melpa-stable")
+        (smartrep              . "melpa-stable")
+        (expand-region         . "melpa-stable")
+        (flycheck              . "melpa-stable")
+        (flycheck-pos-tip      . "melpa-stable")
+        (exec-path-from-shell  . "melpa-stable")
+        (highlight-symbol      . "melpa-stable")
+        (auto-highlight-symbol . "marmalade")
+        (recentf-ext           . "melpa")
+        (smooth-scroll         . "melpa-stable")
+        (rainbow-delimiters    . "melpa-stable")
+        (color-theme-modern    . "melpa-stable")
+        (google-translate      . "melpa-stable")
+        (codic                 . "melpa-stable")
+        (e2wm                  . "melpa-stable")
+        (go-mode               . "melpa-stable")
+        (enh-ruby-mode         . "melpa-stable")
+        (nlinum                . "gnu")
+        (go-autocomplete       . "melpa-stable")
+        (go-eldoc              . "melpa-stable")
+        (undo-tree             . "marmalade")
+        (undohist              . "melpa")
+        (helm                  . "melpa-stable")
+        (helm-gtags            . "melpa-stable")
+        (yasnippet             . "melpa-stable")
+        ))
+(package-initialize)
+;; インストールされていれば、次回以降インストールさせない。
+(unless package-archive-contents (package-refresh-contents))
+(dolist (pkg installing-package-list)
+  (unless (package-installed-p pkg)
+    (package-install pkg)))
+
+
 
 (require 'init-loader)
 (setq init-loader-show-log-after-init nil)
@@ -83,3 +125,24 @@
 
 ;; (provide 'init)
 ;; ;;; init.el ends here
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(flycheck-display-errors-function (function flycheck-pos-tip-error-messages))
+ '(google-translate-default-source-language "en")
+ '(google-translate-default-target-language "ja")
+ '(helm-gtags-auto-update t)
+ '(helm-gtags-ignore-case t)
+ '(helm-gtags-path-style (quote relative))
+ '(package-selected-packages
+   (quote
+	(color-theme-modern yasnippet web-mode undohist undo-tree smooth-scroll smartrep redo+ recentf-ext rainbow-delimiters popwin nlinum multiple-cursors migemo js2-mode init-loader highlight-symbol helm-gtags google-translate go-eldoc go-autocomplete fuzzy flycheck-pos-tip expand-region exec-path-from-shell enh-ruby-mode e2wm codic auto-highlight-symbol)))
+ '(yas-trigger-key "TAB"))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
