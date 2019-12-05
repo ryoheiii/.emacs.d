@@ -1,5 +1,6 @@
 ﻿;;; Code:
-(require 'google-c-style)
+(use-package google-c-style
+  :ensure t)
 
 ;; google-c-style.elの定義関数
 (add-hook 'c-mode-common-hook 'google-set-c-style)

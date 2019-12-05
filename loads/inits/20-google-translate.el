@@ -1,6 +1,7 @@
 ;; http://qiita.com/catatsuy/items/ae9875706769d4f02317
 ;; google-translate.el
-(require 'google-translate)
+(use-package google-translate
+  :ensure t)
 
 ;; キーバインドの設定（お好みで）
 (global-set-key (kbd "C-c C-t") 'google-translate-at-point)

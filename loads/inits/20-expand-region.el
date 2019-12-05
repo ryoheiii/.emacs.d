@@ -1,7 +1,8 @@
 ;;; expand-region
 ;;; インクリメンタルに選択範囲を広げる
 
-(require 'expand-region)
+(use-package expand-region
+  :ensure t)
 (global-set-key (kbd "C-,") 'er/expand-region)
 (global-set-key (kbd "C-M-,") 'er/contract-region)
 

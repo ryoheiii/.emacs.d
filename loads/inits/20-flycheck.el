@@ -5,7 +5,8 @@
 
 ;; c++11オプションのために追加
 ;; 19-cc-mode.elのフックでコール
-(require 'flycheck)
+(use-package flycheck
+  :ensure t)
 (flycheck-define-checker c/c++
   "A C/C++ checker using g++."
   :command ("g++" "-std=c++11" "-Wall" "-Wextra" source)
@@ -23,7 +24,7 @@
 ;; キーバインド
 ; 設定しても動かないので00-keybind.elに記述
 
-;(require 'flycheck)
+;(use-package flycheck)
 ;(setq flycheck-check-syntax-automatically '(mode-enabled save))
 ;; (add-hook 'ruby-mode-hook 'flycheck-mode)
 ;(add-hook 'enh-ruby-mode-hook 'flycheck-mode)

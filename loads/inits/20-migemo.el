@@ -1,5 +1,6 @@
 ;; 参考 http://rubikitch.com/2014/08/20/migemo/
-(require 'migemo)
+(use-package migemo
+  :ensure t)
 (setq migemo-command "cmigemo")
 (setq migemo-options '("-q" "--emacs"))
 

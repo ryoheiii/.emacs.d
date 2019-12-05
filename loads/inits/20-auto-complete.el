@@ -1,6 +1,7 @@
 ;;; 自動補完機能-auto-complete
 ;; 130502
-(require 'auto-complete-config nil t)
+(use-package auto-complete
+  :ensure t)
 (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict") ;; ディレクトリ指定
 (ac-config-default)
 

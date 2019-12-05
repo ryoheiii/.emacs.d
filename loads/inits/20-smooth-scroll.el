@@ -1,5 +1,6 @@
 ;;; Code:
-(require ‘smooth-scroll)
+(use-package smooth-scroll
+  :ensure t)
 (smooth-scroll-mode t)
 
 (provide '20-smooth-scroll)

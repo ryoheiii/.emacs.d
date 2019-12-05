@@ -1,8 +1,10 @@
 ;;; multiple-cursors
 ;;; 複数箇所を同時に編集する
 ;;; 2012-12-05
-(require 'multiple-cursors)
-(require 'smartrep)
+(use-package multiple-cursors
+  :ensure t)
+(use-package smartrep
+  :ensure t)
 
 ;;; Code:
 (declare-function smartrep-define-key "smartrep")

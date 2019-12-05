@@ -11,59 +11,6 @@
 ;; load-pathに追加するディレクトリ
 (add-to-load-path "loads/elisp/" "loads/my-functions/")
 
-;;; Package Manegement
-;; Install packages list
-(defvar installing-package-list
-  '(
-    init-loader
-    dash
-    async
-    auto-complete
-    fuzzy ; auto-completeの曖昧補完
-    migemo ; ローマ字で日本語検索するツール, require cmigemo
-    multiple-cursors
-    smartrep
-    expand-region ;; C-sで検索中にC-wで語句選択可能に
-    flycheck
-    flycheck-pos-tip ; for flycheck
-    exec-path-from-shell
-    highlight-symbol
-    auto-highlight-symbol
-    recentf-ext
-    smooth-scroll
-    rainbow-delimiters
-    color-theme-modern
-
-    ;; translate ;; C-c C-t
-    google-translate
-    codic ; 変数とかのネーミング（Alt-x codic）; http://futurismo.biz/archives/2538
-
-    ;; window
-    e2wm
-
-    ;; mode
-    go-mode
-    enh-ruby-mode
-    nlinum
-
-    ;; for go language
-    go-autocomplete
-    go-eldoc
-
-    ;; undo/redo
-    undo-tree
-    undohist
-
-    ;; sets of helm
-    helm ; 旧anything
-;    helm-git
-    helm-gtags ; gtags
-    yasnippet ; 将来は移植
-;    helm-c-yasnippet
-    )
-  "上記に起動時に melpa からインストールしたい Emacs Lisp パッケージを並べる"
-  )
-
 (require 'package)
 ;; package.elでelispを入れるdirectoryの設定
 (setq package-user-dir "~/.emacs.d/loads/elisp/elpa/")
@@ -75,53 +22,21 @@
         ("marmalade" . "http://marmalade-repo.org/packages/")
         ("org" . "http://orgmode.org/elpa/")
         ))
-(setq package-pinned-packages
-      '(
-        (init-loader           . "melpa-stable")
-        (dash                  . "melpa-stable")
-        (async                 . "melpa-stable")
-        (eieio                 . "melpa-stable")
-        (auto-complete         . "melpa-stable")
-        (fuzzy                 . "melpa-stable")
-        (migemo                . "melpa-stable")
-        (multiple-cursors      . "melpa-stable")
-        (smartrep              . "melpa-stable")
-        (expand-region         . "melpa-stable")
-        (flycheck              . "melpa-stable")
-        (flycheck-pos-tip      . "melpa-stable")
-        (exec-path-from-shell  . "melpa-stable")
-        (highlight-symbol      . "melpa-stable")
-        (auto-highlight-symbol . "marmalade")
-        (recentf-ext           . "melpa")
-        (smooth-scroll         . "melpa-stable")
-        (rainbow-delimiters    . "melpa-stable")
-        (color-theme-modern    . "melpa-stable")
-        (google-translate      . "melpa-stable")
-        (codic                 . "melpa-stable")
-        (e2wm                  . "melpa-stable")
-        (go-mode               . "melpa-stable")
-        (enh-ruby-mode         . "melpa-stable")
-        (nlinum                . "gnu")
-        (go-autocomplete       . "melpa-stable")
-        (go-eldoc              . "melpa-stable")
-        (undo-tree             . "marmalade")
-        (undohist              . "melpa")
-        (helm                  . "melpa-stable")
-        (helm-gtags            . "melpa-stable")
-        (yasnippet             . "melpa-stable")
-        ))
 (package-initialize)
-;; インストールされていれば、次回以降インストールさせない。
-(unless package-archive-contents (package-refresh-contents))
-(dolist (pkg installing-package-list)
-  (unless (package-installed-p pkg)
-    (package-install pkg)))
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
 
+(setq use-package-enable-imenu-support t)
+(eval-when-compile
+  (require 'use-package))
 
-
-(require 'init-loader)
+;;;;; init-loader
+(use-package init-loader
+  :ensure t
+  :config
+  (init-loader-load "~/.emacs.d/loads/inits/"))
 (setq init-loader-show-log-after-init nil)
-(init-loader-load "~/.emacs.d/loads/inits/")
 
 ;; (provide 'init)
 ;; ;;; init.el ends here

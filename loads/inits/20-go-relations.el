@@ -1,11 +1,14 @@
 ;;; Code:
 ;; 20-go-eldoc.el
-(require 'go-eldoc)
+;(use-package go-eldoc
+;  :ensure t)
 
 ;; 20-gocode.el
-(require 'go-autocomplete)
-(require 'auto-complete-config)
+;(use-package go-autocomplete
+;  :ensure t)
+;(use-package auto-complete-config
+;  :ensure t)
 
-(provide '20-relations)
+;(provide '20-relations)
 ;;; 20-relations ends here
 

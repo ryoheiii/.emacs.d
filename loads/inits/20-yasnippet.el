@@ -1,7 +1,8 @@
 ;;; yasnippetの設定
 ;; 130717
 ;;yasnippetを置いているフォルダにパスを通す
-(require 'yasnippet)
+(use-package yasnippet
+  :ensure t)
 (setq yas-snippet-dirs
       '("~/.emacs.d/my-data/snippets" ;; 省略するとデフォルトのディレクトリ
         ))

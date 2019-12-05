@@ -1,5 +1,6 @@
 ;;; Code:
-(require 'auto-highlight-symbol)
+(use-package auto-highlight-symbol
+  :ensure t)
 (global-auto-highlight-symbol-mode t)
 
 ;; memo
