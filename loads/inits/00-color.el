@@ -1,7 +1,10 @@
 ;;; Code:
 
+;; ;;; Please set your themes directory to 'custom-theme-load-path (replace-colorthemes)
+;; (add-to-list 'custom-theme-load-path
+;;              (file-name-as-directory "~/.emacs.d/loads/site-elisp/replace-colorthemes/"))
+
 ;;; 見た目
-;; 121207
 ;; ソースコードに色を付ける
 (global-font-lock-mode t)
 (transient-mark-mode t)
@@ -13,31 +16,59 @@
 ;; (load-theme 'railscast t t)
 ;; (enable-theme 'railscast)
 
-
 ;;; 空白
-;; 2011-10-27
-(require 'whitespace)
-;; 1行が80桁を超えたら長すぎると判断する。; 無効
-;;; (setq whitespace-line-column 80)
-(setq whitespace-style '(face       ; faceを使って視覚化する。
-                         trailing   ; 行末の空白を対象とする。
-                         tabs       ; タブ
-                         spaces     ; スペース
-                         space-mark ; 表示のマッピング
-                         tab-mark
-                         ))
-(setq whitespace-display-mappings
-      '((space-mark ?\u3000 [?\u25a1])
-        ;; WARNING: the mapping below has a problem.
-        ;; When a TAB occupies exactly one column, it will display the
-        ;; character ?\xBB at that column followed by a TAB which goes to
-        ;; the next TAB column.
-        ;; If this is a problem for you, please, comment the line below.
-        (tab-mark ?\t [?\u00BB ?\t] [?\\ ?\t])))
-;; スペースは全角のみを可視化
-(setq whitespace-space-regexp "\\(\u3000+\\)")
-;; デフォルトで視覚化を有効にする。
-(global-whitespace-mode 1)
+;; 空白や長すぎる行を視覚化する。
+(use-package whitespace
+  :ensure t
+  :config
+  (progn
+    (setq whitespace-style '(face              ; faceを使って視覚化する。
+                             tabs              ; タブ
+                             spaces            ; スペース
+                             newline
+                             ;; indentation::tab
+                             ;; indentation::space
+                             empty             ; 先頭/末尾の空行
+                             ;; lines-tail        ; develock.elに移行 (rainbow-delimiterが無効になるので、やっぱこっち)
+
+                             space-mark        ; 表示のマッピング
+                             ;; tab-mark ; ※  tab-markすると表示がずれる
+                             newline-mark
+
+                             ;; trailing          ; 行末の空白を対象とする。
+                             ;; lines-tail        ; 長すぎる行のうち
+                             ;;                   ; whitespace-line-column以降のみを
+                             ;;                   ; 対象とする。
+                             ;; indentation       ; indent-tabs-modeと逆のインデントを
+                             ;;                   ; 対象とする。
+                             ;;                   ; 2013-05-03
+                             ;;space-before-tab  ; タブの前にあるスペースを対象とする。
+                             ;; space-after-tab   ; タブの後にあるスペースを対象とする。
+                             ))
+    ;; (set-face-foreground 'whitespace-newline "gray40")
+    (set-face-foreground 'whitespace-tab "DarkMagenta")
+    ;; (set-face-foreground 'whitespace-tab "gray40")
+    (set-face-background 'whitespace-tab 'nil)
+    (set-face-underline  'whitespace-tab t)
+
+    (setq whitespace-line-column 100) ;; lines-tail
+    (setq whitespace-display-mappings
+          '(
+            (space-mark   ?\x3000 [?\□]); 全角スペース
+            ;; (space-mark ?\u0020 [?\xB7])  ; 半角スペース
+            ;; (newline-mark ?\n   [?\u21B5 ?\n] [?$ ?\n]) ; 改行記号
+            ;; (newline-mark ?\n   [?\u2193 ?\n] [?$ ?\n]) ; 改行記号
+            (tab-mark ?\t [?\u2192 ?\t] [?\\ ?\t]) ; タブ
+            ))
+
+    ;; スペースは全角のみを可視化
+    (setq whitespace-space-regexp "\\(\u3000+\\)")
+
+    ;; デフォルトで視覚化を有効にする。
+    (global-whitespace-mode 1)
+    )
+  )
+
 
 ;;; 位置
 ;;現在行を目立たせる(ハイライト)
@@ -46,8 +77,8 @@
       (background dark))
      (:background "dark slate gray"))
     (((class color)
-      (background light))
-     (:background  "#98FB98"))
+      (Background Light))
+     (:Background  "#98FB98"))
     (t
      ()))
   "*Face used by hl-line.")

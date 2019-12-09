@@ -9,11 +9,10 @@
         (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
             (normal-top-level-add-subdirs-to-load-path))))))
 ;; load-pathに追加するディレクトリ
-(add-to-load-path "loads/elisp/" "loads/my-functions/")
+(add-to-load-path "loads/elisp/" "loads/site-lisp/")
 
 (require 'package)
-;; package.elでelispを入れるdirectoryの設定
-(setq package-user-dir "~/.emacs.d/loads/elisp/elpa/")
+(setq package-user-dir "~/.emacs.d/loads/elisp/")
 (setq package-archives
       '(
         ("gnu" . "https://elpa.gnu.org/packages/")
@@ -22,7 +21,43 @@
         ("marmalade" . "http://marmalade-repo.org/packages/")
         ("org" . "http://orgmode.org/elpa/")
         ))
+(setq package-pinned-packages
+      '(
+        (init-loader           . "melpa-stable")
+        (dash                  . "melpa-stable")
+        (async                 . "melpa-stable")
+        (eieio                 . "melpa-stable")
+        (auto-complete         . "melpa-stable")
+        (fuzzy                 . "melpa-stable")
+        (migemo                . "melpa-stable")
+        (multiple-cursors      . "melpa-stable")
+        (smartrep              . "melpa-stable")
+        (expand-region         . "melpa-stable")
+        (flycheck              . "melpa-stable")
+        (flycheck-pos-tip      . "melpa-stable")
+        (exec-path-from-shell  . "melpa-stable")
+        (highlight-symbol      . "melpa-stable")
+        (auto-highlight-symbol . "marmalade")
+        (recentf-ext           . "melpa")
+        (smooth-scroll         . "melpa-stable")
+        (rainbow-delimiters    . "melpa-stable")
+        (color-theme-modern    . "melpa-stable")
+        (google-translate      . "melpa-stable")
+        (codic                 . "melpa-stable")
+        (e2wm                  . "melpa-stable")
+        (go-mode               . "melpa-stable")
+        (enh-ruby-mode         . "melpa-stable")
+        (nlinum                . "gnu")
+        (go-autocomplete       . "melpa-stable")
+        (go-eldoc              . "melpa-stable")
+        (undo-tree             . "marmalade")
+        (undohist              . "melpa")
+        (helm                  . "melpa-stable")
+        (helm-gtags            . "melpa-stable")
+        (yasnippet             . "melpa-stable")
+        ))
 (package-initialize)
+
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
@@ -35,11 +70,13 @@
 (use-package init-loader
   :ensure t
   :config
-  (init-loader-load "~/.emacs.d/loads/inits/"))
-(setq init-loader-show-log-after-init nil)
+  (init-loader-load "~/.emacs.d/loads/inits/")
+  (setq init-loader-show-log-after-init nil)
+)
 
-;; (provide 'init)
+(provide 'init)
 ;; ;;; init.el ends here
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

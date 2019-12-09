@@ -21,8 +21,4 @@
    ;; (c-toggle-auto-hungry-state 1)
    ;; (c-toggle-hungry-state 1)
 
-   ;; CamelCaseの語でも単語単位に分解して編集する
-   ;; GtkWindow         => Gtk Window
-   ;; EmacsFrameClass   => Emacs Frame Class
-   ;; NSGraphicsContext => NS Graphics Context
    (subword-mode 1)))

@@ -1,15 +1,14 @@
-;; 参考 http://rubikitch.com/2014/08/20/migemo/
-(use-package migemo
-  :ensure t)
-(setq migemo-command "cmigemo")
-(setq migemo-options '("-q" "--emacs"))
-
-;; Set your installed path
-; find /usr -name "*migemo-dict*"
-(setq migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict")
-
-(setq migemo-user-dictionary nil)
-(setq migemo-regex-dictionary nil)
-(setq migemo-coding-system 'utf-8-unix)
-(load-library "migemo")
-(migemo-init)
+;; (use-package migemo
+;;   :ensure t
+;;   :config
+;;   ;; Set your installed path
+;;   (setq migemo-command "cmigemo"
+;;         migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict")
+;;   (setq migemo-options '("-q" "--emacs")
+;;         migemo-user-dictionary nil
+;;         migemo-regex-dictionary nil
+;;         migemo-coding-system 'utf-8-unix)
+;;   (migemo-init)
+;;   ;; (use-package helm)
+;;   ;; (helm-migemo-mode +1)
+;;   )

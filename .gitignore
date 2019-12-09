@@ -5,8 +5,8 @@ backup/*
 *.dat
 /README.txt
 # loads/my-functions/*
-loads/elisp/elpa/*
-loads/elisp/site-lisp/aoj-submit/
+loads/elisp/*
+loads/site-lisp/*
 my-data/snippets/*
 my-data/ac-dict/*
 

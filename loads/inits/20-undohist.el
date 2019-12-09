@@ -1,3 +1,5 @@
 ;;; undohistの設定
 (use-package undohist
-  :ensure t)
+  :ensure t
+  :config
+  (undohist-initialize))

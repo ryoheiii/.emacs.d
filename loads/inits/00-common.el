@@ -1,12 +1,21 @@
+;;; 日本語環境
+;; Localeに合わせた環境の設定
+(set-locale-environment nil)
+
 ;;;文字コードの設定
 (set-language-environment       'Japanese)
 (prefer-coding-system           'utf-8)
 
 ;;; Macで日本語のファイル名を扱う場合の設定
 (when (eq system-type 'darwin)
-  (require 'ucs-normalize)
-  (set-file-name-coding-system 'utf-8-hfs)
-  (setq locale-coding-system 'utf-8-hfs))
+  (use-package ucs-normalize
+    :config
+    (set-file-name-coding-system 'utf-8-hfs)
+    (setq locale-coding-system 'utf-8-hfs)
+    ))
+
+;; 行末の空白をファイルセーブ時に削除
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
 
 ;;; window size
 (if window-system (progn
@@ -17,23 +26,11 @@
 ))
 
 ;;; grep
-(define-key global-map (kbd "C-c g") 'grep)
-(require 'grep)
-(setq grep-command-before-query "grep -nri -e ")
-(defun grep-default-command ()
-  (if current-prefix-arg
-      (let ((grep-command-before-target
-             (concat grep-command-before-query
-                     (shell-quote-argument (grep-tag-default)))))
-        (cons (if buffer-file-name
-                  (concat grep-command-before-target
-                          " *."
-                          (file-name-extension buffer-file-name))
-                (concat grep-command-before-target " ."))
-              (+ (length grep-command-before-target) 1)))
-    (car grep-command)))
-(setq grep-command (cons (concat grep-command-before-query " .")
-                         (+ (length grep-command-before-query) 1)))
+(use-package grep
+  :ensure t
+  :config
+  (setq grep-command-before-query "grep -nr -e ")
+  )
 
 ;;; 選択範囲をisearch
 (defadvice isearch-mode (around isearch-mode-default-string (forward &optional regexp op-fun recursive-edit word-p) activate)
@@ -47,10 +44,6 @@
           (goto-char (mark))
           (isearch-repeat-forward)))
     ad-do-it))
-
-;;; 日本語環境
-;; Localeに合わせた環境の設定
-(set-locale-environment nil)
 
 ;;; バー
 ;; メニューバーを消す
@@ -78,8 +71,12 @@
 ;; カーソルの位置が何行目かを表示する
 (line-number-mode t)
 ;; カーソルの場所を保存する
-(require 'saveplace)
-(setq-default save-place t)
+(use-package saveplace
+  :ensure t
+  :config
+  (setq-default save-place t)
+  )
+
 
 ;;; 行
 ;; 行の先頭でC-kを一回押すだけで行全体を消去する
@@ -121,8 +118,10 @@
 
 ;;; バッファ名
 ;; ファイル名が重複していたらディレクトリ名を追加する。
-(require 'uniquify)
-(setq uniquify-buffer-name-style 'post-forward-angle-brackets)
+(use-package uniquify
+  :config
+  (setq uniquify-buffer-name-style 'post-forward-angle-brackets)
+  )
 
 ;;; shebangがあるファイルを保存すると実行権をつける。
 ;; 2012-03-15
@@ -155,8 +154,11 @@
 (setq auto-coding-functions nil)
 
 ;;; 行番号表示 -> nlinum.elへ移行
-;; 121209
 ;; (global-linum-mode)
+;; 4 桁分の表示領域を確保する
+(setq linum-format "%4d ")
+;; 軽くする処理
+(setq linum-delay t)
 
 ;;; yes no → y n
 ;; 121209
