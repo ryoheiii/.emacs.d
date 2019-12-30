@@ -1,13 +1,12 @@
 (use-package rainbow-delimiters
   :ensure t
+  :diminish
   :init
   (progn
     (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
-
-  :bind
-  (
-   ([f8] . rainbow-delimiters-using-stronger-colors))
-
+  :bind (
+         ("C-c l" . rainbow-delimiters-using-stronger-colors)
+         )
   :config
   ;; these setting should be placed after load-theme
   ;; 括弧の色を強調

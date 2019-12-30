@@ -1,7 +1,6 @@
 # .emacs.d
 
-hist/*
-backup/*
+tmp/*
 *.dat
 /README.txt
 # loads/my-functions/*
@@ -17,3 +16,4 @@ my-data/ac-dict/*
 
 # 個別ファイル
 20-aoj-submit.el
+network-security.data

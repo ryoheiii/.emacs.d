@@ -23,48 +23,66 @@
         ))
 (setq package-pinned-packages
       '(
-        (init-loader           . "melpa-stable")
-        (dash                  . "melpa-stable")
-        (async                 . "melpa-stable")
-        (eieio                 . "melpa-stable")
-        (auto-complete         . "melpa-stable")
-        (fuzzy                 . "melpa-stable")
-        (migemo                . "melpa-stable")
-        (multiple-cursors      . "melpa-stable")
-        (smartrep              . "melpa-stable")
-        (expand-region         . "melpa-stable")
-        (flycheck              . "melpa-stable")
-        (flycheck-pos-tip      . "melpa-stable")
-        (exec-path-from-shell  . "melpa-stable")
-        (highlight-symbol      . "melpa-stable")
-        (auto-highlight-symbol . "marmalade")
-        (recentf-ext           . "melpa")
-        (smooth-scroll         . "melpa-stable")
-        (rainbow-delimiters    . "melpa-stable")
-        (color-theme-modern    . "melpa-stable")
-        (google-translate      . "melpa-stable")
-        (codic                 . "melpa-stable")
-        (e2wm                  . "melpa-stable")
-        (go-mode               . "melpa-stable")
-        (enh-ruby-mode         . "melpa-stable")
-        (nlinum                . "gnu")
-        (go-autocomplete       . "melpa-stable")
-        (go-eldoc              . "melpa-stable")
-        (undo-tree             . "marmalade")
-        (undohist              . "melpa")
-        (helm                  . "melpa-stable")
-        (helm-gtags            . "melpa-stable")
-        (yasnippet             . "melpa-stable")
+        (init-loader               . "melpa-stable")
+        (use-package               . "melpa-stable")
+        (swiper-helm               . "melpa-stable")
+        (dumb-jump                 . "melpa-stable")
+        (avy-migemo                . "melpa-stable")
+        (ivy                       . "melpa-stable")
+        (ivy-yasnippet             . "melpa-stable")
+        (eshell                    . "melpa-stable")
+        (elscreen                  . "melpa-stable")
+        (auto-complete-c-headers   . "melpa")
+        (auto-complete-clang-async . "melpa-stable")
+        (mozc                      . "melpa")
+        (google-translate          . "melpa-stable")
+        (swiper                    . "melpa-stable")
+        (exec-path-from-shell      . "melpa-stable")
+        (tabbar                    . "melpa-stable")
+        (which-key                 . "melpa-stable")
+        (neotree                   . "melpa-stable")
+        (imenu-list                . "melpa-stable")
+        (powerline                 . "melpa-stable")
+        (easy-kill                 . "melpa-stable")
+        (smooth-scroll             . "melpa-stable")
+        (dash                      . "melpa-stable")
+        (async                     . "melpa-stable")
+        (eieio                     . "melpa-stable")
+        (auto-complete             . "melpa-stable")
+        (fuzzy                     . "melpa-stable")
+        (migemo                    . "melpa-stable")
+        (multiple-cursors          . "melpa-stable")
+        (smartrep                  . "melpa-stable")
+        (expand-region             . "melpa-stable")
+        (flycheck                  . "melpa-stable")
+        (flycheck-pos-tip          . "melpa-stable")
+        (exec-path-from-shell      . "melpa-stable")
+        (highlight-symbol          . "melpa-stable")
+        (auto-highlight-symbol     . "marmalade")
+        (recentf-ext               . "melpa")
+        (smooth-scroll             . "melpa-stable")
+        (rainbow-delimiters        . "melpa-stable")
+        (color-theme-modern        . "melpa-stable")
+        (google-translate          . "melpa-stable")
+        (codic                     . "melpa-stable")
+        (e2wm                      . "melpa-stable")
+        (go-mode                   . "melpa-stable")
+        (enh-ruby-mode             . "melpa-stable")
+        (nlinum                    . "gnu")
+        (go-autocomplete           . "melpa-stable")
+        (go-eldoc                  . "melpa-stable")
+        (undo-tree                 . "marmalade")
+        (undohist                  . "melpa")
+        (helm                      . "melpa-stable")
+        (helm-gtags                . "melpa-stable")
+        (yasnippet                 . "melpa-stable")
         ))
 (package-initialize)
 
+;;;;; use-package の存在を保証
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
-
-(setq use-package-enable-imenu-support t)
-(eval-when-compile
-  (require 'use-package))
 
 ;;;;; init-loader
 (use-package init-loader
@@ -76,25 +94,3 @@
 
 (provide 'init)
 ;; ;;; init.el ends here
-
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(flycheck-display-errors-function (function flycheck-pos-tip-error-messages))
- '(google-translate-default-source-language "en")
- '(google-translate-default-target-language "ja")
- '(helm-gtags-auto-update t)
- '(helm-gtags-ignore-case t)
- '(helm-gtags-path-style (quote relative))
- '(package-selected-packages
-   (quote
-	(color-theme-modern yasnippet web-mode undohist undo-tree smooth-scroll smartrep redo+ recentf-ext rainbow-delimiters popwin nlinum multiple-cursors migemo js2-mode init-loader highlight-symbol helm-gtags google-translate go-eldoc go-autocomplete fuzzy flycheck-pos-tip expand-region exec-path-from-shell enh-ruby-mode e2wm codic auto-highlight-symbol)))
- '(yas-trigger-key "TAB"))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
