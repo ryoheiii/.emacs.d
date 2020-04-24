@@ -1,21 +1,21 @@
 <!-- -*- gfm -*- -->
 # 必要なもの
 ## パス設定
-* yasnippets: loads/inits/20-ysnippets.el
-* auto-complete: loads/inits/20-auto-complete.el
-* migemo: loads/inits/20-migemo.el へインストールディレクトリ内の辞書パス設定
+* yasnippets:    loads/inits/20-external-package.el
+* auto-complete: loads/inits/20-external-package.el
+* migemo:        loads/inits/20-external-package.el へインストールディレクトリ内の辞書パス設定
 
 ## font
-* sudo apt-get install fonts-inconsolata
+* sudo apt install fonts-inconsolata
 
 ## gtags
-sudo apt-get install global
+sudo apt install global
 
 ## migemo （ローマ字で日本語検索するツール）
-* sudo apt-get install cmigemo
+* sudo apt install cmigemo
 
 ## aspell (スペルチェック)
-* sudo apt-get install aspell
+* sudo apt install aspell
 * ~/.aspell.confも必要
 
 # package管理
