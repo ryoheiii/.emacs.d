@@ -1,16 +1,10 @@
-;; 日本語設定
-(set-language-environment "Japanese")
-;; (set-locale-environment nil)
-
 ;;;文字コードの設定
-(set-language-environment   'Japanese)
+(set-language-environment   "Japanese"
+                            )
 (prefer-coding-system       'utf-8)
 (set-default-coding-systems 'utf-8)
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
-
-;; 行末の空白をファイルセーブ時に削除
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
 
 ;;; Macで日本語のファイル名を扱う場合の設定
 (when (eq system-type 'darwin)
@@ -24,12 +18,6 @@
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
 ;;; 色設定関連
-;;; theme
-;;; Please set your themes directory to 'custom-theme-load-path (replace-colorthemes)
-;; Emacs 24 以上ならば color-theme ではなく theme フレームワークが利用可能なのでコメントアウト
-(add-to-list 'custom-theme-load-path
-             (file-name-as-directory "~/.emacs.d/loads/site-elisp/replace-colorthemes/"))
-
 ;; load your favorite theme (replace-colorthemese)
 ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
 (load-theme 'hober t t)
@@ -59,7 +47,6 @@
 ;;; eval
 ;; evalした結果を全部表示
 (setq eval-expression-print-length nil)
-
 ;; カーソルの位置が何文字目かを表示する
 (column-number-mode t)
 ;; カーソルの位置が何行目かを表示する

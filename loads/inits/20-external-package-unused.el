@@ -1,3 +1,23 @@
+;; (use-package doom-themes
+;;   :ensure t
+;;   :init
+;;   (load-theme 'doom-dracula t)
+;;   :custom
+;;   (doom-themes-enable-italic t)
+;;   (doom-themes-enable-bold t)
+;;   :custom-face
+;;   (doom-modeline-bar ((t (:background "#6272a4"))))
+;;   :config
+;;   (doom-themes-neotree-config)
+;;   (doom-themes-org-config)
+;;   )
+
+;; (use-package xclip
+;;   :ensure t
+;;   :init
+;;   (xclip-mode 1)
+;;   )
+
 ;; ;;; 分割ウインドウをいい感じの比率で制御
 ;; (use-package golden-ratio
 ;;   :ensure t

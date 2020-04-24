@@ -5,6 +5,12 @@
 * auto-complete: loads/inits/20-external-package.el
 * migemo:        loads/inits/20-external-package.el へインストールディレクトリ内の辞書パス設定
 
+## clang
+* sudo apt install clang
+
+## color theme
+* sudo apt install elpa-color-theme-modern
+
 ## font
 * sudo apt install fonts-inconsolata
 
@@ -35,3 +41,6 @@
 6. Linux: linux
 * 例： 00-keybind.el とか cocoa-emacs-appearance.el のように "prefix-機能名.el" とファイル名をつける
 * package.el 周りの設定は 20 番台に書くことが多い
+
+# その他
+* xterm-256color を利用

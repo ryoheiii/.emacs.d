@@ -1,9 +1,3 @@
-;; (use-package xclip
-;;   :ensure t
-;;   :init
-;;   (xclip-mode 1)
-;;   )
-
 ;; https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :ensure t
@@ -757,7 +751,7 @@ The description of ARG is in `neo-buffer--execute'."
   :init
   (setq yas-snippet-dirs '(
                            "~/.emacs.d/my-data/snippets"
-                           "~/.emacs.d/loads/elisp/yasnippet-snippets-20200418.1154/snippets"
+                           "~/.emacs.d/loads/elisp/yasnippet-snippets-0.22/snippets"
                            ))
   ;; (yas-reload-all)
   (yas-global-mode 1)
