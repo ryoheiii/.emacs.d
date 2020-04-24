@@ -10,7 +10,7 @@
  '(helm-gtags-path-style (quote root))
  '(package-selected-packages
    (quote
-    (ivy swiper-helm ivy-yasnippet yasnippet-snippets dumb-jump company-box company helm-c-yasnippet recentf-ext move-text google-c-style golden-ratio easy-kill python-mode region-bindings-mode avy-migemo auto-complete-clang-async auto-complete-c-headers elscreen mozc google-translate swiper helm-ag helm-descbinds tabbar which-key imenu-list neotree powerline smooth-scroll yasnippet helm-gtags helm undohist undo-tree nlinum e2wm color-theme-modern srefactor anzu rainbow-delimiters auto-highlight-symbol highlight-symbol expand-region smartrep multiple-cursors migemo fuzzy dash async auto-complete init-loader)))
+    (color-theme company-irony-c-headers comapny-irony-c-headers irony smart-newline xclip codic ruby-block ruby-electric ivy swiper-helm ivy-yasnippet yasnippet-snippets dumb-jump company-box company helm-c-yasnippet recentf-ext move-text google-c-style golden-ratio easy-kill python-mode region-bindings-mode avy-migemo auto-complete-clang-async auto-complete-c-headers elscreen mozc google-translate swiper helm-ag helm-descbinds tabbar which-key imenu-list neotree powerline smooth-scroll yasnippet helm-gtags helm undohist undo-tree nlinum e2wm color-theme-modern srefactor anzu rainbow-delimiters auto-highlight-symbol highlight-symbol expand-region smartrep multiple-cursors migemo fuzzy dash async auto-complete init-loader)))
  '(yas-trigger-key "TAB"))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.

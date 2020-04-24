@@ -1,4 +1,3 @@
-
 ;; 日本語設定
 (set-language-environment "Japanese")
 ;; (set-locale-environment nil)
@@ -154,7 +153,7 @@
 (fset 'yes-or-no-p 'y-or-n-p)
 
 ;;; 常時デバッグモード
-(setq debug-on-error t)
+;; (setq debug-on-error t)
 
 ;; タブを半角スペースに
 (setq-default tab-width 4)

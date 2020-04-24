@@ -1,17 +1,20 @@
 ;;; 括弧
 (use-package paren
   :ensure t
+  :init
+  (show-paren-mode 1)
   :config
   (setq show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる。
-  (show-paren-mode +1)
   )
 
 ;;; 空白
 (use-package whitespace
   :ensure t
   :defer t
-  :diminish (global-whitespace-mode whitespace-mode)
-  :init (global-whitespace-mode t)
+  :diminish
+  (global-whitespace-mode whitespace-mode)
+  :init
+  (global-whitespace-mode t)
   :config
   (setq whitespace-style '(face       ; faceを使って視覚化する。
                            trailing   ; 行末
@@ -105,6 +108,9 @@
 
 (use-package savehist
   :ensure t
+  :defer 20
+  :init
+  (savehist-mode 1)
   :config
   (setq savehist-additional-variables
         ;; search entries
@@ -114,17 +120,16 @@
         ;; keep the home clean
         savehist-file (my-set-history "savehist") ;; my-set-history @00-auto-file-place.el
         )
-  (savehist-mode +1)
   )
 
 ;; カーソルの場所を保存する
 (use-package saveplace
   :ensure t
-  :init (save-place-mode 1)
+  :init
+  (setq-default save-place t)
+  (setq save-place-limit nil)
+  (save-place-mode 1)
   :config
-  (progn
-    (setq-default save-place t)
-    (setq save-place-limit nil))
   (setq save-place-file (my-set-history "places"))        ;; my-set-history @00-auto-file-place.el
   (setq eshell-directory-name (my-set-history "eshell/")) ;; my-set-history @00-auto-file-place.el
   )

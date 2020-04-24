@@ -1,8 +1,36 @@
+;; (use-package xclip
+;;   :ensure t
+;;   :init
+;;   (xclip-mode 1)
+;;   )
+
+;; https://ainame.hateblo.jp/entry/2013/12/08/162032
+(use-package smart-newline
+  :ensure t
+  :init
+  (add-hook 'c++-mode-hook
+            '(lambda ()
+               (smart-newline-mode 1)))
+  (add-hook 'c-mode-hook
+            '(lambda ()
+               (smart-newline-mode 1)))
+  (add-hook 'cc-mode-hook
+            '(lambda ()
+               (smart-newline-mode 1)))
+  (add-hook 'emacs-lisp-mode-hook
+            '(lambda ()
+               (smart-newline-mode 1)))
+  (add-hook 'lisp-mode-hook
+            '(lambda ()
+               (smart-newline-mode 1)))
+  )
+
 ;;; 単語を検索した時に何番目のマッチかを表示する拡張
 ;; https://qiita.com/syohex/items/56cf3b7f7d9943f7a7ba
 (use-package anzu
   :ensure t
-  :init (global-anzu-mode +1)
+  :init
+  (global-anzu-mode 1)
   :config
   (custom-set-variables
    '(anzu-mode-lighter "")
@@ -28,34 +56,45 @@
   (setq ispell-dictionary "american")
   )
 
+(use-package irony
+  :ensure t
+  :init
+  :after cc-mode
+  :config
+  (add-hook 'c-mode-hook 'irony-mode)
+  (add-hook 'c++-mode-hook 'irony-mode)
+  (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
+
+  (use-package company-irony-c-headers
+    :ensure t
+    :after company
+    :config
+    (add-to-list 'company-backend 'company-ironny-c-headers)
+    )
+  )
+
 
 ;; C-w でリファレンス表示
 (use-package company
   :ensure t
   :diminish company-mode
   :init
-  (setq company-selection-wrap-around t)
-  ;; :bind
-  ;; (:map company-active-map
-  ;;       ;; ("M-n" . nil)
-  ;;       ;; ("M-p" . nil)
-  ;;       ;; ("C-n" . company-select-next)
-  ;;       ;; ("C-p" . company-select-previous)
-  ;;       ;; ("C-h" . nil)
-  ;;       )
-  ;; :bind (("C-M-i" . company-complete)
-  ;;        :map company-mode-map
-  ;;        ("TAB" . indent-for-tab-command)
-  ;;        :map company-active-map
-  ;;        ("C-n" . company-select-next)
-  ;;        ("C-p" . company-select-previous)
-  ;;        ("C-s" . company-filter-candidates)
-  ;;        ("TAB" . company-complete-selection)
-  ;;        :map company-search-map
-  ;;        ("C-n" . company-select-next)
-  ;;        ("C-p" . company-select-previous))
+  (global-company-mode 1)
+  :bind (
+         ("C-M-i" . company-complete)
+         :map company-mode-map
+         ("TAB" . indent-for-tab-command)
+         :map company-active-map
+         ("M-n" . nil)
+         ("M-p" . nil)
+         ("C-n" . company-select-next)
+         ("C-p" . company-select-previous)
+         ("TAB" . company-complete-selection)
+         :map company-search-map
+         ("C-n" . company-select-next)
+         ("C-p" . company-select-previous))
   :config
-  (global-company-mode +1)
+  (setq company-selection-wrap-around t)
   (setq company-transformers '(company-sort-by-backend-importance)) ;; ソート順
   (setq company-idle-delay 0) ; デフォルトは 0.5
   (setq company-show-numbers t)
@@ -68,15 +107,8 @@
   (setq company-dabbrev-around t)
   (setq completion-ignore-case t)
   (setq company-dabbrev-downcase nil)
-
-  ;; (global-set-key (kbd "C-M-i") 'company-complete)
-  (define-key company-active-map (kbd "M-n") nil)
-  (define-key company-active-map (kbd "M-p") nil)
-  (define-key company-active-map (kbd "C-n") 'company-select-next)
-  (define-key company-active-map (kbd "C-p") 'company-select-previous)
-  (define-key company-active-map (kbd "C-h") nil)
-  (define-key company-active-map (kbd "TAB") 'company-complete-selection) ;; TABで候補を設定
-  ;; (define-key company-active-map (kbd "C-f") 'company-complete-selection) ;; C-fで候補を設定
+  (setq company-eclim-auto-save nil)
+  (setq company-dabbrev-downcase nil)
 
   ;; yasnippetとの連携
   (defvar company-mode/enable-yas t
@@ -103,6 +135,42 @@
                       :background "grey60")
   (set-face-attribute 'company-scrollbar-bg nil
                       :background "gray40")
+  )
+
+;;; 自動補完機能-auto-complete ; company に置き換え
+(use-package auto-complete
+  :ensure t
+  :demand t
+  :diminish ""
+  :bind (:map ac-menu-map
+              ("C-n" . ac-next)
+              ("C-p" . ac-previous)
+              )
+  :config
+  (use-package auto-complete-c-headers
+    :ensure t
+    :init
+    (add-hook 'c++-mode-hook (lambda ()
+                               '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
+    (add-hook 'c-mode-hook (lambda ()
+                             '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
+    )
+
+  (use-package auto-complete-config)
+  (ac-config-default)
+  (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict") ;; ディレクトリ指定
+  (add-to-list 'ac-modes 'text-mode)         ;; text-modeでも自動的に有効にする
+  (ac-set-trigger-key "TAB")
+
+  (setq ac-comphist-file (my-set-history "ac-comphist.dat")) ;; my-set-history @00-auto-file-place.el
+  (setq ac-use-menu-map t)
+  (setq ac-disable-faces nil) ;;コメントや文字列リテラルでも補完を行う
+  (setq ac-use-fuzzy t)       ;; 曖昧マッチ
+
+  ;; yasnippetのbindingを指定するとエラーが出るので回避する方法。
+  (setf (symbol-function 'yas-active-keys)
+        (lambda ()
+          (remove-duplicates (mapcan #'yas--table-all-keys (yas--get-snippet-tables)))))
   )
 
 (use-package e2wm
@@ -133,20 +201,6 @@
 
     ;; (e2wm:start-management)
     )
-  )
-
-;; M-w   行
-;; M-w w 単語
-;; M-w s S式
-;; M-w l リスト
-;; M-w f ファイル名
-;; M-w d defun
-;; M-w D 関数名
-;; M-w e 行
-(use-package easy-kill
-  :ensure t
-  :config
-  (global-set-key [remap kill-ring-save] 'easy-kill)
   )
 
 ;;; キー
@@ -284,23 +338,15 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
 ;;; インクリメンタルに選択範囲を広げる
 (use-package expand-region
   :ensure t
+  :init
+  (transient-mark-mode t)
   :bind (
          ("C-,"   . er/expand-region)
          ;; ("C-M-," . er/contract-region)
          )
   :config
   ;; transient-mark-modeが nilでは動作しない
-  (transient-mark-mode t)
   )
-
-;;; 分割ウインドウをいい感じの比率で制御
-(use-package golden-ratio
-  :ensure t
-  :init (golden-ratio-mode t)
-  :config
-  ;; NeoTree との干渉に対する例外処理
-  (add-to-list 'golden-ratio-exclude-buffer-names " *NeoTree*")
- )
 
 (use-package google-c-style
   :ensure t
@@ -416,16 +462,16 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
   (add-hook 'c++-mode-hook
             (lambda ()
               (helm-gtags-mode)))
-  :bind
-  (([f11] . helm-gtags-find-tag) ;; 関数の定義場所の検索
-   ([f12] . helm-gtags-find-rtag) ;; 関数の使用箇所の検索
-   ([f9]  . helm-gtags-find-symbol);; 変数の使用箇所の検索
-   ("C-t" . helm-gtags-pop-stack);; gtagsでジャンプする一つ前の状態に戻る
-   ([f6]  . helm-gtags-find-files) ;; ファイルジャンプ
-   ;; ([f3] . helm-gtags-select)
-   ;; ("C-t l" . helm-gtags-show-stack)
-   ;; ("C-t m" . helm-gtags-update-tags)
-   )
+  :bind  (
+          ([f11] . helm-gtags-find-tag) ;; 関数の定義場所の検索
+          ([f12] . helm-gtags-find-rtag) ;; 関数の使用箇所の検索
+          ([f9]  . helm-gtags-find-symbol);; 変数の使用箇所の検索
+          ("C-t" . helm-gtags-pop-stack);; gtagsでジャンプする一つ前の状態に戻る
+          ([f6]  . helm-gtags-find-files) ;; ファイルジャンプ
+          ;; ([f3] . helm-gtags-select)
+          ;; ("C-t l" . helm-gtags-show-stack)
+          ;; ("C-t m" . helm-gtags-update-tags)
+          )
   :config
   (custom-set-variables
    '(helm-gtags-path-style 'root)
@@ -450,7 +496,8 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
 ;; helm-M-xでキーバインドを表示してくれる
 (use-package helm-descbinds
   :ensure t
-  :init (helm-descbinds-mode)
+  :init
+  (helm-descbinds-mode 1)
   )
 
 ;; helmで高速ファイル中身サーチ(ag)
@@ -506,14 +553,17 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
         migemo-regex-dictionary nil
         migemo-coding-system 'utf-8-unix)
   (migemo-init)
-  (use-package helm)
-  (helm-migemo-mode +1)
+  (use-package helm
+    :init
+    (helm-migemo-mode 1)
+    )
   )
 
 (use-package avy-migemo
   :ensure t
-  :config
+  :init
   (avy-migemo-mode 1)
+  :config
   (setq avy-timeout-seconds nil)
   ;; (use-package avy-migemo-e.g.swiper :ensure t)
   (global-set-key (kbd "C-M-;") 'avy-migemo-goto-char-timer)
@@ -574,8 +624,9 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
   :ensure t
   :init
   (setq-default neo-keymap-style 'concise)
-  :bind
-  ([f8] . neotree-toggle)
+  :bind (
+         ([f8] . neotree-toggle)
+         )
   :config
   (setq neo-smart-open t) ;ウインドウを開くたびにcurrent fileのあるディレクトリを表示
   (setq neo-create-file-auto-open t)
@@ -626,6 +677,8 @@ The description of ARG is in `neo-buffer--execute'."
 
 (use-package recentf
   :ensure t
+  :init
+  (recentf-mode 1)
   :config
   (defmacro with-suppressed-message (&rest body)
     "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
@@ -644,7 +697,6 @@ The description of ARG is in `neo-buffer--execute'."
         recentf-auto-cleanup 'never
         recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list)
    )
-  (recentf-mode +1)
   )
 
 (use-package recentf-ext
@@ -657,19 +709,6 @@ The description of ARG is in `neo-buffer--execute'."
   :config
   (smooth-scroll-mode t)
   (setq smooth-scroll/vscroll-step-size 8)
-  )
-
-;;;; semantic
-;; C/C++等の構文を静的に解析していろいろな機能を提供するsemantic
-;;;; srefactor
-;; リファクタリングツール
-(use-package srefactor
-  :ensure t
-  :defer  t
-  :config
-  (semantic-mode 0)
-  (define-key c-mode-map (kbd "C-c r") 'srefactor-refactor-at-point)
-  (define-key c++-mode-map (kbd "C-c r") 'srefactor-refactor-at-point)
   )
 
 ;;インクリメンタルバッファサーチ
@@ -708,51 +747,50 @@ The description of ARG is in `neo-buffer--execute'."
 
 (use-package which-key
   :ensure t
-  :init (which-key-mode)
+  :init
+  (which-key-mode 1)
   )
 
 ;;; snippet系
 (use-package yasnippet
   :ensure t
-  :diminish yas-minor-mode
-  :bind (:map yas-minor-mode-map
-              ("C-x i i" . yas-insert-snippet)     ;; 既存スニペットを挿入する
-              ("C-x i n" . yas-new-snippet)        ;; 新規スニペットを作成するバッファを用意する
-              ("C-x i v" . yas-visit-snippet-file) ;; 既存スニペットを閲覧・編集する
-              ("C-x i l" . yas-describe-tables)
-              ("C-x i g" . yas-reload-all)
-              )
+  :init
+  (setq yas-snippet-dirs '(
+                           "~/.emacs.d/my-data/snippets"
+                           "~/.emacs.d/loads/elisp/yasnippet-snippets-20200418.1154/snippets"
+                           ))
+  ;; (yas-reload-all)
+  (yas-global-mode 1)
+  :diminish
+  ;; :bind (:map yas-minor-mode-map
+  ;;             ("C-x i i" . yas-insert-snippet)     ;; 既存スニペットを挿入する
+  ;;             ("C-x i n" . yas-new-snippet)        ;; 新規スニペットを作成するバッファを用意する
+  ;;             ("C-x i v" . yas-visit-snippet-file) ;; 既存スニペットを閲覧・編集する
+  ;;             ("C-x i l" . yas-describe-tables)
+  ;;             ("C-x i g" . yas-reload-all)
+  ;;             )
   :config
   (use-package yasnippet-snippets
     :ensure t)
-
-  (progn
-    (setq yas-snippet-dirs '(
-                             "~/.emacs.d/my-data/snippets"
-                             "~/.emacs.d/loads/elisp/yasnippet-snippets-0.17/snippets"
-                             ))
-    )
-  (yas-reload-all)
-  (yas-global-mode 1)
   (setq yas-prompt-functions '(yas-ido-prompt))
   (custom-set-variables '(yas-trigger-key "TAB"))
-  )
 
-;; (use-package ivy-yasnippet
-;;   :ensure t
-;;   :bind (
-;;          ("C-c C-y" . ivy-yasnippet)
-;;          )
-;;   :config
-;;   (setq ivy-yasnippet-expand-keys "smart")
-;;   (advice-add #'ivy-yasnippet--preview :override #'ignore)
-;;   )
+  ;; (use-package ivy-yasnippet
+  ;;   :ensure t
+  ;;   :bind (
+  ;;          ("C-c C-y" . ivy-yasnippet)
+  ;;          )
+  ;;   :config
+  ;;   (setq ivy-yasnippet-expand-keys "smart")
+  ;;   (advice-add #'ivy-yasnippet--preview :override #'ignore)
+  ;;   )
 
-(use-package helm-c-yasnippet
-  :ensure t
-  :bind (
-         ("C-c y" . helm-yas-complete)
-         )
-  :config
-  (setq helm-yas-space-match-any-greedy t)
+  (use-package helm-c-yasnippet
+    :ensure t
+    :bind (
+           ("C-c y" . helm-yas-complete)
+           )
+    :config
+    (setq helm-yas-space-match-any-greedy t)
+    )
   )

@@ -1,37 +1,24 @@
-;; ;;; 自動補完機能-auto-complete ; company に置き換え
-;; (use-package auto-complete
+;; ;;; 分割ウインドウをいい感じの比率で制御
+;; (use-package golden-ratio
 ;;   :ensure t
-;;   :demand t
-;;   :diminish ""
-;;   :bind (:map ac-menu-map
-;;               ("C-n" . ac-next)
-;;               ("C-p" . ac-previous)
-;;               )
+;;   :init (golden-ratio-mode t)
 ;;   :config
-;;   (use-package auto-complete-config)
-;;   (ac-config-default)
-;;   (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict") ;; ディレクトリ指定
-;;   (add-to-list 'ac-modes 'text-mode)         ;; text-modeでも自動的に有効にする
-;;   (ac-set-trigger-key "TAB")
+;;   ;; NeoTree との干渉に対する例外処理
+;;   (add-to-list 'golden-ratio-exclude-buffer-names " *NeoTree*")
+;;  )
 
-;;   (setq ac-comphist-file (my-set-history "ac-comphist.dat")) ;; my-set-history @00-auto-file-place.el
-;;   (setq ac-use-menu-map t)
-;;   (setq ac-disable-faces nil) ;;コメントや文字列リテラルでも補完を行う
-;;   (setq ac-use-fuzzy t)       ;; 曖昧マッチ
-
-;;   ;; yasnippetのbindingを指定するとエラーが出るので回避する方法。
-;;   (setf (symbol-function 'yas-active-keys)
-;;         (lambda ()
-;;           (remove-duplicates (mapcan #'yas--table-all-keys (yas--get-snippet-tables)))))
-;;   )
-
-;; (use-package auto-complete-c-headers
+;; ;; M-w   行
+;; ;; M-w w 単語
+;; ;; M-w s S式
+;; ;; M-w l リスト
+;; ;; M-w f ファイル名
+;; ;; M-w d defun
+;; ;; M-w D 関数名
+;; ;; M-w e 行
+;; (use-package easy-kill
 ;;   :ensure t
-;;   :init
-;;   (add-hook 'c++-mode-hook (lambda ()
-;;             '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
-;;   (add-hook 'c-mode-hook (lambda ()
-;;             '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
+;;   :config
+;;   (global-set-key [remap kill-ring-save] 'easy-kill)
 ;;   )
 
 ;; (use-package dumb-jump
@@ -164,4 +151,17 @@
 ;;                   (t (format "%s"
 ;;                              (or (thing-at-point 'symbol)
 ;;                                  ""))))))
+;;   )
+
+;; ;;;; semantic
+;; ;; C/C++等の構文を静的に解析していろいろな機能を提供するsemantic
+;; ;;;; srefactor
+;; ;; リファクタリングツール
+;; (use-package srefactor
+;;   :ensure t
+;;   :defer  t
+;;   :config
+;;   (semantic-mode 0)
+;;   (define-key c-mode-map (kbd "C-c r") 'srefactor-refactor-at-point)
+;;   (define-key c++-mode-map (kbd "C-c r") 'srefactor-refactor-at-point)
 ;;   )

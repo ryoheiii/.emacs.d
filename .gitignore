@@ -1,5 +1,6 @@
 # .emacs.d
 
+elpa/
 tmp/*
 *.dat
 /README.txt
@@ -17,3 +18,4 @@ my-data/ac-dict/*
 # 個別ファイル
 20-aoj-submit.el
 network-security.data
+srecode-map.el
