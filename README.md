@@ -11,7 +11,7 @@
 ### color theme
 - sudo apt install elpa-color-theme-modern
 ### font
-- sudo apt install fonts-inconsolata
+- sudo apt install fonts-ricty-diminished
 ### gtags
 - sudo apt install global
 ### migemo （ローマ字で日本語検索）

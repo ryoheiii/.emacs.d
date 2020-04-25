@@ -43,7 +43,7 @@
         (org-pomodoro              . "melpa-stable")
         (doom-modeline             . "melpa-stable")
         (avy                       . "melpa-stable")
-        (xclip                     . "melpa-stable")
+        (xclip                     . "gnu")
         (irony                     . "melpa-stable")
         (doom-themes               . "melpa-stable")
         (golden-ratio              . "melpa-stable")

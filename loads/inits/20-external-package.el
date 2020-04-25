@@ -1,3 +1,9 @@
+(use-package xclip
+  :ensure t
+  :init
+  (xclip-mode 1)
+  )
+
 (use-package smart-mode-line
   :ensure t
   :config

@@ -1,13 +1,13 @@
-;; ;;;; $ sudo aptitude install fonts-inconsolata fonts-takao
-;; ;;; フォント設定
-;; ;; 121203
-;; (set-default-font "Inconsolata-12")
-;; (set-face-font 'variable-pitch "Inconsolata-12")
-;; (set-fontset-font (frame-parameter nil 'font)
-;;                   'japanese-jisx0208
-;;                   '("Takaoゴシック" . "unicode-bmp")
-;; )
-
-;; ;; 半角と全角の比を1：2にする
-;; (setq face-font-rescale-alist
-;;       '((".*Hiragino_Mincho_pro.*" . 1.2)))
+;; sudo apt install fonts-ricty-diminished
+(set-face-attribute 'default nil
+                    :family "Ricty Diminished Discord"
+                    :height 150)
+(set-fontset-font (frame-parameter nil 'font)
+                  'japanese-jisx0208
+                  (cons "Ricty Diminished Discord" "iso10646-1"))
+(set-fontset-font (frame-parameter nil 'font)
+                  'japanese-jisx0212
+                  (cons "Ricty Diminished Discord" "iso10646-1"))
+(set-fontset-font (frame-parameter nil 'font)
+                  'katakana-jisx0201
+                  (cons "Ricty Diminished Discord" "iso10646-1"))
