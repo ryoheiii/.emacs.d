@@ -1,4 +1,3 @@
-;; consider (local-set-key "\C-c\C-p" 'insert-dbgprint)
 (defun my/insert-dbgprint (start end)
   "inserts the dbgprintf() sentence"
   (interactive "r")

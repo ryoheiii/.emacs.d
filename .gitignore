@@ -9,16 +9,16 @@ loads/elisp/*
 loads/site-lisp/*
 my-data/snippets/*
 my-data/ac-dict/*
-
+transient
 #*#
 .mc-lists.el
-
-!.gitkeep
-
-# 個別ファイル
-transient
-21-only-my-package.el
 network-security.data
 srecode-map.el
 custom.el
 amx-items
+
+!.gitkeep
+
+# 個別ファイル
+20-external-package-unused.el
+21-only-my-package.el

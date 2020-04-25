@@ -1,12 +1,11 @@
 ;;;文字コードの設定
-(set-language-environment   "Japanese"
-                            )
+(set-language-environment   "Japanese")
 (prefer-coding-system       'utf-8)
 (set-default-coding-systems 'utf-8)
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
 
-;;; Macで日本語のファイル名を扱う場合の設定
+;;; Macで日本語のファイル名を扱う場合用
 (when (eq system-type 'darwin)
   (use-package ucs-normalize
     :config
@@ -17,7 +16,7 @@
 ;; 行末の空白をファイルセーブ時に削除
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
-;;; テーマ設定
+;;; Theme 設定
 ;; load your favorite theme (replace-colorthemese)
 ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
 (load-theme 'hober t t)
@@ -29,7 +28,7 @@
 ;; (load-theme 'dark-laptop t t)
 ;; (enable-theme 'dark-laptop)
 
-;; ソースコードに色を付ける
+;; ソースコードを色付け
 (global-font-lock-mode t)
 (transient-mark-mode t)
 
