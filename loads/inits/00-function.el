@@ -1,3 +1,16 @@
+;;; WSL
+;; copy (wsl -> win)
+(defun my/wsl-copy (start end)
+  (interactive "r")
+  (shell-command-on-region start end "clip.exe"))
+(global-set-key (kbd "C-c C-c") 'my/wsl-copy)
+
+;; paste (win -> wsl)
+(defun my/wsl-paste ()
+  (interactive)
+  (insert (shell-command-to-string "powershell.exe -command 'Get-Clipboard'")))
+(global-set-key (kbd "C-c C-v") 'my/wsl-paste)
+
 (defun my/insert-dbgprint (start end)
   "inserts the dbgprintf() sentence"
   (interactive "r")
