@@ -16,7 +16,9 @@ my-data/ac-dict/*
 !.gitkeep
 
 # 個別ファイル
-20-aoj-submit.el
+transient
+21-only-my-package.el
 network-security.data
 srecode-map.el
 custom.el
+amx-items

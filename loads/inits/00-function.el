@@ -1,5 +1,5 @@
 ;; consider (local-set-key "\C-c\C-p" 'insert-dbgprint)
-(defun insert-dbgprint (start end)
+(defun my/insert-dbgprint (start end)
   "inserts the dbgprintf() sentence"
   (interactive "r")
   (let (result name value (case-fold-search-bak case-fold-search))

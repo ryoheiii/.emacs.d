@@ -41,24 +41,6 @@
 ;;   (global-set-key [remap kill-ring-save] 'easy-kill)
 ;;   )
 
-;; (use-package dumb-jump
-;;   :ensure t
-;;   :config
-;;   ;; これをしないとホームディレクトリ以下が検索対象になる
-;;   (setq dumb-jump-default-project "")
-;;   ;; 日本語を含むパスだとgit grepがちゃんと動かない…
-;;   (setq dumb-jump-force-searcher 'rg)
-;;   ;; 標準キーバインドを有効にする
-;;   (setq dumb-jump-mode t)
-;;   (setf dumb-jump-selector 'helm)
-;;   ;; (setq dumb-jump-selector 'ivy) ;; 候補選択をivyに任せます
-;;   (setq dumb-jump-use-visible-window nil)
-
-;;   (define-key global-map (kbd "C-c j") 'dumb-jump-go) ;; go-to-definition!
-;;   (define-key global-map [(super shift d)] 'dumb-jump-back)
-;;   )
-
-;; ;;PATHをシェルから引き継ぐ
 ;; (use-package exec-path-from-shell
 ;;   :ensure t
 ;;   :init (exec-path-from-shell-initialize)

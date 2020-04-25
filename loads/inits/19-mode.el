@@ -32,7 +32,7 @@
                 ("\\.c$"    . c-mode)
                 ("\\.h$"    . c++-mode)
                 ("\\.hpp$"  . c++-mode)
-                ("\\.log$"  . c-mode)    ;; Lucio/config.log から find-file を使用したいため
+                ("\\.log$"  . c-mode)    ;; config.log から find-file を使用したいため
                 ("\\.cfg$"  . c-mode)    ;; .cfg からタグジャンプしたいため
                 ("\\.tmp$"  . text-mode) ;; コミットログ時にスニペットを展開したいため
                 ("\\.txt$"  . text-mode)
@@ -46,27 +46,24 @@
 ;; c-modeやc++-modeなどcc-modeベースのモード共通の設定
 (use-package cc-mode
   :ensure t
-  :init
-  (add-hook 'c-mode-common-hook
-            (lambda ()
-              ;; コンパイル
-              (local-set-key (kbd "C-c c") 'compile)
-
-              ;; 自動改行（auto-new-line）と
-              ;; 連続する空白の一括削除（hungry-delete）を
-              ;; 有効にする
-              (c-toggle-auto-hungry-state 1)
-              ;; (c-toggle-hungry-state 1)
-
-              ;; 他のエディタなどがファイルを書き換えたらすぐにそれを反映する
-              ;; auto-revert-modeを有効にする
-              (auto-revert-mode)
-
-              ;; インデント幅を4にする
-              (setq indent-tabs-mode nil
-                    c-basic-offset 4)
-              ))
   :config
+  (add-hook
+   'c-mode-common-hook
+   (lambda ()
+     ;; コンパイル
+     (local-set-key (kbd "C-c c") 'compile)
+
+     ;; 自動改行（auto-new-line）と連続する空白の一括削除（hungry-delete）を有効にする
+     (c-toggle-auto-hungry-state 1)
+     ;; (c-toggle-hungry-state 1)
+
+     ;; 他のエディタなどがファイルを書き換えたらすぐにそれを反映する
+     ;; auto-revert-modeを有効にする
+     (auto-revert-mode)
+
+     ;; インデント幅を4にする
+     (setq indent-tabs-mode nil c-basic-offset 4))
+   )
   )
 
 ;; c++-modeだけの設定
@@ -104,8 +101,8 @@
 (add-hook
  'text-mode-hook
  (lambda ()
-   ;; 自動で長過ぎる行を分割する
-;   (auto-fill-mode 1)
+   ;; ;; 自動で長過ぎる行を分割する
+   ;; (auto-fill-mode 1)
 
    ;; スペースでインデントをする
    (setq indent-tabs-mode nil)
@@ -114,7 +111,8 @@
    (setq tab-width 2)
    (setq c-basic-offset 2)
 
-   (subword-mode 1)))
+   (subword-mode 1))
+ )
 
 ;;; txt-mode
 (add-hook
@@ -137,11 +135,13 @@
    (setq tab-stop-list '(4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
                       64 68 72 76 80 84 88 92 96 100 104 108 112 116 120))
 
-   (subword-mode 1)))
+   (subword-mode 1))
+ )
 
 ;;; emacs-lisp-mode
 (add-hook
  'emacs-lisp-mode-hook
  (lambda ()
    ;; スペースでインデントをする
-   (setq indent-tabs-mode nil)))
+   (setq indent-tabs-mode nil))
+ )

@@ -1,8 +1,8 @@
 ;;; 括弧
 (use-package paren
   :ensure t
-  :init
-  (show-paren-mode 1)
+  :hook
+  (after-init . show-paren-mode)
   :config
   (setq show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる。
   )

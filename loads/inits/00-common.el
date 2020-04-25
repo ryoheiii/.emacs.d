@@ -17,7 +17,7 @@
 ;; 行末の空白をファイルセーブ時に削除
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
-;;; 色設定関連
+;;; テーマ設定
 ;; load your favorite theme (replace-colorthemese)
 ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
 (load-theme 'hober t t)
@@ -33,12 +33,21 @@
 (global-font-lock-mode t)
 (transient-mark-mode t)
 
+;; 日時表示
+(setq display-time-day-and-date t)
+(setq display-time-string-forms
+      '((format "%s/%s (%s) %s:%s"
+                month day dayname
+                24-hours minutes
+                ))
+      )
+(display-time)
+
 ;;; バー
 ;; メニューバーを消す
 (menu-bar-mode -1)
 ;; ツールバーを消す
-(if window-system
-    (tool-bar-mode 0))
+(if window-system (tool-bar-mode 01))
 
 ;;; カーソル
 ;; カーソルの点滅を止める
@@ -52,6 +61,17 @@
 ;; カーソルの位置が何行目かを表示する
 (line-number-mode t)
 
+;; エラー音を鳴らなくする
+(setq ring-bell-function 'ignore)
+
+;; save時にmode line を光らせる
+(add-hook 'after-save-hook
+      (lambda ()
+        (let ((orig-fg (face-background 'mode-line)))
+          (set-face-background 'mode-line "dark green")
+          (run-with-idle-timer 0.1 nil
+                   (lambda (fg) (set-face-background 'mode-line fg))
+                   orig-fg))))
 
 ;;; 行
 ;; 行の先頭でC-kを一回押すだけで行全体を消去する
@@ -119,6 +139,15 @@
 
 ;;; 現在の関数名をウィンドウ上部に表示する。
 (which-function-mode 1)
+
+;; ;; current directory 表示
+;; (let ((ls (member 'mode-line-buffer-identification
+;;                   mode-line-format)))
+;;   (setcdr ls
+;;     (cons '(:eval (concat " ("
+;;             (abbreviate-file-name default-directory)
+;;             ")"))
+;;           (cdr ls))))
 
 ;;;;; 全体のカスタマイズ
 ;;;タイトルバーにフルパスを表示

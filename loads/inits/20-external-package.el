@@ -1,3 +1,135 @@
+(use-package smart-mode-line
+  :ensure t
+  :config
+  (defvar sml/no-confirm-load-theme t)
+  (defvar sml/theme 'dark)
+  (defvar sml/shorten-directory -1) ;; directory pathはフルで表示されたいので
+  (sml/setup)
+  )
+
+(use-package total-lines
+  :ensure t
+  :init
+  (global-total-lines-mode t)
+  :config
+  (defun my-set-line-numbers ()
+    (setq-default mode-line-front-space
+                  (append mode-line-front-space
+                          '((:eval (format " (%d)" (- total-lines 1))))))) ;; 「" (%d)"」の部分はお好みで
+  (add-hook 'after-init-hook 'my-set-line-numbers)
+  )
+
+;; うまくキーにバインドできない
+(use-package smart-hungry-delete
+  :ensure t
+  :defer nil
+  :bind (
+         ("<backspace>" . smart-hungry-delete-backward-char)
+         ("C-d"         . smart-hungry-delete-forward-char)
+         )
+  :config
+  (smart-hungry-delete-add-default-hooks)
+  )
+
+(use-package dumb-jump
+  :ensure t
+  :init
+  (setq dumb-jump-mode t)
+  :bind (
+         ("M-g o" . dumb-jump-go-other-window)
+         ("M-g j" . dumb-jump-go)
+         ("C-c j" . dumb-jump-go)
+         ("M-g b" . dumb-jump-back)
+         ("C-c b" . dumb-jump-back)
+         ("M-g i" . dumb-jump-go-prompt)
+         ("M-g x" . dumb-jump-go-prefer-external)
+         ("M-g z" . dumb-jump-go-prefer-external-other-window)
+         )
+  :config
+  ;; (setf dumb-jump-selector 'helm)
+  (setq dumb-jump-selector 'ivy)
+  )
+
+(use-package hide-mode-line
+  :ensure t
+  :hook
+  ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
+  )
+
+(use-package minimap
+  :ensure t
+  :commands
+  (minimap-bufname minimap-create minimap-kill)
+  :custom
+  (minimap-major-modes '(prog-mode))
+  (minimap-window-location 'right)
+  (minimap-update-delay 0.2)
+  (minimap-minimum-width 20)
+  :bind
+  ("C-c m" . minimap-mode)
+  :config
+  (custom-set-faces
+   '(minimap-active-region-background
+     ((((background dark)) (:background "#555555555555"))
+      (t (:background "#C847D8FEFFFF"))) :group 'minimap))
+  )
+
+(use-package fill-column-indicator
+  :ensure t
+  :hook
+  ((markdown-mode git-commit-mode) . fci-mode)
+  )
+
+(use-package git-gutter+
+  :ensure t
+  :custom
+  (git-gutter+:modified-sign "~")
+  (git-gutter+:added-sign    "+")
+  (git-gutter+:deleted-sign  "-")
+  :custom-face
+  (git-gutter+:modified ((t (:background "#f1fa8c"))))
+  (git-gutter+:added    ((t (:background "#50fa7b"))))
+  (git-gutter+:deleted  ((t (:background "#ff79c6"))))
+  :config
+  (global-git-gutter+-mode +1)
+  )
+
+(use-package beacon
+  :ensure t
+  :custom
+  (beacon-color "yellow")
+  :config
+  (beacon-mode 1)
+  )
+
+(use-package volatile-highlights
+    :ensure t
+    :diminish
+    :hook
+    (after-init . volatile-highlights-mode)
+    :custom-face
+    (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
+)
+
+(use-package highlight-indent-guides
+    :ensure t
+    :diminish
+    :hook
+    (prog-mode . highlight-indent-guides-mode)
+    :custom
+    (highlight-indent-guides-auto-enabled t)
+    (highlight-indent-guides-responsive t)
+    (highlight-indent-guides-method 'character)
+    )
+
+(use-package dashboard
+  :ensure t
+  :diminish
+  (dashboard-mode page-break-lines-mode)
+  :hook
+  (after-init . dashboard-setup-startup-hook)
+  )
+
 ;; https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :ensure t
@@ -355,6 +487,7 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
 
 (use-package helm
   :ensure t
+  :diminish
   :init
   (setq helm-ff-file-name-history-use-recentf t)
   (setq helm-display-function #'display-buffer)
@@ -449,6 +582,7 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
 
 (use-package helm-gtags
   :ensure t
+  :diminish
   :init
   (add-hook 'c-mode-hook
             (lambda ()
@@ -616,57 +750,33 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
 ;; 左側にでるファイラー
 (use-package neotree
   :ensure t
-  :init
-  (setq-default neo-keymap-style 'concise)
-  :bind (
-         ([f8] . neotree-toggle)
-         )
-  :config
-  (setq neo-smart-open t) ;ウインドウを開くたびにcurrent fileのあるディレクトリを表示
-  (setq neo-create-file-auto-open t)
-  (setq neo-theme (if (display-graphic-p) 'icons 'arrow))
-  (setq neo-show-hidden-files t)
-
-  ;;(setq neo-vc-integration '(face char))
-  (setq neo-toggle-window-keep-p t)
+  :after
+  projectfile
+  :commands
+  (neotree-show neotree-hide neotree-dir neotree-find)
+  ;; :bind (
+  ;;        ([f8] . neotree-toggle)
+  ;;        )
+  :preface
   (bind-key [f8] 'neotree-toggle)
-  (bind-key "C-c c" 'neotree-create-node neotree-mode-map)
-  (bind-key "C-c d" 'neotree-delete-node neotree-mode-map)
-  (bind-key "C-c r" 'neotree-rename-node neotree-mode-map)
-  (bind-key "C-c p" 'neotree-copy-node neotree-mode-map)
-  (bind-key "C-c s" 'neotree-stretch-toggle neotree-mode-map)
-  (bind-key "C-c t" 'neotree-toggle neotree-mode-map)
-  (bind-key "C-c n" 'neotree-create-node neotree-mode-map)
-  (bind-key* "C-x n" 'neotree-refresh) ;バッファで開いているところをneoteeのルートにする
-
-  (neotree)
-
-  ;; Change neotree's font size
-  ;; Tips from https://github.com/jaypei/emacs-neotree/issues/218
-  (defun neotree-text-scale ()
-    "Text scale for neotree."
+  (defun neotree-toggle ()
     (interactive)
-    (text-scale-adjust 0)
-    (text-scale-decrease 1)
-    (message nil))
-  (add-hook 'neo-after-create-hook
-            (lambda (_)
-              (call-interactively 'neotree-text-scale)))
-
-  ;; neotree enter hide
-  ;; Tips from https://github.com/jaypei/emacs-neotree/issues/77
-  (defun neo-open-file-hide (full-path &optional arg)
-    "Open file and hiding neotree.
-The description of FULL-PATH & ARG is in `neotree-enter'."
-    (neo-global--select-mru-window arg)
-    (find-file full-path)
-    (neotree-hide))
-
-  (defun neotree-enter-hide (&optional arg)
-    "Neo-open-file-hide if file, Neo-open-dir if dir.
-The description of ARG is in `neo-buffer--execute'."
-    (interactive "P")
-    (neo-buffer--execute arg 'neo-open-file-hide 'neo-open-dir))
+    (let ((project-dir
+           (ignore-errors
+         ;;; Pick one: projectile or find-file-in-project
+             (projectile-project-root)
+             ))
+          (file-name (buffer-file-name))
+          (neo-smart-open t))
+      (if (and (fboundp 'neo-global--window-exists-p)
+               (neo-global--window-exists-p))
+          (neotree-hide)
+        (progn
+          (neotree-show)
+          (if project-dir
+              (neotree-dir project-dir))
+          (if file-name
+              (neotree-find file-name))))))
   )
 
 (use-package recentf
@@ -718,6 +828,7 @@ The description of ARG is in `neo-buffer--execute'."
 ;; C-x uで樹形図表示
 (use-package undo-tree
   :ensure t
+  :diminish
   :init
   (global-undo-tree-mode)
   :config
@@ -734,6 +845,7 @@ The description of ARG is in `neo-buffer--execute'."
 
 (use-package undohist
   :ensure t
+  :diminish
   :config
   (setq undohist-directory (my-set-history "undohist")) ;; my-set-history @00-auto-file-place.el
   (undohist-initialize)
@@ -741,13 +853,22 @@ The description of ARG is in `neo-buffer--execute'."
 
 (use-package which-key
   :ensure t
-  :init
-  (which-key-mode 1)
+  :diminish which-key-mode
+  :custom
+  (which-key-max-description-length 40)
+  (which-key-use-C-h-commands t)
+  :hook
+  (after-init . which-key-mode)
+  )
+
+(use-package amx
+  :ensure t
   )
 
 ;;; snippet系
 (use-package yasnippet
   :ensure t
+  :diminish
   :init
   (setq yas-snippet-dirs '(
                            "~/.emacs.d/my-data/snippets"
@@ -755,7 +876,6 @@ The description of ARG is in `neo-buffer--execute'."
                            ))
   ;; (yas-reload-all)
   (yas-global-mode 1)
-  :diminish
   ;; :bind (:map yas-minor-mode-map
   ;;             ("C-x i i" . yas-insert-snippet)     ;; 既存スニペットを挿入する
   ;;             ("C-x i n" . yas-new-snippet)        ;; 新規スニペットを作成するバッファを用意する
@@ -781,10 +901,39 @@ The description of ARG is in `neo-buffer--execute'."
 
   (use-package helm-c-yasnippet
     :ensure t
+    :diminish
     :bind (
            ("C-c y" . helm-yas-complete)
            )
     :config
     (setq helm-yas-space-match-any-greedy t)
     )
+  )
+
+(use-package rainbow-delimiters
+  :ensure t
+  :diminish
+  :hook
+  (prog-mode . rainbow-delimiters-mode)
+  :bind (
+         ("C-c l" . rainbow-delimiters-using-stronger-colors)
+         )
+  :config
+  ;; these setting should be placed after load-theme
+  ;; 括弧の色を強調
+  (use-package cl-lib :ensure t)
+  (use-package color  :ensure t)
+  (defun rainbow-delimiters-using-stronger-colors ()
+    (interactive)
+    (cl-loop
+     for index from 1 to rainbow-delimiters-max-face-count
+     do
+     (let ((face (intern (format "rainbow-delimiters-depth-%d-face" index))))
+       (cl-callf color-saturate-name (face-foreground face) 50))))
+
+  ;; making unmatched parens stand out more
+  (set-face-attribute 'rainbow-delimiters-unmatched-face nil
+                      :foreground     'unspecified
+                      :inherit        'error
+                      :strike-through t)
   )
