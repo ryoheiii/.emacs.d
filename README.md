@@ -1,6 +1,6 @@
 <!-- -*- gfm -*- -->
 # **Prepare**
-## Modyfy path according to local environment
+## Modify paths according to local environment
 ### yasnippets
 - loads/inits/20-external-package.el
 ### auto-complete
@@ -8,7 +8,7 @@
 ### migemo
 - loads/inits/20-external-package.el
 
-## Package
+## Install Packages
 ### clang
 - sudo apt install clang
 ### color theme
@@ -23,10 +23,10 @@
 - sudo apt install aspell
 - ~/.aspell.conf
 
-# **Package Management**
+# **How to manage packages**
 * Loads all the configuration files under "evry~/.emacs.d/loads/elisp/site-lisp", "elpa"
 
-# **Naming rule for "~/.emacs.d/loads/inits/*.el"**
+# **Naming rule for configuration files ("~/.emacs.d/loads/inits/*.el")**
 * 環境に依存しない設定はファイル名の最初に 2 桁の数字
 * 番号は優先度で 00 が最初に読み込まれて、99 が最後に読み込まれる
 * 同じ数字を付けても良い
