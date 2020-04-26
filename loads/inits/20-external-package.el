@@ -290,9 +290,11 @@
 
   (use-package auto-complete-config)
   (ac-config-default)
-  (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict") ;; ディレクトリ指定
+  (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict")
+  (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict/ac-dict") ;; for symbolic link
   (add-to-list 'ac-modes 'text-mode)         ;; text-modeでも自動的に有効にする
   (ac-set-trigger-key "TAB")
+
 
   (setq ac-comphist-file (my-set-history "ac-comphist.dat")) ;; my-set-history @00-auto-file-place.el
   (setq ac-use-menu-map t)
@@ -878,7 +880,8 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
   :init
   (setq yas-snippet-dirs '(
                            "~/.emacs.d/my-data/snippets"
-                           "~/.emacs.d/loads/elisp/yasnippet-snippets-0.22/snippets"
+                           "~/.emacs.d/my-data/snippets/snippets" ;; for symbolic link
+                           "~/.emacs.d/loads/elisp/yasnippet-snippets/snippets"
                            ))
   ;; (yas-reload-all)
   (yas-global-mode 1)
