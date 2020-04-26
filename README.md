@@ -14,9 +14,9 @@
 - sudo apt install fonts-ricty-diminished
 ### gtags
 - sudo apt install global
-### migemo （ローマ字で日本語検索）
+### migemo （serach JAPANESE in Romaji）
 - sudo apt install cmigemo
-### aspell (スペルチェック)
+### aspell (check spell)
 - sudo apt install aspell
 - ~/.aspell.conf
 
