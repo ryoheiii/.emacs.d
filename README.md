@@ -39,4 +39,4 @@
 * package.el 周りの設定は 20 番台に書くことが多い
 
 # **Others**
-* xterm-256color を利用
+* Use "xterm-256color"

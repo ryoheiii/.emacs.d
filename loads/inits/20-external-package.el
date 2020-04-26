@@ -121,7 +121,8 @@
     :ensure t
     :diminish
     :hook
-    (prog-mode . highlight-indent-guides-mode)
+    ;; (prog-mode . highlight-indent-guides-mode) ; Dont need for c/c++
+    (emacs-lisp-mode . highlight-indent-guides-mode)
     :custom
     (highlight-indent-guides-auto-enabled t)
     (highlight-indent-guides-responsive t)
