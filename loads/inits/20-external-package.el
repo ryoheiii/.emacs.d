@@ -25,17 +25,17 @@
   (add-hook 'after-init-hook 'my-set-line-numbers)
   )
 
-;; うまくキーにバインドできない
-(use-package smart-hungry-delete
-  :ensure t
-  :defer nil
-  :bind (
-         ("<backspace>" . smart-hungry-delete-backward-char)
-         ("C-d"         . smart-hungry-delete-forward-char)
-         )
-  :config
-  (smart-hungry-delete-add-default-hooks)
-  )
+;; ;; うまくキーにバインドできない
+;; (use-package smart-hungry-delete
+;;   :ensure t
+;;   :defer nil
+;;   :bind (
+;;          ("<backspace>" . smart-hungry-delete-backward-char)
+;;          ("C-d"         . smart-hungry-delete-forward-char)
+;;          )
+;;   :config
+;;   (smart-hungry-delete-add-default-hooks)
+;;   )
 
 (use-package dumb-jump
   :ensure t
@@ -62,23 +62,24 @@
   ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
   )
 
-(use-package minimap
-  :ensure t
-  :commands
-  (minimap-bufname minimap-create minimap-kill)
-  :custom
-  (minimap-major-modes '(prog-mode))
-  (minimap-window-location 'right)
-  (minimap-update-delay 0.2)
-  (minimap-minimum-width 20)
-  :bind
-  ("C-c m" . minimap-mode)
-  :config
-  (custom-set-faces
-   '(minimap-active-region-background
-     ((((background dark)) (:background "#555555555555"))
-      (t (:background "#C847D8FEFFFF"))) :group 'minimap))
-  )
+;; ;; うまく縮小表示されない
+;; (use-package minimap
+;;   :ensure t
+;;   :commands
+;;   (minimap-bufname minimap-create minimap-kill)
+;;   :custom
+;;   (minimap-major-modes '(prog-mode))
+;;   (minimap-window-location 'right)
+;;   (minimap-update-delay 0.2)
+;;   (minimap-minimum-width 20)
+;;   :bind
+;;   ("C-c m" . minimap-mode)
+;;   :config
+;;   (custom-set-faces
+;;    '(minimap-active-region-background
+;;      ((((background dark)) (:background "#555555555555"))
+;;       (t (:background "#C847D8FEFFFF"))) :group 'minimap))
+;;   )
 
 (use-package fill-column-indicator
   :ensure t
