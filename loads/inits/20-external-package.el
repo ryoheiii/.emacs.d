@@ -436,40 +436,40 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
                                              "%b"))))
   )
 
-(use-package eshell
-  :init
-  :config
-  ;; 確認なしでヒストリ保存
-  (setq eshell-ask-to-save-history (quote always))
-  ;; 補完時にサイクルする
-  (setq eshell-cmpl-cycle-completions nil)
-  ;; 補完時に大文字小文字を区別しない
-  (setq eshell-cmpl-ignore-case t)
+;; (use-package eshell
+;;   :init
+;;   :config
+;;   ;; 確認なしでヒストリ保存
+;;   (setq eshell-ask-to-save-history (quote always))
+;;   ;; 補完時にサイクルする
+;;   (setq eshell-cmpl-cycle-completions nil)
+;;   ;; 補完時に大文字小文字を区別しない
+;;   (setq eshell-cmpl-ignore-case t)
 
-  (setq eshell-save-history-on-exit t)
-  (setq eshell-cmpl-dir-ignore "\\`\\(\\.\\.?\\|CVS\\|\\.svn\\|\\.git\\)/\\'")
+;;   (setq eshell-save-history-on-exit t)
+;;   (setq eshell-cmpl-dir-ignore "\\`\\(\\.\\.?\\|CVS\\|\\.svn\\|\\.git\\)/\\'")
 
-  ;;補完候補がこの数値以下だとサイクルせずに候補表示
-  ;; (setq eshell-cmpl-cycle-cutoff-length 5)
+;;   ;;補完候補がこの数値以下だとサイクルせずに候補表示
+;;   ;; (setq eshell-cmpl-cycle-cutoff-length 5)
 
-  ;; 履歴で重複を無視する
-  (setq eshell-hist-ignoredups t)
+;;   ;; 履歴で重複を無視する
+;;   (setq eshell-hist-ignoredups t)
 
-  ;; これで正規表現がつかえるようになる??
-  (setq eshell-prompt-regexp "^[^#$]*[$#] ")
+;;   ;; これで正規表現がつかえるようになる??
+;;   (setq eshell-prompt-regexp "^[^#$]*[$#] ")
 
-  ;; スクロールがカクカクなるのを抑止する.
-  ;; http://stackoverflow.com/questions/12667043/emacs-smooth-scrolling-scroll-margin-and-eshell
-  ;; (setq scroll-margin 0)
+;;   ;; スクロールがカクカクなるのを抑止する.
+;;   ;; http://stackoverflow.com/questions/12667043/emacs-smooth-scrolling-scroll-margin-and-eshell
+;;   ;; (setq scroll-margin 0)
 
-  ;; zsh の環境変数を取り込む
-  ;; http://d.hatena.ne.jp/zonu_exe/20120509/1336583187
-  ;; (let ((zshpath (shell-command-to-string "/usr/bin/zsh -c 'printenv PATH'")))
-  ;;   (let ((pathlst (split-string zshpath ":")))
-  ;;     (setq exec-path pathlst))
-  ;;   (setq eshell-path-env zshpath)
-  ;;   (setenv "PATH" zshpath))
-  )
+;;   ;; zsh の環境変数を取り込む
+;;   ;; http://d.hatena.ne.jp/zonu_exe/20120509/1336583187
+;;   ;; (let ((zshpath (shell-command-to-string "/usr/bin/zsh -c 'printenv PATH'")))
+;;   ;;   (let ((pathlst (split-string zshpath ":")))
+;;   ;;     (setq exec-path pathlst))
+;;   ;;   (setq eshell-path-env zshpath)
+;;   ;;   (setenv "PATH" zshpath))
+;;   )
 
 ;;; インクリメンタルに選択範囲を広げる
 (use-package expand-region
