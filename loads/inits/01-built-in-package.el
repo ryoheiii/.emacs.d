@@ -81,12 +81,12 @@
                            (+ (length grep-command-before-query) 1)))
   )
 
-;; ;; 括弧の補完
-;; (use-package elec-pair
-;;   :ensure t
-;;   :config
-;;   (electric-pair-mode +1)
-;;   )
+;; 括弧の補完
+(use-package elec-pair
+  :ensure t
+  :config
+  (electric-pair-mode +1)
+  )
 
 ;; highlight the current line
 ;; (use-package hl-line
