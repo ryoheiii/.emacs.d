@@ -1,6 +1,6 @@
 ;;; 括弧
 (use-package paren
-  :ensure t
+  :ensure nil ; built-in-package なのでインストール不要
   :hook
   (after-init . show-paren-mode)
   :config
@@ -9,7 +9,7 @@
 
 ;;; 空白
 (use-package whitespace
-  :ensure t
+  :ensure nil ; built-in-package なのでインストール不要
   :defer t
   :diminish
   (global-whitespace-mode whitespace-mode)
@@ -58,7 +58,7 @@
   )
 
 (use-package grep
-  :ensure t
+  :ensure nil ; built-in-package なのでインストール不要
   :bind (
          ("C-c g" . grep)
          )
@@ -83,7 +83,7 @@
 
 ;; 括弧の補完
 (use-package elec-pair
-  :ensure t
+  :ensure nil ; built-in-package なのでインストール不要
   :config
   (electric-pair-mode +1)
   )
@@ -96,18 +96,28 @@
 
 ;;; バッファ名
 ;; ファイル名が重複していたらディレクトリ名を追加する。
-(use-package uniquify
-  :config
-  (setq uniquify-buffer-name-style 'forward)
-  (setq uniquify-separator "/")
-  ;; rename after killing uniquified
-  (setq uniquify-after-kill-buffer-p t)
-  ;; don't muck with special buffers
-  (setq uniquify-ignore-buffers-re "^\\*")
-  )
+;(use-package uniquify
+;  :ensure nil ; built-in-package なのでインストール不要
+;  :config
+;  (setq uniquify-buffer-name-style 'forward)
+;  (setq uniquify-separator "/")
+;  ;; rename after killing uniquified
+;  (setq uniquify-after-kill-buffer-p t)
+;  ;; don't muck with special buffers
+;  (setq uniquify-ignore-buffers-re "^\\*")
+;  )
+;; straight.el 導入による "Could not find package uniquify" エラー対策。
+;; ensure nil していてもEmacs の起動時に use-package がパッケージの存在を確認するためにエラーが発生する模様
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'forward)
+(setq uniquify-separator "/")
+;; rename after killing uniquified
+(setq uniquify-after-kill-buffer-p t)
+;; don't muck with special buffers
+(setq uniquify-ignore-buffers-re "^\\*")
 
 (use-package savehist
-  :ensure t
+  :ensure nil ; built-in-package なのでインストール不要
   :defer 20
   :init
   (savehist-mode 1)
@@ -124,18 +134,16 @@
 
 ;; カーソルの場所を保存する
 (use-package saveplace
-  :ensure t
+  :ensure nil ; built-in-package なのでインストール不要
   :init
-  (setq-default save-place t)
   (setq save-place-limit nil)
   (save-place-mode 1)
   :config
   (setq save-place-file (my-set-history "places"))        ;; my-set-history @00-auto-file-place.el
-  (setq eshell-directory-name (my-set-history "eshell/")) ;; my-set-history @00-auto-file-place.el
   )
 
 (use-package windmove
-  :ensure t
+  :ensure nil ; ビルトインパッケージなのでインストールは不要
   :config
   ;; use shift + arrow keys to switch between visible buffers
   (windmove-default-keybindings)

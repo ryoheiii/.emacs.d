@@ -15,10 +15,10 @@
 (setq package-user-dir "~/.emacs.d/loads/elisp/")
 (setq package-archives
       '(
-        ("gnu"          . "https://elpa.gnu.org/packages/")
         ("melpa"        . "https://melpa.org/packages/")
         ("melpa-stable" . "https://stable.melpa.org/packages/")
-        ("marmalade"    . "http://marmalade-repo.org/packages/")
+        ("marmalade"    . "https://marmalade-repo.org/packages/")
+        ("gnu"          . "https://elpa.gnu.org/packages/")
         ("org"          . "http://orgmode.org/elpa/")
         ))
 (setq package-pinned-packages
@@ -40,6 +40,7 @@
         (highlight-indent-guides   . "melpa")
         (dashboard                 . "melpa-stable")
         (amx                       . "melpa-stable")
+        (s                         . "melpa-stable")
         (org-pomodoro              . "melpa-stable")
         (doom-modeline             . "melpa-stable")
         (avy                       . "melpa-stable")
@@ -77,8 +78,7 @@
         (ispell                    . "melpa-stable")
         (powerline                 . "melpa-stable")
         (easy-kill                 . "melpa-stable")
-        ;; (dash                      . "melpa-stable") ;; for git-gutter+
-        (dash                      . "melpa")
+        (dash                      . "melpa") ;; for git-gutter+
         (async                     . "melpa-stable")
         (eieio                     . "melpa-stable")
         (fuzzy                     . "melpa-stable")
@@ -90,9 +90,8 @@
         (expand-region             . "melpa-stable")
         (flycheck                  . "melpa-stable")
         (flycheck-pos-tip          . "melpa-stable")
-        (exec-path-from-shell      . "melpa-stable")
         (highlight-symbol          . "melpa-stable")
-        (auto-highlight-symbol     . "marmalade")
+        (auto-highlight-symbol     . "melpa-stable")
         (recentf                   . "melpa")
         (recentf-ext               . "melpa")
         (smooth-scroll             . "melpa-stable")
@@ -103,9 +102,6 @@
         (codic                     . "melpa-stable")
         (e2wm                      . "melpa-stable")
         (go-mode                   . "melpa-stable")
-        (enh-ruby-mode             . "melpa-stable")
-        (ruby-electric             . "melpa-stable")
-        (ruby-block                . "marmalade")
         (nlinum                    . "melpa-stable")
         (go-autocomplete           . "melpa-stable")
         (go-eldoc                  . "melpa-stable")
@@ -120,13 +116,37 @@
         (helm-c-yasnippet          . "melpa-stable")
         (yasnippet                 . "melpa-stable")
         (yasnippet-snippets        . "melpa-stable")
+        (color-theme-modern        . "melpa-stable") ;; for hober color-theme
         ))
 (package-initialize)
 
 ;;;;; use-package の存在を保証
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
+(dolist (package '(use-package))
+   (unless (package-installed-p package)
+       (package-install package)))
+
+;;;;; GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el)
+;;;;; straight.el 自身のインストールと初期設定
+;; (defvar bootstrap-version)
+;; (let ((bootstrap-file
+;;        (expand-file-name
+;;         "straight/repos/straight.el/bootstrap.el"
+;;         (or (bound-and-true-p straight-base-dir)
+;;             user-emacs-directory)))
+;;       (bootstrap-version 7))
+;;   (unless (file-exists-p bootstrap-file)
+;;     (with-current-buffer
+;;         (url-retrieve-synchronously
+;;          "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+;;          'silent 'inhibit-cookies)
+;;       (goto-char (point-max))
+;;       (eval-print-last-sexp)))
+;;   (load bootstrap-file nil 'nomessage))
+
+;; ;; オプションなしで自動的にuse-packageをstraight.elにフォールバックする
+;; ;; 本来は (use-package hoge :straight t) のように書く必要がある
+;; (setq straight-use-package-by-default t)
+
 
 ;;;;; init-loader
 (use-package init-loader
@@ -137,4 +157,4 @@
 )
 
 (provide 'init)
-;; ;;; init.el ends here
+;;;;; init.el ends here

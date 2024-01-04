@@ -16,17 +16,11 @@
 ;; 行末の空白をファイルセーブ時に削除
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
-;;; Theme 設定
+;;; Theme 設定 (デフォルトでサポートされなくなったので color-thgeme-modern@20-external-package.el で設定)
 ;; load your favorite theme (replace-colorthemese)
 ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
-(load-theme 'hober t t)
-(enable-theme 'hober)
-;; (load-theme 'railscast t t)
-;; (enable-theme 'railscast)
-;; (load-theme 'clarity t t)
-;; (enable-theme 'clarity)
-;; (load-theme 'dark-laptop t t)
-;; (enable-theme 'dark-laptop)
+;; (load-theme 'hober t t)
+;; (enable-theme 'hober)
 
 ;; ソースコードを色付け
 (global-font-lock-mode t)

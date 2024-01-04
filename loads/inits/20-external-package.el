@@ -1,3 +1,13 @@
+(use-package color-theme-modern
+  :ensure t
+  :config
+  (add-to-list 'custom-theme-load-path
+               (file-name-as-directory "~/.emacs.d/loads/elisp/color-theme-modern-0.0.3"))
+  ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
+  (load-theme 'hober t t)
+  (enable-theme 'hober)
+  )
+
 (use-package xclip
   :ensure t
   :init
@@ -271,7 +281,7 @@
                              '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
     )
 
-  (use-package auto-complete-config)
+  ;; (use-package auto-complete-config)
   (ac-config-default)
   (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict")
   (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict/ac-dict") ;; for symbolic link
@@ -289,6 +299,18 @@
         (lambda ()
           (remove-duplicates (mapcan #'yas--table-all-keys (yas--get-snippet-tables)))))
   )
+
+;;; GitHub Copilot の設定
+;; 警告が多発して不安定
+;; (use-package copilot
+;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+;;   :ensure t
+;;   :hook ((prog-mode . copilot-mode))  ;; プログラミング言語のバッファで Copilot を有効にする
+;;   :config
+;;   (setq copilot-node-executable "~/.nvm/versions/node/v21.5.0/bin/node")
+;;   (define-key copilot-mode-map (kbd "C-<tab>") 'copilot-accept-completion)
+;;   (define-key copilot-mode-map (kbd "C-TAB") 'copilot-accept-completion)
+;;   )
 
 ;; (use-package e2wm
 ;;   :ensure t
@@ -859,6 +881,10 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
 (use-package amx
   :ensure t
   )
+
+(use-package s
+  :ensure t
+)
 
 ;;; snippet系
 (use-package yasnippet
