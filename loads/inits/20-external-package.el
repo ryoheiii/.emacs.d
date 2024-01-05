@@ -621,13 +621,12 @@
       `(with-temp-message (or (current-message) "") ,@body)))
 
   ;; recentf の設定
-  ;; (setq recentf-save-file "~/.emacs.d/hist/recentf" "-" user-full-name)
-  (setq recentf-max-saved-items 2000                 ; 保存するファイルの数
+  (setq recentf-max-saved-items 2000                  ; 保存するファイルの数
         recentf-max-menu-items 15                    ; メニューに表示するアイテムの数
         recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
         recentf-auto-cleanup 'never                  ; 自動整理の設定
         ;; recentf の保存リストのパスをカスタマイズ (my-set-history@00-auto-file-place.el)
-	recentf-save-file (my-set-history "recentf-" user-full-name)
+	    recentf-save-file (my-set-history "recentf-" user-full-name)
         ;; 30秒ごとに recentf リストを自動保存
         recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
   )

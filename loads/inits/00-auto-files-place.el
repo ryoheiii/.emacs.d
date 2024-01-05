@@ -20,7 +20,7 @@
 (setq auto-save-file-name-transforms `((".*" ,my-backup-dir t)))
 
 ;;; オートセーブリスト
-(setq auto-save-list-file-prefix (my-set-history "auto-save-list/.saves-"))
+(setq auto-save-list-file-prefix (my-set-history "auto-save-list/.saves-" user-full-name))
 
 ;;; ブックマーク設定
 (setq bookmark-default-file (my-set-history "bookmark-" user-full-name))
