@@ -11,6 +11,10 @@
 ;;; システムのゴミ箱ディレクトリ
 (setq trash-directory (expand-file-name "~/.Trash"))
 
+;;; カスタムファイル設定
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(load custom-file 'noerror)
+
 ;;; バックアップ設定
 (add-to-list 'backup-directory-alist (cons "." my-backup-dir))
 (setq auto-save-file-name-transforms `((".*" ,my-backup-dir t)))
@@ -24,9 +28,5 @@
 ;;; TRAMP 設定
 (setq tramp-persistency-file-name (my-set-history "tramp-" user-full-name))
 
-;;; カスタムファイル設定
-(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
-(load custom-file 'noerror)
-
-;; helm-recentd
-;; (setq helm-recentd-file (my-set-history "helm-recentd-" user-full-name))
+;;; Transient パッケージが生成する一時ファイルを保存する場所
+(setq transient-history-file (expand-file-name "transient/history.el" my-history-dir))

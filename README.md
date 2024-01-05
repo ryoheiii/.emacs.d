@@ -47,3 +47,4 @@
 
 # **その他**
 * "xterm-256color"を使用する
+* Irony の初回実行時、サーバー構築のため`M-x irony-install-server`の手動実行が必要

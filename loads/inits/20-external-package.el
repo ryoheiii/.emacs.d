@@ -53,8 +53,11 @@
   )
 
 ;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
+;; dash - Emacs 用のモダンなリスト操作ライブラリ (git-gutter+ の依存パッケージ)
+(use-package dash :ensure t)
 (use-package git-gutter+
   :ensure t
+  :after dash
   :custom
   (git-gutter+:modified-sign "~")
   (git-gutter+:added-sign    "+")
@@ -146,17 +149,22 @@
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
 (use-package irony
   :ensure t
+  :defer t
   :after cc-mode
-  :hook ((c-mode c++-mode) . irony-mode)
+  :hook ((c-mode . irony-mode)
+         (c++-mode . irony-mode)
+         (irony-mode . irony-cdb-autosetup-compile-options))
+  :init
+  ;; Irony モードのインストール場所とオプションファイルの設定
+  (setq irony-server-install-prefix    (expand-file-name "irony" my-history-dir))
+  (setq irony-server-options-directory (expand-file-name "irony" my-history-dir))
   :config
-  (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-  ;; Irony と Companyの統合
+  ;; Irony と Company の統合
   (use-package company-irony-c-headers
     :ensure t
-    :after company
     :config
-    (add-to-list 'company-backend 'company-irony-c-headers)
-    )
+    ;; Company バックエンドに Irony の補完を追加
+    (add-to-list 'company-backends '(company-irony-c-headers company-irony)))
   )
 
 ;; Company - 自動補完機能の強化とカスタマイズ
@@ -614,12 +622,12 @@
 
   ;; recentf の設定
   ;; (setq recentf-save-file "~/.emacs.d/hist/recentf" "-" user-full-name)
-  (setq recentf-max-saved-items 2000                      ; 保存するファイルの数
-        recentf-max-menu-items 15                        ; メニューに表示するアイテムの数
-        recentf-exclude '("recentf" "-" user-full-name)  ; 除外するファイルパターン（.recentf自体は含まない）
-        recentf-auto-cleanup 'never                      ; 自動整理の設定
+  (setq recentf-max-saved-items 2000                 ; 保存するファイルの数
+        recentf-max-menu-items 15                    ; メニューに表示するアイテムの数
+        recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
+        recentf-auto-cleanup 'never                  ; 自動整理の設定
         ;; recentf の保存リストのパスをカスタマイズ (my-set-history@00-auto-file-place.el)
-        recentf-save-file (my-set-history "recentf" "-" user-full-name)
+	recentf-save-file (my-set-history "recentf-" user-full-name)
         ;; 30秒ごとに recentf リストを自動保存
         recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
   )
@@ -675,7 +683,7 @@
   :ensure t
   :diminish  ; モードラインの表示を隠す
   :config
-  (setq undohist-directory (my-set-history "undohist")) ; アンドゥ履歴の保存先 (@00-auto-file-place.el)
+  (setq undohist-directory (my-set-history "undohist")) ; アンドゥ履歴の保存場所 (@00-auto-file-place.el)
   (undohist-initialize)                                 ; undohist を初期化
   )
 
@@ -693,6 +701,8 @@
 ;;; Amx - M-x コマンドの強化（コマンド履歴などを改善）
 (use-package amx
   :ensure t
+  :config
+  (setq amx-save-file (my-set-history "amx-items")) ; Amx の履歴ファイルの保存場所 (@00-auto-file-place.el)
   )
 
 ;;; S - 文字列操作のための追加機能

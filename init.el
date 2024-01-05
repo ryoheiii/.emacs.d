@@ -13,13 +13,15 @@
 ;; load-path に追加するディレクトリ
 (add-to-load-path "loads/elisp/" "loads/site-lisp/")
 
+;;; パッケージの設定
 (require 'package)
-(setq package-user-dir "~/.emacs.d/loads/elisp/")
+(setq package-user-dir (expand-file-name "loads/elisp/" user-emacs-directory))
+;; パッケージアーカイブの設定
 (setq package-archives
       '(
         ("melpa"        . "https://melpa.org/packages/")
         ("melpa-stable" . "https://stable.melpa.org/packages/")
-        ("marmalade"    . "https://marmalade-repo.org/packages/")
+        ;;("marmalade"    . "https://marmalade-repo.org/packages/")
         ("gnu"          . "https://elpa.gnu.org/packages/")
         ("org"          . "http://orgmode.org/elpa/")
         ))
@@ -121,14 +123,23 @@
         (color-theme-modern        . "melpa-stable") ;; for hober color-theme
         (Aggressive-indent         . "melpa-stable")
         ))
+;; パッケージシステムの初期化
 (package-initialize)
 
-;;; use-package の確保
+;; パッケージリストの更新と use-package の確保
 (unless (package-installed-p 'use-package)
+  (package-refresh-contents)
   (package-install 'use-package))
 
-;;; GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el)
-;;; straight.el 自身のインストールと初期設定
+;; use-package の設定
+(eval-when-compile
+  (require 'use-package))
+
+;;; straight.el の設定 (GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el))
+;; (defvar straight-base-dir (expand-file-name "loads/elisp/" user-emacs-directory))
+;; (setq straight-repository-branch "develop")
+
+;; straight.el 自身のインストールと初期設定
 ;; (defvar bootstrap-version)
 ;; (let ((bootstrap-file
 ;;        (expand-file-name

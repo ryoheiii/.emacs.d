@@ -1,25 +1,16 @@
 # .emacs.d
 
+#*#
+*.dat
 elpa/
 tmp/*
-*.dat
-/README.txt
-# loads/my-functions/*
 loads/elisp/*
 loads/site-lisp/*
 my-data/snippets/*
 my-data/ac-dict/*
-transient
-#*#
-.mc-lists.el
-network-security.data
-srecode-map.el
-custom.el
-amx-items
-straight/
-irony/
 
 !.gitkeep
 
 # 個別ファイル
+custom.el
 21-external-package-not-commit.el
