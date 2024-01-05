@@ -135,11 +135,11 @@
 (eval-when-compile
   (require 'use-package))
 
-;;; straight.el の設定 (GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el))
+;; ;;; straight.el の設定 (GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el))
 ;; (defvar straight-base-dir (expand-file-name "loads/elisp/" user-emacs-directory))
 ;; (setq straight-repository-branch "develop")
 
-;; straight.el 自身のインストールと初期設定
+;; ;; straight.el 自身のインストールと初期設定
 ;; (defvar bootstrap-version)
 ;; (let ((bootstrap-file
 ;;        (expand-file-name
@@ -157,11 +157,6 @@
 ;;   (load bootstrap-file nil 'nomessage))
 
 ;; (straight-use-package 'use-package)
-
-;; ;; オプションなしで自動的にuse-packageをstraight.elにフォールバックする
-;; ;; 本来は (use-package hoge :straight t) のように書く必要がある
-;; (setq straight-use-package-by-default t)
-
 
 ;;; Init-loader - 設定ファイルを整理し、分割された設定を読み込む
 (use-package init-loader

@@ -33,14 +33,13 @@
 (initchart-record-execution-time-of require feature)
 
 ;;;;; straight.el 管理系
-;;; GitHub Copilot の設定
-;; 警告が多発して不安定
+;; ;;; GitHub Copilot の設定
 ;; (use-package copilot
 ;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
 ;;   :ensure t
 ;;   :hook ((prog-mode . copilot-mode))  ;; プログラミング言語のバッファで Copilot を有効にする
 ;;   :config
 ;;   (setq copilot-node-executable "~/.nvm/versions/node/v21.5.0/bin/node")
-;;   (define-key copilot-mode-map (kbd "C-<tab>") 'copilot-accept-completion)
-;;   (define-key copilot-mode-map (kbd "C-TAB") 'copilot-accept-completion)
+;;   (define-key copilot-mode-map (kbd "<tab>") 'copilot-accept-completion)
+;;   (define-key copilot-mode-map (kbd "TAB") 'copilot-accept-completion)
 ;;   )
