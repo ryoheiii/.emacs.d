@@ -1,14 +1,16 @@
 ;;; Code:
-;;; ロードパス
-;; load-pathの追加関数
+
+;;; ロードパスの設定
+;; load-path の追加関数
 (defun add-to-load-path (&rest paths)
-  (let (path)
-    (dolist (path paths paths)
-      (let ((default-directory (expand-file-name (concat user-emacs-directory path))))
-        (add-to-list 'load-path default-directory)
-        (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
-            (normal-top-level-add-subdirs-to-load-path))))))
-;; load-pathに追加するディレクトリ
+  "Add specified PATHS to the Emacs load-path."
+  (dolist (path paths paths)
+    (let ((default-directory (expand-file-name (concat user-emacs-directory path))))
+      (add-to-list 'load-path default-directory)
+      (when (fboundp 'normal-top-level-add-subdirs-to-load-path)
+        (normal-top-level-add-subdirs-to-load-path)))))
+
+;; load-path に追加するディレクトリ
 (add-to-load-path "loads/elisp/" "loads/site-lisp/")
 
 (require 'package)
@@ -117,16 +119,16 @@
         (yasnippet                 . "melpa-stable")
         (yasnippet-snippets        . "melpa-stable")
         (color-theme-modern        . "melpa-stable") ;; for hober color-theme
+        (Aggressive-indent         . "melpa-stable")
         ))
 (package-initialize)
 
-;;;;; use-package の存在を保証
-(dolist (package '(use-package))
-   (unless (package-installed-p package)
-       (package-install package)))
+;;; use-package の確保
+(unless (package-installed-p 'use-package)
+  (package-install 'use-package))
 
-;;;;; GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el)
-;;;;; straight.el 自身のインストールと初期設定
+;;; GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el)
+;;; straight.el 自身のインストールと初期設定
 ;; (defvar bootstrap-version)
 ;; (let ((bootstrap-file
 ;;        (expand-file-name
@@ -143,18 +145,20 @@
 ;;       (eval-print-last-sexp)))
 ;;   (load bootstrap-file nil 'nomessage))
 
+;; (straight-use-package 'use-package)
+
 ;; ;; オプションなしで自動的にuse-packageをstraight.elにフォールバックする
 ;; ;; 本来は (use-package hoge :straight t) のように書く必要がある
 ;; (setq straight-use-package-by-default t)
 
 
-;;;;; init-loader
+;;; Init-loader - 設定ファイルを整理し、分割された設定を読み込む
 (use-package init-loader
   :ensure t
   :config
   (init-loader-load "~/.emacs.d/loads/inits/")
   (setq init-loader-show-log-after-init nil)
-)
+  )
 
 (provide 'init)
-;;;;; init.el ends here
+;;; init.el ends here

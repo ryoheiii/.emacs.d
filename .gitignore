@@ -17,6 +17,7 @@ srecode-map.el
 custom.el
 amx-items
 straight/
+irony/
 
 !.gitkeep
 

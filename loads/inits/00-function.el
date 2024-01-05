@@ -1,4 +1,4 @@
-;;; WSL
+;;; WSL でのクリップボード操作
 ;; copy (wsl -> win)
 (defun my/wsl-copy (start end)
   (interactive "r")
@@ -11,6 +11,7 @@
   (insert (shell-command-to-string "powershell.exe -command 'Get-Clipboard'")))
 (global-set-key (kbd "C-c C-v") 'my/wsl-paste)
 
+;;; デバッグプリントの挿入
 (defun my/insert-dbgprint (start end)
   "inserts the dbgprintf() sentence"
   (interactive "r")
@@ -27,14 +28,14 @@
                                (format "dbgprintf(\"%s = %%d" name)
                                (when (string-match "^[A-Z]" value)
                                  (format " (%s)" value))
-                               (format "\\r\\n\", %s);\n" name)
-                               )))
-        (next-line)))
+                               (format "\\r\\n\", %s);\n" name))))
+        (forward-line 1)))
     (insert-before-markers result)
-        (setq case-fold-search case-fold-search-bak)))
+    (setq case-fold-search case-fold-search-bak)))
 
-;;; 選択範囲をisearch
-(defadvice isearch-mode (around isearch-mode-default-string (forward &optional regexp op-fun recursive-edit word-p) activate)
+;;; 選択範囲を isearch
+(defadvice isearch-mode (around isearch-mode-default-string
+                                (forward &optional regexp op-fun recursive-edit word-p) activate)
   (if (and transient-mark-mode mark-active (not (eq (mark) (point))))
       (progn
         (isearch-update-ring (buffer-substring-no-properties (mark) (point)))
@@ -46,11 +47,12 @@
           (isearch-repeat-forward)))
     ad-do-it))
 
-;;; nlinum.el 関係
+;;; nlinum.el の遅延更新
 (defadvice linum-schedule (around my-linum-schedule () activate)
-    (run-with-idle-timer 0.2 nil #'linum-update-current))
+  (run-with-idle-timer 0.2 nil #'linum-update-current))
 
-;;; window関連
+;;; ウィンドウ関連操作
+;; 垂直分割
 (defun split-window-vertically-n (num_wins)
   (interactive "p")
   (if (= num_wins 2)
@@ -59,6 +61,8 @@
       (split-window-vertically
        (- (window-height) (/ (window-height) num_wins)))
       (split-window-vertically-n (- num_wins 1)))))
+
+;; 水平分割
 (defun split-window-horizontally-n (num_wins)
   (interactive "p")
   (if (= num_wins 2)
@@ -68,6 +72,7 @@
        (- (window-width) (/ (window-width) num_wins)))
       (split-window-horizontally-n (- num_wins 1)))))
 
+;; 他のウィンドウへ移動、または新規分割
 (defun other-window-or-split ()
   (interactive)
   (when (one-window-p)
@@ -76,38 +81,27 @@
       (split-window-horizontally)))
   (other-window 1))
 
-;; window リサイズ
+;; ウィンドウリサイズ機能
 (defun window-resizer ()
   "Control window size and position."
   (interactive)
   (let ((window-obj (selected-window))
         (current-width (window-width))
         (current-height (window-height))
-        (dx (if (= (nth 0 (window-edges)) 0) 1
-              -1))
-        (dy (if (= (nth 1 (window-edges)) 0) 1
-              -1))
+        (dx (if (= (nth 0 (window-edges)) 0) 1 -1))
+        (dy (if (= (nth 1 (window-edges)) 0) 1 -1))
         action c)
     (catch 'end-flag
       (while t
-        (setq action
-              (read-key-sequence-vector (format "size[%dx%d]"
-                                                (window-width)
-                                                (window-height))))
+        (setq action (read-key-sequence-vector (format "size[%dx%d]" (window-width) (window-height))))
         (setq c (aref action 0))
-        (cond ((= c ?f)
-               (enlarge-window-horizontally dx))
-              ((= c ?b)
-               (shrink-window-horizontally dx))
-              ((= c ?n)
-               (enlarge-window dy))
-              ((= c ?p)
-               (shrink-window dy))
+        (cond ((= c ?f) (enlarge-window-horizontally dx))
+              ((= c ?b) (shrink-window-horizontally dx))
+              ((= c ?n) (enlarge-window dy))
+              ((= c ?p) (shrink-window dy))
               ;; otherwise
               (t
-               (let ((last-command-char (aref action 0))
-                     (command (key-binding action)))
-                 (when command
-                   (call-interactively command)))
+               (let ((last-command-char (aref action 0)) (command (key-binding action)))
+                 (when command (call-interactively command)))
                (message "Quit")
-                              (throw 'end-flag t)))))))
+               (throw 'end-flag t)))))))

@@ -1,83 +1,58 @@
+;;; Color Theme Modern - モダンなカラーテーマの設定。選択可能なテーマの幅を広げる
 (use-package color-theme-modern
   :ensure t
   :config
+  ;; カスタムテーマのロードパスを追加
   (add-to-list 'custom-theme-load-path
                (file-name-as-directory "~/.emacs.d/loads/elisp/color-theme-modern-0.0.3"))
+  ;; テーマの適用
   ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
   (load-theme 'hober t t)
   (enable-theme 'hober)
   )
 
+;;; Xclip - クリップボードとの共有を可能にする
 (use-package xclip
   :ensure t
-  :init
-  (xclip-mode 1)
+  :init (xclip-mode 1) ; クリップボード共有を有効化
   )
 
+;;; Smart Mode Line - モードラインの外観と情報表示をカスタマイズ
 (use-package smart-mode-line
   :ensure t
   :config
-  (defvar sml/no-confirm-load-theme t)
-  (defvar sml/theme 'dark)
-  (defvar sml/shorten-directory -1) ;; directory pathはフルで表示されたいので
+  (setq sml/no-confirm-load-theme t
+        sml/theme 'dark
+        sml/shorten-directory -1)  ; ディレクトリパスはフル表示
   (sml/setup)
   )
 
+;;; Total Lines - バッファ内の総行数をモードラインに表示
 (use-package total-lines
   :ensure t
-  :init
-  (global-total-lines-mode t)
+  :init (global-total-lines-mode t)
   :config
   (defun my-set-line-numbers ()
+    "モードラインに全行数を表示。"
     (setq-default mode-line-front-space
                   (append mode-line-front-space
                           '((:eval (format " (%d)" (- total-lines 1))))))) ;; 「" (%d)"」の部分はお好みで
   (add-hook 'after-init-hook 'my-set-line-numbers)
   )
 
-;; ;; うまくキーにバインドできない
-;; (use-package smart-hungry-delete
-;;   :ensure t
-;;   :defer nil
-;;   :bind (
-;;          ("<backspace>" . smart-hungry-delete-backward-char)
-;;          ("C-d"         . smart-hungry-delete-forward-char)
-;;          )
-;;   :config
-;;   (smart-hungry-delete-add-default-hooks)
-;;   )
-
-;; (use-package dumb-jump
-;;   :ensure t
-;;   :init
-;;   (setq dumb-jump-mode t)
-;;   :bind (
-;;          ("M-g o" . dumb-jump-go-other-window)
-;;          ("M-g j" . dumb-jump-go)
-;;          ("C-c j" . dumb-jump-go)
-;;          ("M-g b" . dumb-jump-back)
-;;          ("C-c b" . dumb-jump-back)
-;;          ("M-g i" . dumb-jump-go-prompt)
-;;          ("M-g x" . dumb-jump-go-prefer-external)
-;;          ("M-g z" . dumb-jump-go-prefer-external-other-window)
-;;          )
-;;   :config
-;;   ;; (setf dumb-jump-selector 'helm)
-;;   (setq dumb-jump-selector 'ivy)
-;;   )
-
+;;; Hide Mode Line - 特定のモードでモードラインを隠す
 (use-package hide-mode-line
   :ensure t
-  :hook
-  ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
+  :hook ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
   )
 
+;;; Full Column Indicator - テキストの折り返し位置を視覚的に示す
 (use-package fill-column-indicator
   :ensure t
-  :hook
-  ((markdown-mode git-commit-mode) . fci-mode)
+  :hook ((markdown-mode git-commit-mode) . fci-mode)
   )
 
+;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
 (use-package git-gutter+
   :ensure t
   :custom
@@ -92,121 +67,105 @@
   (global-git-gutter+-mode +1)
   )
 
+;;; Beacon - カーソルの位置を明確にするために点滅エフェクトを追加
 (use-package beacon
   :ensure t
-  :custom
-  (beacon-color "yellow")
-  :config
-  (beacon-mode 1)
+  :custom (beacon-color "yellow")
+  :config (beacon-mode 1)
   )
 
+;;; Volatile Highlights - 一時的なハイライト（選択範囲など）の強調表示
 (use-package volatile-highlights
-    :ensure t
-    :diminish
-    :hook
-    (after-init . volatile-highlights-mode)
-    :custom-face
-    (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
-)
-
-(use-package highlight-indent-guides
-    :ensure t
-    :diminish
-    :hook
-    ;; (prog-mode . highlight-indent-guides-mode) ; Dont need for c/c++
-    (emacs-lisp-mode . highlight-indent-guides-mode)
-    :custom
-    (highlight-indent-guides-auto-enabled t)
-    (highlight-indent-guides-responsive t)
-    (highlight-indent-guides-method 'character)
-    )
-
-(use-package dashboard
   :ensure t
   :diminish
-  (dashboard-mode page-break-lines-mode)
-  :hook
-  (after-init . dashboard-setup-startup-hook)
+  :hook (after-init . volatile-highlights-mode)
+  :custom-face
+  (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
   )
 
+;;; Highlight Indent Guides - インデントレベルを視覚的に区別するためのガイド表示
+(use-package highlight-indent-guides
+  :ensure t
+  :diminish
+  :hook (emacs-lisp-mode . highlight-indent-guides-mode)
+  :custom
+  (highlight-indent-guides-auto-enabled t)
+  (highlight-indent-guides-responsive t)
+  (highlight-indent-guides-method 'character)
+  )
+
+;;; Aggressive Indent - コード編集時の自動インデント調整
+(use-package aggressive-indent
+  :ensure t
+  :hook (emacs-lisp-mode . aggressive-indent-mode)
+  )
+
+;;; Dashboard - Emacs のスタートアップ画面をカスタマイズ
+(use-package dashboard
+  :ensure t
+  :diminish (dashboard-mode page-break-lines-mode)
+  :hook (after-init . dashboard-setup-startup-hook)
+  )
+
+;;; Smart Newline - 改行時の自動インデントと位置調整
 ;; https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :ensure t
   :init
-  (add-hook 'c++-mode-hook
-            '(lambda ()
-               (smart-newline-mode 1)))
-  (add-hook 'c-mode-hook
-            '(lambda ()
-               (smart-newline-mode 1)))
-  (add-hook 'cc-mode-hook
-            '(lambda ()
-               (smart-newline-mode 1)))
-  (add-hook 'emacs-lisp-mode-hook
-            '(lambda ()
-               (smart-newline-mode 1)))
-  (add-hook 'lisp-mode-hook
-            '(lambda ()
-               (smart-newline-mode 1)))
+  (dolist (mode '(c++-mode-hook c-mode-hook cc-mode-hook emacs-lisp-mode-hook lisp-mode-hook))
+    (add-hook mode (lambda () (smart-newline-mode 1))))
   )
 
-;;; 単語を検索した時に何番目のマッチかを表示する拡張
+;;; Anzu - 検索や置換操作時にマッチ数や現在位置を表示
 ;; https://qiita.com/syohex/items/56cf3b7f7d9943f7a7ba
 (use-package anzu
   :ensure t
   :init
   (global-anzu-mode 1)
   :config
-  (custom-set-variables
-   '(anzu-mode-lighter "")
-   '(anzu-deactivate-region t)
-   '(anzu-search-threshold 1000)
-   '(anzu-replace-to-string-separator " => ")
-   )
+  (setq anzu-mode-lighter ""
+        anzu-deactivate-region t
+        anzu-search-threshold 1000
+        anzu-replace-to-string-separator " => ")
   )
 
+;;; Ispell - スペルチェック機能の設定と辞書の指定
 (use-package ispell
   :ensure t
   :config
-  ;; aspell にパスを通す
+  ;; aspell にパスを設定
   (when (file-executable-p "/usr/bin/aspell")
     (setq-default ispell-program-name "aspell")
-    ;; (setq ispell-extra-args '("--sug-mode=ultra" "--lang=en_US"))
-    ;; パフォーマンス向上
-    (add-to-list 'ispell-extra-args "--sug-mode=ultra")
-    ;; 日本語はスキップ.
-    '(add-to-list 'ispell-skip-region-alist '("[^\000-\377]+")))
-
-  ;; スペルチェックには英語の辞書を使う
+    (add-to-list 'ispell-extra-args "--sug-mode=ultra"))
+  ;; 日本語をスキップする設定
+  (add-to-list 'ispell-skip-region-alist '("[^\000-\377]+"))
+  ;; スペルチェックに英語の辞書を使用
   (setq ispell-dictionary "american")
   )
 
+;;; Irony - C/C++ のコード補完とシンボル情報の提供
 (use-package irony
   :ensure t
-  :init
   :after cc-mode
+  :hook ((c-mode c++-mode) . irony-mode)
   :config
-  (add-hook 'c-mode-hook 'irony-mode)
-  (add-hook 'c++-mode-hook 'irony-mode)
   (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-
+  ;; Irony と Companyの統合
   (use-package company-irony-c-headers
     :ensure t
     :after company
     :config
-    (add-to-list 'company-backend 'company-ironny-c-headers)
+    (add-to-list 'company-backend 'company-irony-c-headers)
     )
   )
 
-
-;; C-w でリファレンス表示
+;; Company - 自動補完機能の強化とカスタマイズ
 (use-package company
   :ensure t
   :diminish company-mode
   :init
   (global-company-mode 1)
-  :bind (
-         ("C-M-i" . company-complete)
+  :bind (("C-M-i" . company-complete)
          :map company-mode-map
          ("TAB" . indent-for-tab-command)
          :map company-active-map
@@ -219,32 +178,26 @@
          ("C-n" . company-select-next)
          ("C-p" . company-select-previous))
   :config
-  (setq company-selection-wrap-around t)
-  (setq company-transformers '(company-sort-by-backend-importance)) ;; ソート順
-  (setq company-idle-delay 0) ; デフォルトは 0.5
-  (setq company-show-numbers t)
-  (setq company-tooltip-limit 10)
-  (setq company-minimum-prefix-length 3) ; デフォルトは 4
-  (setq company-tooltip-align-annotations t)
-  ;; invert the navigation direction if the the completion popup-isearch-match
-  ;; is displayed on top (happens near the bottom of windows)
-  (setq company-tooltip-flip-when-above t)
-  (setq company-dabbrev-around t)
-  (setq completion-ignore-case t)
-  (setq company-dabbrev-downcase nil)
-  (setq company-eclim-auto-save nil)
-  (setq company-dabbrev-downcase nil)
-
-  ;; yasnippetとの連携
-  (defvar company-mode/enable-yas t
-    "Enable yasnippet for all backends.")
+  (setq company-selection-wrap-around t
+        company-transformers '(company-sort-by-backend-importance) ; ソート順
+        company-idle-delay 0                                       ; デフォルトは 0.5
+        company-show-numbers t
+        company-tooltip-limit 10
+        company-minimum-prefix-length 3                            ; デフォルトは 4
+        company-tooltip-align-annotations t
+        company-tooltip-flip-when-above t
+        company-dabbrev-around t
+        completion-ignore-case t
+        company-dabbrev-downcase nil
+        company-eclim-auto-save nil)
+  ;; Yasnippetとの連携
+  (defvar company-mode/enable-yas t)
   (defun company-mode/backend-with-yas (backend)
     (if (or (not company-mode/enable-yas) (and (listp backend) (member 'company-yasnippet backend)))
         backend
       (append (if (consp backend) backend (list backend))
               '(:with company-yasnippet))))
   (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
-
   ;; color settings
   (set-face-attribute 'company-tooltip nil
                       :foreground "black" :background "lightgrey")
@@ -262,7 +215,7 @@
                       :background "gray40")
   )
 
-;;; 自動補完機能-auto-complete ; company に置き換え
+;;; Auto-complete - コード補完機能の提供と設定（company に置き換え）
 (use-package auto-complete
   :ensure t
   :demand t
@@ -280,69 +233,23 @@
     (add-hook 'c-mode-hook (lambda ()
                              '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
     )
-
-  ;; (use-package auto-complete-config)
   (ac-config-default)
   (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict")
   (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict/ac-dict") ;; for symbolic link
   (add-to-list 'ac-modes 'text-mode)         ;; text-modeでも自動的に有効にする
   (ac-set-trigger-key "TAB")
-
-
   (setq ac-comphist-file (my-set-history "ac-comphist.dat")) ;; my-set-history @00-auto-file-place.el
-  (setq ac-use-menu-map t)
-  (setq ac-disable-faces nil) ;;コメントや文字列リテラルでも補完を行う
-  (setq ac-use-fuzzy t)       ;; 曖昧マッチ
-
-  ;; yasnippetのbindingを指定するとエラーが出るので回避する方法。
+  (setq ac-use-menu-map t
+        ac-disable-faces nil ;コメントや文字列リテラルでも補完を行う
+        ac-use-fuzzy t)      ; 曖昧マッチ
+  ;; yasnippet の binding を指定するとエラーが出るので回避する方法。
   (setf (symbol-function 'yas-active-keys)
         (lambda ()
           (remove-duplicates (mapcan #'yas--table-all-keys (yas--get-snippet-tables)))))
   )
 
-;;; GitHub Copilot の設定
-;; 警告が多発して不安定
-;; (use-package copilot
-;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-;;   :ensure t
-;;   :hook ((prog-mode . copilot-mode))  ;; プログラミング言語のバッファで Copilot を有効にする
-;;   :config
-;;   (setq copilot-node-executable "~/.nvm/versions/node/v21.5.0/bin/node")
-;;   (define-key copilot-mode-map (kbd "C-<tab>") 'copilot-accept-completion)
-;;   (define-key copilot-mode-map (kbd "C-TAB") 'copilot-accept-completion)
-;;   )
-
-;; (use-package e2wm
-;;   :ensure t
-;;   :config
-;;   (progn
-;;     (global-set-key (kbd "C-c +") 'e2wm:start-management)
-
-;;     (setq e2wm:c-code-recipe
-;;           '(| (:left-max-size 30)
-;;               history
-;;               (- (:upper-size-ratio 0.8)
-;;                  main sub)))
-
-;;     (e2wm:add-keymap
-;;      e2wm:pst-minor-mode-keymap
-;;      '(
-;;        ("<M-left>" . e2wm:dp-code) ; codeへ変更
-;;        ("<M-right>"  . e2wm:dp-two)  ; twoへ変更
-;;        ("<M-up>"    . e2wm:dp-doc)  ; docへ変更
-;;        ("<M-down>"  . e2wm:dp-dashboard) ; dashboardへ変更
-;;        ("C-c C-f"       . e2wm:pst-history-forward-command) ; 履歴を進む
-;;        ("C-c C-b"       . e2wm:pst-history-back-command) ; 履歴をもどる
-;;        ([f5]            . e2wm:dp-code-main-maximize-toggle-command)
-;;                                         ;   ("prefix L"  . ielm)
-;;                                         ;   ("M-m"       . e2wm:pst-window-select-main-command)
-;;        ) e2wm:prefix-key)
-
-;;     ;; (e2wm:start-management)
-;;     )
-;;   )
-
-;;; キー
+;;; ElScreen - 複数のウィンドウ（スクリーン）を管理
+;; キー
 ;; C-z c    新規スクリーンを作成して移動する elscreen-create
 ;; C-z k    現在のスクリーンを閉じる         elscreen-kill
 ;; C-z p    前のスクリーンへ                 elscreen-previous
@@ -351,193 +258,118 @@
 ;; C-z [0-9]    番号のスクリーンへ           elscreen-jump-[0-9]
 ;; C-z ?    ヘルプを表示する
 
-;;; helm 連携キー
+;; helm 連携キー
 ;; C-z C-f  新しいelscreenでファイルを開く
 ;; C-z b    新しいelscreenでバッファを開く
 ;; C-z d    新しいelscreenでdiredを開く
 (use-package elscreen
   :ensure t
   :config
+  ;; Elscreenのプレフィックスキーを設定
   (setq elscreen-prefix-key (kbd "C-z"))
+  ;; Elscreenを起動
   (elscreen-start)
-  ;; タブの先頭に[X]を表示しない
-  (setq elscreen-tab-display-kill-screen nil)
-  ;; header-lineの先頭に[<->]を表示しない
-  (setq elscreen-tab-display-control nil)
-  ;; バッファ名・モード名からタブに表示させる内容を決定する(デフォルト設定)
+  ;; タブの表示設定
+  (setq elscreen-tab-display-kill-screen nil  ; タブの先頭に[X]を表示しない
+        elscreen-tab-display-control nil)    ; header-lineの先頭に[<->]を表示しない
+  ;; バッファ名・モード名に基づくタブのニックネーム設定
   (setq elscreen-buffer-to-nickname-alist
-        '(("^dired-mode$"     .
-           (lambda ()
-             (format "Dired(%s)" dired-directory)))
-          ("^Info-mode$"      .
-           (lambda ()
-             (format "Info(%s)" (file-name-nondirectory Info-current-file))))
-          ("^mew-draft-mode$" .
-           (lambda ()
-             (format "Mew(%s)" (buffer-name (current-buffer)))))
-          ("^mew-"            . "Mew")
-          ("^irchat-"         . "IRChat")
-          ("^liece-"          . "Liece")
-          ("^lookup-"         . "Lookup")))
-  (setq elscreen-mode-to-nickname-alist
-        '(("[Ss]hell"         . "shell")
-          ("compilation"      . "compile")
-          ("-telnet"          . "telnet")
-          ("dict"             . "OnlineDict")
-          ("*WL:Message*"     . "Wanderlust")))
-
-  ;;;  Use frame-title for tabs
-  ;; How to display the list of screens on the frame-title of my Emacs?
-  ;; This is broken. get-alist should be changed to alist-get
-  ;; https://www.emacswiki.org/emacs/EmacsLispScreen#toc8
-  ;;
-  (defvar *elscreen-tab-truncate-length*
-    20 "Number of characters to truncate tab names in frame title")
-  ;;
+        '(( "^dired-mode$" . (lambda () (format "Dired(%s)" dired-directory)))
+          ("^Info-mode$"  . (lambda () (format "Info(%s)" (file-name-nondirectory Info-current-file))))
+          ("^mew-"        . "Mew")
+          ("^irchat-"     . "IRChat")
+          ("^liece-"      . "Liece")
+          ("^lookup-"     . "Lookup"))
+        elscreen-mode-to-nickname-alist
+        '(( "[Ss]hell"     . "shell")
+          ("compilation"  . "compile")
+          ("-telnet"      . "telnet")
+          ("dict"         . "OnlineDict")
+          ("*WL:Message*" . "Wanderlust")))
+  ;; フレームタイトルにタブ情報を表示
+  (setq *elscreen-tab-truncate-length* 20)
   (defun elscreen-tabs-as-string ()
-    "Return a string representation of elscreen tab names
-
-Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
+    "Return a string representation of elscreen tab names."
     (let* ((screen-list (sort (elscreen-get-screen-list) '<))
            (screen-to-name-alist (elscreen-get-screen-to-name-alist)))
-      ;; mapconcat: mapping and then concate name elements together with separator
       (mapconcat
        (lambda (screen)
          (format (if (string-equal "+" (elscreen-status-label screen))
-                     ;; Current screen format
                      "[ %d ] %s"
-                   ;; Others
                    "(%d) %s")
-                 ;; screen number: replaces %d (integer)
                  screen
-                 ;; screen name: replaces %s (string)
                  (elscreen-truncate-screen-name
-                  ;; Return the value associated with KEY in ALIST
-                  (alist-get screen screen-to-name-alist)
-                  *elscreen-tab-truncate-length*)))
-       ;; Screen numbers (keys for alist)
-       screen-list
-       ;; Separator
-       " | ")))
-  ;;
-  (defvar *elscreen-tabs-as-string*
-    "" "Variable to hold curent elscreen tab names as a string")
-  ;;
+                  (alist-get screen screen-to-name-alist) *elscreen-tab-truncate-length*)))
+       screen-list " | ")))
+  (defvar *elscreen-tabs-as-string* "" "Variable to hold current elscreen tab names as a string.")
   (defun update-elscreen-tabs-as-string ()
-    "Update *elscreen-tabs-as-string* variable"
+    "Update *elscreen-tabs-as-string* variable."
     (interactive)
     (setq *elscreen-tabs-as-string* (elscreen-tabs-as-string)))
-  ;;
-  ;; Update *elscreen-tabs-as-string* whenever elscreen status updates
   (add-hook 'elscreen-screen-update-hook 'update-elscreen-tabs-as-string)
-  ;;
-  ;; Set frame title format as combination of current elscreen tabs and buffer/path
   (setq frame-title-format '(:eval (concat *elscreen-tabs-as-string*
                                            "    ||    "
                                            (if buffer-file-name
-                                               (abbreviate-file-name buffer-file-name)
-                                             "%b"))))
+                                               (abbreviate-file-name buffer-file-name) "%b"))))
   )
 
-;; (use-package eshell
-;;   :init
-;;   :config
-;;   ;; 確認なしでヒストリ保存
-;;   (setq eshell-ask-to-save-history (quote always))
-;;   ;; 補完時にサイクルする
-;;   (setq eshell-cmpl-cycle-completions nil)
-;;   ;; 補完時に大文字小文字を区別しない
-;;   (setq eshell-cmpl-ignore-case t)
-
-;;   (setq eshell-save-history-on-exit t)
-;;   (setq eshell-cmpl-dir-ignore "\\`\\(\\.\\.?\\|CVS\\|\\.svn\\|\\.git\\)/\\'")
-
-;;   ;;補完候補がこの数値以下だとサイクルせずに候補表示
-;;   ;; (setq eshell-cmpl-cycle-cutoff-length 5)
-
-;;   ;; 履歴で重複を無視する
-;;   (setq eshell-hist-ignoredups t)
-
-;;   ;; これで正規表現がつかえるようになる??
-;;   (setq eshell-prompt-regexp "^[^#$]*[$#] ")
-
-;;   ;; スクロールがカクカクなるのを抑止する.
-;;   ;; http://stackoverflow.com/questions/12667043/emacs-smooth-scrolling-scroll-margin-and-eshell
-;;   ;; (setq scroll-margin 0)
-
-;;   ;; zsh の環境変数を取り込む
-;;   ;; http://d.hatena.ne.jp/zonu_exe/20120509/1336583187
-;;   ;; (let ((zshpath (shell-command-to-string "/usr/bin/zsh -c 'printenv PATH'")))
-;;   ;;   (let ((pathlst (split-string zshpath ":")))
-;;   ;;     (setq exec-path pathlst))
-;;   ;;   (setq eshell-path-env zshpath)
-;;   ;;   (setenv "PATH" zshpath))
-;;   )
-
-;;; インクリメンタルに選択範囲を広げる
+;;;Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :ensure t
   :init
   (transient-mark-mode t)
-  :bind (
-         ("C-,"   . er/expand-region)
+  :bind (("C-," . er/expand-region)
          ;; ("C-M-," . er/contract-region)
          )
-  :config
-  ;; transient-mark-modeが nilでは動作しない
   )
 
+;;; Google C Style - Google の C スタイルガイドに準拠したコーディング
 (use-package google-c-style
   :ensure t
-  :init
-  (add-hook 'c-mode-common-hook
-            (lambda ()
-              (google-set-c-style)
-              (google-make-newline-indent)))
-  (add-hook 'c++-mode-common-hook
-            (lambda ()
-              (google-set-c-style)
-              (google-make-newline-indent)))
-  :config
-  ;; (c-set-offset 'statement-case-open 0)
+  :hook (( c-mode-common   . (lambda ()
+                               (google-set-c-style)
+                               (google-make-newline-indent)))
+         (c++-mode-common . (lambda ()
+                              (google-set-c-style)
+                              (google-make-newline-indent))))
   )
 
+;;; Helm - 効率的なバッファやコマンドの検索
 (use-package helm
   :ensure t
   :diminish
   :init
-  (setq helm-ff-file-name-history-use-recentf t)
-  (setq helm-display-function #'display-buffer)
+  (setq helm-ff-file-name-history-use-recentf t
+        helm-display-function #'display-buffer)
   (helm-mode 1)
-  :bind
-  (("M-x"     . 'helm-M-x)
-   ("C-x C-f" . helm-find-files)
-   ("C-x C-r" . helm-recentf)
-   ("C-x C-y" . helm-show-kill-ring)
-   ("C-x g"   . helm-do-grep-ag)
-   ("C-x b"   . helm-buffers-list)
-   ("C-x i"   . helm-imenu)
-   :map helm-map
-   ("C-h" . delete-backward-char)
-   :map helm-find-files-map
-   ("C-h" . delete-backward-char)
-   ("TAB" . helm-execute-persistent-action)
-   :map helm-read-file-map
-   ("TAB" . helm-execute-persistent-action))
+  :bind (( "M-x"     . helm-M-x)
+         ("C-x C-f" . helm-find-files)
+         ("C-x C-r" . helm-recentf)
+         ("C-x C-y" . helm-show-kill-ring)
+         ("C-x g"   . helm-do-grep-ag)
+         ("C-x b"   . helm-buffers-list)
+         ("C-x i"   . helm-imenu)
+         :map helm-map
+         ("C-h" . delete-backward-char)
+         :map helm-find-files-map
+         ("C-h" . delete-backward-char)
+         ("TAB" . helm-execute-persistent-action)
+         :map helm-read-file-map
+         ("TAB" . helm-execute-persistent-action))
   :config
-  ;; emacsのコマンドを検索可能に
+  (setq helm-buffer-details-flag nil
+        helm-delete-minibuffer-contents-from-point t
+        helm-ff-fuzzy-matching nil)
+  ;; Emacsのコマンドと履歴のソース定義
   (defvar helm-source-emacs-commands
     (helm-build-sync-source "Emacs commands"
       :candidates (lambda ()
                     (let ((cmds))
-                      (mapatoms
-                       (lambda (elt) (when (commandp elt) (push elt cmds))))
+                      (mapatoms (lambda (elt) (when (commandp elt) (push elt cmds))))
                       cmds))
       :coerce #'intern-soft
       :action #'command-execute)
     "A simple helm source for Emacs commands.")
-
-  ;; emacsのコマンド履歴を検索可能に
   (defvar helm-source-emacs-commands-history
     (helm-build-sync-source "Emacs commands history"
       :candidates (lambda ()
@@ -548,15 +380,19 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
       :coerce #'intern-soft
       :action #'command-execute)
     "Emacs commands history")
-
-  ;; Disable helm in some functions
-  ;; (add-to-list 'helm-completing-read-handlers-alist '(find-alternate-file . nil))
-
-  ;; (1) helm-buffers-list のバッファ名の領域を広くとる
-  (setq helm-buffer-details-flag nil)
+  ;; 検索パターンの変換
+  (defun helm-buffers-list-pattern-transformer (pattern)
+    (if (equal pattern "")
+        pattern
+      (let* ((first-char (substring pattern 0 1))
+             (pattern (cond ( (equal first-char "*") (concat " " pattern))
+                            ((equal first-char "=") (concat "*" (substring pattern 1)))
+                            (t pattern))))
+        (setq pattern (replace-regexp-in-string "\\." "\\\\." pattern))
+        (setq pattern (replace-regexp-in-string "\\*" "\\\\*" pattern))
+        pattern)))
 
   ;; Emulate `kill-line' in helm minibuffer
-  (setq helm-delete-minibuffer-contents-from-point t)
   (defadvice helm-delete-minibuffer-contents (before emulate-kill-line activate)
     "Emulate `kill-line' in helm minibuffer"
     (kill-new (buffer-substring (point) (field-end))))
@@ -566,7 +402,6 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
     (when (file-exists-p candidate)
       ad-do-it))
 
-  (setq helm-ff-fuzzy-matching nil)
   (defadvice helm-ff--transform-pattern-for-completion (around my-transform activate)
     "Transform the pattern to reflect my intention"
     (let* ((pattern (ad-get-arg 0))
@@ -580,209 +415,178 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
                         ;; and not required because the directory name is prepended
                         (substring input-pattern 1)
                       (concat ".*" input-pattern))))))
-
-  (defun helm-buffers-list-pattern-transformer (pattern)
-    (if (equal pattern "")
-        pattern
-      (let* ((first-char (substring pattern 0 1))
-             (pattern (cond ((equal first-char "*")
-                             (concat " " pattern))
-                            ((equal first-char "=")
-                             (concat "*" (substring pattern 1)))
-                            (t
-                             pattern))))
-        ;; Escape some characters
-        (setq pattern (replace-regexp-in-string "\\." "\\\\." pattern))
-        (setq pattern (replace-regexp-in-string "\\*" "\\\\*" pattern))
-        pattern)))
   )
 
+;;; Helm GTags - ソースコード内のシンボル検索とナビゲーション
 (use-package helm-gtags
   :ensure t
   :diminish
-  :init
-  (add-hook 'c-mode-hook
-            (lambda ()
-              (helm-gtags-mode)))
-  (add-hook 'c++-mode-hook
-            (lambda ()
-              (helm-gtags-mode)))
-  :bind  (
-          ([f11] . helm-gtags-find-tag) ;; 関数の定義場所の検索
-          ([f12] . helm-gtags-find-rtag) ;; 関数の使用箇所の検索
-          ([f9]  . helm-gtags-find-symbol);; 変数の使用箇所の検索
-          ("C-t" . helm-gtags-pop-stack);; gtagsでジャンプする一つ前の状態に戻る
-          ([f6]  . helm-gtags-find-files) ;; ファイルジャンプ
-          ;; ([f3] . helm-gtags-select)
-          ;; ("C-t l" . helm-gtags-show-stack)
-          ;; ("C-t m" . helm-gtags-update-tags)
-          )
+  :hook (( c-mode   . helm-gtags-mode)
+         (c++-mode . helm-gtags-mode))
+  :bind (( [f11] . helm-gtags-find-tag)    ;; 関数の定義場所の検索
+         ([f12] . helm-gtags-find-rtag)   ;; 関数の使用箇所の検索
+         ([f9]  . helm-gtags-find-symbol) ;; 変数の使用箇所の検索
+         ("C-t" . helm-gtags-pop-stack)   ;; gtagsでジャンプする一つ前の状態に戻る
+         ([f6]  . helm-gtags-find-files)  ;; ファイルジャンプ
+         )
   :config
   (custom-set-variables
-   '(helm-gtags-path-style 'root)
-   ;; '(helm-gtags-ignore-case t)
-   ;; '(helm-gtags-auto-update t)
-   )
-
-  ;; auto update GTAGS
-  ;; use ~/.globalrc by global
+   '(helm-gtags-path-style 'root))
+  ;; GTAGSの自動更新関数
   (defun update-gtags ()
     (interactive)
-    (let* ((file (buffer-file-name (current-buffer)))
-           (dir (directory-file-name (file-name-directory file))))
-      (when (executable-find "global")
-        (start-process "gtags-update" nil "global" "-uv")
-        )
-      )
-    )
+    (when (and (buffer-file-name)
+               (executable-find "global"))
+      (start-process "gtags-update" nil "global" "-uv")))
+  ;; 必要に応じてアンコメントして使用
   ;; (add-hook 'after-save-hook 'update-gtags)
   )
 
-;; helm-M-xでキーバインドを表示してくれる
+;;; Helm Descbinds - コマンドとキーバインドの検索（helm-M-x でキーバインドを表示）
 (use-package helm-descbinds
   :ensure t
-  :init
-  (helm-descbinds-mode 1)
+  :init (helm-descbinds-mode 1)
   )
 
-;; helmで高速ファイル中身サーチ(ag)
+;;; Helm AG - ファイルの内容を高速検索
 (use-package helm-ag
   :ensure t
   )
 
+;;; Highlight Symbol - シンボルのハイライトとナビゲーション
 (use-package highlight-symbol
   :ensure t
-  :bind (
-         ([f3] . highlight-symbol-at-point)
-         ([f4] . highlight-symbol-remove-all)
-         )
+  :bind (( [f3] . highlight-symbol-at-point)
+         ([f4] . highlight-symbol-remove-all))
   :config
-  ;; 使いたい色を設定、repeat
   (setq highlight-symbol-colors '("DarkOrange" "DodgerBlue1" "DeepPink1"))
   )
 
+;;; Auto Highlight Symbol の設定
 (use-package auto-highlight-symbol
   :ensure t
   :config
   (global-auto-highlight-symbol-mode t)
-  ;; memo
   ;; C-x C-aで一括rename
   )
 
+;;; Imenu List - バッファ内のシンボルリスト表示
 (use-package imenu-list
   :ensure t
   )
 
+;;; Ivy - 効率的なバッファやファイルの検索
 (use-package ivy
   :ensure t
   :config
   (ivy-mode 1)
-  (setq ivy-use-virtual-buffers t)
-  (setq enable-recursive-minibuffers t)
-  (setq ivy-height 30) ;; minibufferのサイズを拡大！（重要）
-  (setq ivy-extra-directories nil)
-  (setq ivy-re-builders-alist
-        '((t . ivy--regex-plus)))
-  ;; (fset 'ivy--regex 'identity)
+  (setq ivy-use-virtual-buffers t
+        enable-recursive-minibuffers t
+        ivy-height 30  ;; minibufferのサイズを拡大
+        ivy-extra-directories nil
+        ivy-re-builders-alist '((t . ivy--regex-plus)))
   )
 
-;; ;; 参考 http://rubikitch.com/2014/08/20/migemo/
+;;; Migemo - 日本語を含む検索時の挙動改善
+;; 参考: http://rubikitch.com/2014/08/20/migemo/
 (use-package migemo
   :ensure t
   :config
   ;; Set your installed path
   (setq migemo-command "cmigemo"
-        migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict")
-  (setq migemo-options '("-q" "--emacs")
+        migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict"
+        migemo-options '("-q" "--emacs")
         migemo-user-dictionary nil
         migemo-regex-dictionary nil
         migemo-coding-system 'utf-8-unix)
   (migemo-init)
+  ;; Helmとの統合設定
   (use-package helm
-    :init
-    (helm-migemo-mode 1)
+    :init (helm-migemo-mode 1)
     )
   )
 
+;;; Avy-Migemo - キーボードナビゲーションの強化と日本語対応
 (use-package avy-migemo
   :ensure t
-  :init
-  (avy-migemo-mode 1)
+  :init (avy-migemo-mode 1)
   :config
   (setq avy-timeout-seconds nil)
-  ;; (use-package avy-migemo-e.g.swiper :ensure t)
   (global-set-key (kbd "C-M-;") 'avy-migemo-goto-char-timer)
-  ;;  (global-set-key (kbd "M-g m m") 'avy-migemo-mode)
+  ;; 以下の行は必要に応じてアンコメントして使用
+  ;; (use-package avy-migemo-e.g.swiper :ensure t)
+  ;; (global-set-key (kbd "M-g m m") 'avy-migemo-mode)
   )
 
+;;; Move Text - テキスト行の移動機能
 (use-package move-text
   :ensure t
-  :bind (
-         ("C-M-p" . move-text-up)
-         ("C-M-n" . move-text-down)
-         )
+  :bind (( "C-M-p" . move-text-up)
+         ("C-M-n" . move-text-down))
   )
 
+;;; Mozc - 日本語入力の設定
 (use-package mozc
   :ensure t
-  :config
-  (prefer-coding-system 'utf-8)
+  :config (prefer-coding-system 'utf-8)
   )
 
+;;; Codic - プログラミング用語の翻訳と検索
 (use-package codic
-  :ensure t)
+  :ensure t
+  )
 
+;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :ensure t
   :config
-  (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history @00-auto-file-place.el
+  (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@00-auto-file-place.el 関数を使った設定
 
   (global-set-key (kbd "C-M-c") 'mc/edit-lines)
   (global-set-key (kbd "C-*")   'mc/mark-all-like-this)
 
-  (global-unset-key "\C-q")
-  (use-package smartrep :ensure t)
-  (declare-function smartrep-define-key "smartrep")
-  (smartrep-define-key global-map "C-q"
-    '(("p"      . 'mc/mark-previous-like-this)
-      ("n"      . 'mc/mark-next-like-this)
-      ("*"      . 'mc/mark-all-like-this)
-      ("d"      . 'mc/mark-all-like-this-dwim)
-      ("m"      . 'mc/mark-more-like-this-extended)
-      ("u"      . 'mc/unmark-next-like-this)
-      ("U"      . 'mc/unmark-previous-like-this)
-      ("s"      . 'mc/skip-to-next-like-this)
-      ("S"      . 'mc/skip-to-previous-like-this)
-      ("i"      . 'mc/insert-numbers)
-      ("o"      . 'mc/sort-regions)
-      ("O"      . 'mc/reverse-regions)))
-  ;; smartrepによるコマンド実行中はキー入力をエコーしない
-  ;; http://shakenbu.org/yanagi/d/?date=20140105
-  (advice-add 'smartrep-map-internal
-              :around (lambda (orig-fun &rest args)
-                        (let ((echo-keystrokes 0))
-                          (apply orig-fun args))))
+  ;; Smartrepの設定
+  (use-package smartrep
+    :ensure t
+    :config
+    (declare-function smartrep-define-key "smartrep")
+    ;; C-q をプレフィックスキーとして設定
+    (global-set-key (kbd "C-q") nil)
+    (smartrep-define-key global-map "C-q"
+      '(( "p" . mc/mark-previous-like-this)
+        ("n" . mc/mark-next-like-this)
+        ("*" . mc/mark-all-like-this)
+        ("d" . mc/mark-all-like-this-dwim)
+        ("m" . mc/mark-more-like-this-extended)
+        ("u" . mc/unmark-next-like-this)
+        ("U" . mc/unmark-previous-like-this)
+        ("s" . mc/skip-to-next-like-this)
+        ("S" . mc/skip-to-previous-like-this)
+        ("i" . mc/insert-numbers)
+        ("o" . mc/sort-regions)
+        ("O" . mc/reverse-regions)))
+
+    ;; smartrepによるコマンド実行中のキー入力エコーを無効にする
+    ;; http://shakenbu.org/yanagi/d/?date=20140105
+    (advice-add 'smartrep-map-internal
+                :around (lambda (orig-fun &rest args)
+                          (let ((echo-keystrokes 0))
+                            (apply orig-fun args))))
+    )
   )
 
-;; 左側にでるファイラー
+;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :ensure t
-  :after
-  projectfile
+  :after projectfile
   :commands
   (neotree-show neotree-hide neotree-dir neotree-find)
-  ;; :bind (
-  ;;        ([f8] . neotree-toggle)
-  ;;        )
+  ;; :bind (([f8] . neotree-toggle)) ; うまくバインドできない
   :preface
   (bind-key [f8] 'neotree-toggle)
   (defun neotree-toggle ()
     (interactive)
-    (let ((project-dir
-           (ignore-errors
-         ;;; Pick one: projectile or find-file-in-project
-             (projectile-project-root)
-             ))
+    (let ((project-dir (ignore-errors (projectile-project-root)))
           (file-name (buffer-file-name))
           (neo-smart-open t))
       (if (and (fboundp 'neo-global--window-exists-p)
@@ -790,170 +594,152 @@ Set name truncation length in ELSCREEN-TRUNCATE-LENGTH"
           (neotree-hide)
         (progn
           (neotree-show)
-          (if project-dir
-              (neotree-dir project-dir))
-          (if file-name
-              (neotree-find file-name))))))
+          (if project-dir (neotree-dir project-dir))
+          (if file-name   (neotree-find file-name)))))
+    )
   )
 
+;;; Recentf - 最近使用したファイルの履歴管理
 (use-package recentf
   :ensure t
   :init
   (recentf-mode 1)
   :config
+  ;; メッセージを一時的に抑制するマクロ
   (defmacro with-suppressed-message (&rest body)
     "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
     (declare (indent 0))
     (let ((message-log-max nil))
       `(with-temp-message (or (current-message) "") ,@body)))
 
+  ;; recentf の設定
   ;; (setq recentf-save-file "~/.emacs.d/hist/recentf" "-" user-full-name)
-  (setq recentf-max-saved-items 2000 ;; recentf に保存するファイルの数
-        recentf-max-menu-items 15
-        ;; .recentf自体は含まない
-        recentf-exclude '("recentf" "-" user-full-name)
-        ;; my-set-history @00-auto-file-place.el
+  (setq recentf-max-saved-items 2000                      ; 保存するファイルの数
+        recentf-max-menu-items 15                        ; メニューに表示するアイテムの数
+        recentf-exclude '("recentf" "-" user-full-name)  ; 除外するファイルパターン（.recentf自体は含まない）
+        recentf-auto-cleanup 'never                      ; 自動整理の設定
+        ;; recentf の保存リストのパスをカスタマイズ (my-set-history@00-auto-file-place.el)
         recentf-save-file (my-set-history "recentf" "-" user-full-name)
-        ;; 保存する内容を整理
-        recentf-auto-cleanup 'never
-        recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list)
-   )
+        ;; 30秒ごとに recentf リストを自動保存
+        recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
   )
 
+;;; Recentf-ext - Recentfの拡張機能
 (use-package recentf-ext
   :ensure t
   )
 
-;; C-vとかのスクロールがスムーズになる
+;;; Smooth-scroll - スムーズなスクロール操作（C-v など）
 (use-package smooth-scroll
   :ensure t
   :config
-  (smooth-scroll-mode t)
-  (setq smooth-scroll/vscroll-step-size 8)
+  (smooth-scroll-mode t)                    ; smooth-scroll モードを有効化
+  (setq smooth-scroll/vscroll-step-size 8)  ; 垂直スクロールのステップサイズを設定
   )
 
-;;インクリメンタルバッファサーチ
+;;; Swiper - インクリメンタルサーチ機能の強化
 (use-package swiper
   :ensure t
-  :bind (
-         ("C-s" . swiper)
-         )
+  :bind (("C-s" . swiper))
   :config
   )
 
-;; C-/でundo
-;; C-x uで樹形図表示
+;;; Undo-tree - アンドゥの操作のツリー表示と管理
+;; C-/ でundo
+;; C-x u で樹形図表示
 (use-package undo-tree
   :ensure t
   :diminish
   :init
   (global-undo-tree-mode)
   :config
+  (setq undo-tree-auto-save-history nil)  ; アンドゥ履歴の自動保存を無効化
+
+  ;; undo-tree-visualize 関数の動作をカスタマイズ
   (defun undo-tree-split-side-by-side (original-function &rest args)
-    "Split undo-tree side-by-side"
-    (let ((split-height-threshold nil)
-          (split-width-threshold 0))
+    "Split undo-tree side-by-side."
+    (let ((split-height-threshold nil)   ; 縦分割の閾値
+          (split-width-threshold 0))    ; 横分割の閾値
       (apply original-function args)))
+
+  ;; undo-tree-visualize のアドバイスを追加
   (advice-add 'undo-tree-visualize :around #'undo-tree-split-side-by-side)
-  ;; visualizerはRETかC-gで終了
-  (define-key undo-tree-visualizer-mode-map (kbd "RET") 'undo-tree-visualizer-quit)
-  (define-key undo-tree-visualizer-mode-map (kbd "C-g") 'undo-tree-visualizer-quit)
+
+  ;; アンドゥツリービジュアライザのキーバインド設定
+  (define-key undo-tree-visualizer-mode-map (kbd "RET") 'undo-tree-visualizer-quit)  ; RET で終了
+  (define-key undo-tree-visualizer-mode-map (kbd "C-g") 'undo-tree-visualizer-quit)  ; C-g で終了
   )
 
+;;; Undohist - アンドゥ履歴のファイル保存
 (use-package undohist
   :ensure t
-  :diminish
+  :diminish  ; モードラインの表示を隠す
   :config
-  (setq undohist-directory (my-set-history "undohist")) ;; my-set-history @00-auto-file-place.el
-  (undohist-initialize)
+  (setq undohist-directory (my-set-history "undohist")) ; アンドゥ履歴の保存先 (@00-auto-file-place.el)
+  (undohist-initialize)                                 ; undohist を初期化
   )
 
+;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
   :ensure t
   :diminish which-key-mode
   :custom
-  (which-key-max-description-length 40)
-  (which-key-use-C-h-commands t)
+  (which-key-max-description-length 40)  ; 説明の最大長
+  (which-key-use-C-h-commands t)         ; C-h コマンドを使用
   :hook
-  (after-init . which-key-mode)
+  (after-init . which-key-mode)          ; Emacs 起動後に which-key モードを有効化
   )
 
+;;; Amx - M-x コマンドの強化（コマンド履歴などを改善）
 (use-package amx
   :ensure t
   )
 
+;;; S - 文字列操作のための追加機能
 (use-package s
   :ensure t
-)
+  )
 
-;;; snippet系
+;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :ensure t
   :diminish
   :init
-  (setq yas-snippet-dirs '(
-                           "~/.emacs.d/my-data/snippets"
-                           "~/.emacs.d/my-data/snippets/snippets" ;; for symbolic link
-                           "~/.emacs.d/loads/elisp/yasnippet-snippets/snippets"
-                           ))
-  ;; (yas-reload-all)
-  (yas-global-mode 1)
-  ;; :bind (:map yas-minor-mode-map
-  ;;             ("C-x i i" . yas-insert-snippet)     ;; 既存スニペットを挿入する
-  ;;             ("C-x i n" . yas-new-snippet)        ;; 新規スニペットを作成するバッファを用意する
-  ;;             ("C-x i v" . yas-visit-snippet-file) ;; 既存スニペットを閲覧・編集する
-  ;;             ("C-x i l" . yas-describe-tables)
-  ;;             ("C-x i g" . yas-reload-all)
-  ;;             )
+  (setq yas-snippet-dirs '("~/.emacs.d/my-data/snippets"
+                           "~/.emacs.d/my-data/snippets/snippets" ;; シンボリックリンク用
+                           "~/.emacs.d/loads/elisp/yasnippet-snippets/snippets"))
   :config
-  (use-package yasnippet-snippets
-    :ensure t)
-  (setq yas-prompt-functions '(yas-ido-prompt))
-  (custom-set-variables '(yas-trigger-key "TAB"))
+  (yas-global-mode 1)                             ; yasnippet のグローバルモードを有効化
+  (use-package yasnippet-snippets :ensure t)      ; yasnippet の追加スニペット集
+  (setq yas-prompt-functions '(yas-ido-prompt))   ; スニペット展開のプロンプト設定
+  (custom-set-variables '(yas-trigger-key "TAB")) ; トリガーキーを TAB に設定
 
-  ;; (use-package ivy-yasnippet
-  ;;   :ensure t
-  ;;   :bind (
-  ;;          ("C-c C-y" . ivy-yasnippet)
-  ;;          )
-  ;;   :config
-  ;;   (setq ivy-yasnippet-expand-keys "smart")
-  ;;   (advice-add #'ivy-yasnippet--preview :override #'ignore)
-  ;;   )
-
+  ;; helm と yasnippet の統合
   (use-package helm-c-yasnippet
     :ensure t
     :diminish
-    :bind (
-           ("C-c y" . helm-yas-complete)
-           )
+    :bind (("C-c y" . helm-yas-complete))
     :config
+    ;; helm のスペースマッチングを有効にする
     (setq helm-yas-space-match-any-greedy t)
     )
   )
 
+;;; Rainbow-delimiters - 括弧の色分け
+;; 括弧を色分けして対応関係を視覚的に表示する
 (use-package rainbow-delimiters
   :ensure t
   :diminish
-  :hook
-  (prog-mode . rainbow-delimiters-mode)
-  :bind (
-         ("C-c l" . rainbow-delimiters-using-stronger-colors)
-         )
+  :hook (prog-mode . rainbow-delimiters-mode)
+  :bind (("C-c l" . rainbow-delimiters-using-stronger-colors)) ; より強調した色に変更するコマンド
   :config
-  ;; these setting should be placed after load-theme
-  ;; 括弧の色を強調
-  (use-package cl-lib :ensure t)
-  (use-package color  :ensure t)
+  ;; 括弧の色をより強調するための関数
   (defun rainbow-delimiters-using-stronger-colors ()
     (interactive)
-    (cl-loop
-     for index from 1 to rainbow-delimiters-max-face-count
-     do
-     (let ((face (intern (format "rainbow-delimiters-depth-%d-face" index))))
-       (cl-callf color-saturate-name (face-foreground face) 50))))
-
-  ;; making unmatched parens stand out more
+    (cl-loop for index from 1 to rainbow-delimiters-max-face-count
+             do (let ((face (intern (format "rainbow-delimiters-depth-%d-face" index))))
+                  (cl-callf color-saturate-name (face-foreground face) 50))))
+  ;; 一致しない括弧をより目立たせる
   (set-face-attribute 'rainbow-delimiters-unmatched-face nil
                       :foreground     'unspecified
                       :inherit        'error
