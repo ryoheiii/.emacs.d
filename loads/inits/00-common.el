@@ -101,8 +101,10 @@
 ;;; narrowing を禁止
 (put 'narrow-to-region 'disabled nil)
 
-;;; 行番号表示 -> nlinum.elへ移行
-(global-linum-mode)
+;;; 行番号表示
+(if (version< emacs-version "29")
+    (global-linum-mode t)               ; Emacs28 以前
+  (global-display-line-numbers-mode t)) ; Emacs29 以降
 (setq linum-format "%4d ") ;; 4 桁分の表示領域を確保する
 (setq linum-delay t)       ;; 軽くする処理
 

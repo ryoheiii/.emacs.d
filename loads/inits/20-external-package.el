@@ -284,17 +284,17 @@
   ;; バッファ名・モード名に基づくタブのニックネーム設定
   (setq elscreen-buffer-to-nickname-alist
         '(( "^dired-mode$" . (lambda () (format "Dired(%s)" dired-directory)))
-          ("^Info-mode$"  . (lambda () (format "Info(%s)" (file-name-nondirectory Info-current-file))))
-          ("^mew-"        . "Mew")
-          ("^irchat-"     . "IRChat")
-          ("^liece-"      . "Liece")
-          ("^lookup-"     . "Lookup"))
+          ( "^Info-mode$"  . (lambda () (format "Info(%s)" (file-name-nondirectory Info-current-file))))
+          ( "^mew-"        . "Mew")
+          ( "^irchat-"     . "IRChat")
+          ( "^liece-"      . "Liece")
+          ( "^lookup-"     . "Lookup"))
         elscreen-mode-to-nickname-alist
         '(( "[Ss]hell"     . "shell")
-          ("compilation"  . "compile")
-          ("-telnet"      . "telnet")
-          ("dict"         . "OnlineDict")
-          ("*WL:Message*" . "Wanderlust")))
+          ( "compilation"  . "compile")
+          ( "-telnet"      . "telnet")
+          ( "dict"         . "OnlineDict")
+          ( "*WL:Message*" . "Wanderlust")))
   ;; フレームタイトルにタブ情報を表示
   (setq *elscreen-tab-truncate-length* 20)
   (defun elscreen-tabs-as-string ()
