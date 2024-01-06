@@ -67,7 +67,6 @@
         (ivy                       . "melpa-stable")
         (ivy-yasnippet             . "melpa-stable")
         (eshell                    . "melpa-stable")
-        (elscreen                  . "melpa-stable")
         (auto-complete             . "melpa-stable")
         (auto-complete-c-headers   . "melpa")
         (auto-complete-clang-async . "melpa-stable")

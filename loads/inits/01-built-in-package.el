@@ -109,3 +109,39 @@
   :config
   (windmove-default-keybindings) ;; Shift + 矢印キーでウィンドウ間を移動
   )
+
+;;; tab-bar.el の設定 - Emacsのタブ機能をカスタマイズ
+(use-package tab-bar
+  :ensure nil ; 組み込みパッケージなのでインストールは不要
+  :config
+  ;; タブバーを有効化します。
+  (tab-bar-mode 1)
+  ;; 新しいタブを開いたときに、"*scratch*" バッファを表示
+  (setq tab-bar-new-tab-choice "*scratch*")
+  ;; 新しいタブは常に右端に作成
+  (setq tab-bar-new-tab-to 'rightmost)
+  ;; タブバーの表示形式をカスタマイズ
+  (setq tab-bar-tab-name-function 'tab-bar-tab-name-all)
+  ;; C-z をプレフィックスキーとして定義
+  (define-prefix-command 'tab-bar-prefix-map)      ; 新しいプレフィックスコマンドを定義
+  (global-set-key (kbd "C-z") 'tab-bar-prefix-map) ; C-z をプレフィックスキーとして設定
+  ;; 各種キーバインド設定
+  (define-key tab-bar-prefix-map (kbd "n") 'tab-next)       ; 次のタブに切り替え
+  (define-key tab-bar-prefix-map (kbd "C-n") 'tab-next)     ; 次のタブに切り替え
+  (define-key tab-bar-prefix-map (kbd "p") 'tab-previous)   ; 前のタブに切り替え
+  (define-key tab-bar-prefix-map (kbd "C-p") 'tab-previous) ; 前のタブに切り替え
+  (define-key tab-bar-prefix-map (kbd "f") 'tab-new)        ; 新しいタブを開く
+  (define-key tab-bar-prefix-map (kbd "C-f") 'tab-new)      ; 新しいタブを開く
+  (define-key tab-bar-prefix-map (kbd "k") 'tab-close)      ; タブを閉じる
+  (define-key tab-bar-prefix-map (kbd "C-k") 'tab-close)    ; タブを閉じる
+  ;; 特定のタブを選択するためのキーバインド設定
+  (define-key tab-bar-prefix-map (kbd "1")  (lambda () (interactive) (tab-bar-select-tab 1)))
+  (define-key tab-bar-prefix-map (kbd "2")  (lambda () (interactive) (tab-bar-select-tab 2)))
+  (define-key tab-bar-prefix-map (kbd "3")  (lambda () (interactive) (tab-bar-select-tab 3)))
+  (define-key tab-bar-prefix-map (kbd "4")  (lambda () (interactive) (tab-bar-select-tab 4)))
+  (define-key tab-bar-prefix-map (kbd "5")  (lambda () (interactive) (tab-bar-select-tab 5)))
+  (define-key tab-bar-prefix-map (kbd "6")  (lambda () (interactive) (tab-bar-select-tab 6)))
+  (define-key tab-bar-prefix-map (kbd "7")  (lambda () (interactive) (tab-bar-select-tab 7)))
+  (define-key tab-bar-prefix-map (kbd "8")  (lambda () (interactive) (tab-bar-select-tab 8)))
+  (define-key tab-bar-prefix-map (kbd "9")  (lambda () (interactive) (tab-bar-select-tab 9)))
+  )

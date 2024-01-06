@@ -4,8 +4,7 @@
 (set-default-coding-systems 'utf-8)
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
-
-;;; Macで日本語のファイル名を扱う場合用
+;; Macで日本語のファイル名を扱う場合用
 (when (eq system-type 'darwin)
   (use-package ucs-normalize
     :config
@@ -13,6 +12,11 @@
     (setq locale-coding-system 'utf-8-hfs)
     )
   )
+
+;;; 改行コードの表示
+(setq eol-mnemonic-dos  "(CRLF)")
+(setq eol-mnemonic-mac  "(CR)")
+(setq eol-mnemonic-unix "(LF)")
 
 ;;; ファイル保存時の設定
 (add-hook 'before-save-hook 'delete-trailing-whitespace) ;; 行末の空白を削除
@@ -64,15 +68,10 @@
 (setq auto-save-default nil)    ;; オートセーブを無効にする
 (setq create-lockfiles nil)     ;; ロックファイルを作成しない
 
-;;; 改行コードの表示
-(setq eol-mnemonic-dos  "(CRLF)")
-(setq eol-mnemonic-mac  "(CR)")
-(setq eol-mnemonic-unix "(LF)")
-
 ;;; 補完設定
 (setq completion-ignore-case t) ;; 補完時に大文字小文字を区別しない
 (setq read-file-name-completion-ignore-case t)
-(icomplete-mode 1) ;; 補完可能なものを随時表示
+(icomplete-mode 1)              ;; 補完可能なものを随時表示
 
 ;;; クリップボード設定
 (setq x-select-enable-clipboard t) ;; クリップボードをシステムと共有
