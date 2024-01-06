@@ -148,7 +148,7 @@
       `(with-temp-message (or (current-message) "") ,@body)))
 
   ;; recentf の設定
-  (setq recentf-max-saved-items 2000                  ; 保存するファイルの数
+  (setq recentf-max-saved-items 2000                 ; 保存するファイルの数
         recentf-max-menu-items 15                    ; メニューに表示するアイテムの数
         recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
         recentf-auto-cleanup 'never                  ; 自動整理の設定
