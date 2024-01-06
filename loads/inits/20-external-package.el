@@ -347,8 +347,6 @@
   :ensure t
   :diminish
   :init
-  (setq helm-ff-file-name-history-use-recentf t
-        helm-display-function #'display-buffer)
   (helm-mode 1)
   :bind (( "M-x"     . helm-M-x)
          ("C-x C-f" . helm-find-files)
@@ -365,7 +363,9 @@
          :map helm-read-file-map
          ("TAB" . helm-execute-persistent-action))
   :config
-  (setq helm-buffer-details-flag nil
+  (setq helm-ff-file-name-history-use-recentf t
+        helm-display-function #'display-buffer
+        helm-buffer-details-flag nil
         helm-delete-minibuffer-contents-from-point t
         helm-ff-fuzzy-matching nil)
   ;; Emacsのコマンドと履歴のソース定義
@@ -453,6 +453,7 @@
 ;;; Helm Descbinds - コマンドとキーバインドの検索（helm-M-x でキーバインドを表示）
 (use-package helm-descbinds
   :ensure t
+  :after helm
   :init (helm-descbinds-mode 1)
   )
 

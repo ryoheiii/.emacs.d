@@ -3,6 +3,7 @@
 #*#
 *.dat
 elpa/
+eln-cache/
 tmp/*
 loads/elisp/*
 loads/site-lisp/*
