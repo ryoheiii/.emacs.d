@@ -110,7 +110,7 @@
   (windmove-default-keybindings) ;; Shift + 矢印キーでウィンドウ間を移動
   )
 
-;;; tab-bar.el の設定 - Emacsのタブ機能をカスタマイズ
+;;; Tab-bar - Emacsのタブ機能をカスタマイズ
 (use-package tab-bar
   :ensure nil ; 組み込みパッケージなのでインストールは不要
   :config
