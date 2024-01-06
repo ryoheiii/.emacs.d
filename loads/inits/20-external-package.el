@@ -89,6 +89,7 @@
 ;;; Highlight Indent Guides - インデントレベルを視覚的に区別するためのガイド表示
 (use-package highlight-indent-guides
   :ensure t
+  :if (version< emacs-version "29") ; emacs29 で位置ズレが発生するようになるため無効化
   :diminish
   :hook (emacs-lisp-mode . highlight-indent-guides-mode)
   :custom
@@ -627,7 +628,7 @@
         recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
         recentf-auto-cleanup 'never                  ; 自動整理の設定
         ;; recentf の保存リストのパスをカスタマイズ (my-set-history@00-auto-file-place.el)
-	    recentf-save-file (my-set-history "recentf-" user-full-name)
+        recentf-save-file (my-set-history "recentf-" user-full-name)
         ;; 30秒ごとに recentf リストを自動保存
         recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
   )
