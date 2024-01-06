@@ -54,9 +54,10 @@
         (golden-ratio              . "melpa-stable")
         (srefactor                 . "melpa-stable")
         (company                   . "melpa-stable")
+        (company-statistics        . "melpa-stable")
+        (company-irony             . "melpa-stable")
         (company-irony-c-headers   . "melpa-stable")
         (company-c-headers         . "melpa-stable")
-        (company-irony             . "melpa-stable")
         (company-fuzzy             . "melpa-stable")
         (smart-newline             . "melpa")
         (anzu                      . "melpa-stable")
@@ -134,28 +135,28 @@
 (eval-when-compile
   (require 'use-package))
 
-;; ;;; straight.el の設定 (GitHub Copilot を利用する場合 (use-package copilot@20-external-package.el))
-;; (defvar straight-base-dir (expand-file-name "loads/elisp/" user-emacs-directory))
-;; (setq straight-repository-branch "develop")
+;;; straight.el の設定
+(defvar straight-base-dir (expand-file-name "loads/elisp/" user-emacs-directory))
+(setq straight-repository-branch "develop")
 
-;; ;; straight.el 自身のインストールと初期設定
-;; (defvar bootstrap-version)
-;; (let ((bootstrap-file
-;;        (expand-file-name
-;;         "straight/repos/straight.el/bootstrap.el"
-;;         (or (bound-and-true-p straight-base-dir)
-;;             user-emacs-directory)))
-;;       (bootstrap-version 7))
-;;   (unless (file-exists-p bootstrap-file)
-;;     (with-current-buffer
-;;         (url-retrieve-synchronously
-;;          "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
-;;          'silent 'inhibit-cookies)
-;;       (goto-char (point-max))
-;;       (eval-print-last-sexp)))
-;;   (load bootstrap-file nil 'nomessage))
+;; straight.el 自身のインストールと初期設定
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name
+        "straight/repos/straight.el/bootstrap.el"
+        (or (bound-and-true-p straight-base-dir)
+            user-emacs-directory)))
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
 
-;; (straight-use-package 'use-package)
+(straight-use-package 'use-package)
 
 ;;; Init-loader - 設定ファイルを整理し、分割された設定を読み込む
 (use-package init-loader

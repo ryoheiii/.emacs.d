@@ -21,7 +21,7 @@
 ;;; ファイル拡張子とメジャーモードの関連付け
 (setq auto-mode-alist
       (append
-       '(( "\\.go$"   . go-mode)
+       '(("\\.go$"   . go-mode)
          ("\\.C$"    . c-mode)
          ("\\.cc$"   . cc-mode)
          ("\\.nut$"  . c++-mode)

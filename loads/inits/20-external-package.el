@@ -211,89 +211,121 @@
 (use-package company
   :ensure t
   :diminish company-mode
+  :after company-statistics
   :init
   (global-company-mode 1)
   :bind (("C-M-i" . company-complete)
          :map company-mode-map
          ("TAB" . indent-for-tab-command)
          :map company-active-map
-         ("M-n" . nil)
-         ("M-p" . nil)
-         ("C-n" . company-select-next)
-         ("C-p" . company-select-previous)
+         ("M-n" . nil)                        ; M-n で次の候補への移動をキャンセル
+         ("M-p" . nil)                        ; M-p で前の候補への移動をキャンセル
+         ("C-n" . company-select-next)        ; 次の補完候補を選択
+         ("C-p" . company-select-previous)    ; 前の補完候補を選択
+         ("C-s" . company-filter-candidates)  ; C-s で絞り込む
          ("TAB" . company-complete-selection)
          :map company-search-map
+         ;; 検索候補の移動を C-n と C-p で移動
          ("C-n" . company-select-next)
          ("C-p" . company-select-previous))
   :config
+  ;; 基本設定
   (setq company-selection-wrap-around t
-        company-transformers '(company-sort-by-backend-importance) ; ソート順
+        company-transformers '(company-sort-by-occurrence
+                               company-sort-by-backend-importance) ; 利用頻度が高いものを候補の上に表示
         company-idle-delay 0                                       ; デフォルトは 0.5
         company-show-numbers t
         company-tooltip-limit 10
-        company-minimum-prefix-length 3                            ; デフォルトは 4
+        company-minimum-prefix-length 2                            ; デフォルトは 4
         company-tooltip-align-annotations t
         company-tooltip-flip-when-above t
         company-dabbrev-around t
         completion-ignore-case t
         company-dabbrev-downcase nil
         company-eclim-auto-save nil)
-  ;; Yasnippetとの連携
-  (defvar company-mode/enable-yas t)
-  (defun company-mode/backend-with-yas (backend)
-    (if (or (not company-mode/enable-yas) (and (listp backend) (member 'company-yasnippet backend)))
-        backend
-      (append (if (consp backend) backend (list backend))
-              '(:with company-yasnippet))))
-  (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
-  ;; color settings
+  ;; color settings（ツールチップの基本設定）
   (set-face-attribute 'company-tooltip nil
-                      :foreground "black" :background "lightgrey")
+                      :foreground "white" :background "midnight blue")
   (set-face-attribute 'company-tooltip-common nil
-                      :foreground "black" :background "lightgrey")
+                      :foreground "white" :background "midnight blue")
+  ;; color settings（選択項目の設定）
   (set-face-attribute 'company-tooltip-common-selection nil
-                      :foreground "white" :background "steelblue")
+                      :foreground "white" :background "dark slate blue")
   (set-face-attribute 'company-tooltip-selection nil
-                      :foreground "black" :background "steelblue")
+                      :foreground "white" :background "dark slate blue")
+  ;; color settings（プレビューとスクロールバーの設定）
   (set-face-attribute 'company-preview-common nil
-                      :background nil :foreground "lightgrey" :underline t)
+                      :background "dark slate blue" :foreground "white" :underline t)
   (set-face-attribute 'company-scrollbar-fg nil
-                      :background "grey60")
+                      :background "dark gray")
   (set-face-attribute 'company-scrollbar-bg nil
-                      :background "gray40")
-  )
-
-;;; Auto-complete - コード補完機能の提供と設定（company に置き換え）
-(use-package auto-complete
-  :ensure t
-  :demand t
-  :diminish ""
-  :bind (:map ac-menu-map
-              ("C-n" . ac-next)
-              ("C-p" . ac-previous)
-              )
-  :config
-  (use-package auto-complete-c-headers
+                      :background "dim gray")
+  ;; company-same-mode-buffers (プログラムの関数、変数のキーワード補完を強化) との統合
+  ;; e.g. ファイル内のキーワードから補完
+  (use-package company-same-mode-buffers
+    :straight '(company-same-mode-buffers
+                :type git
+                :host github
+                :repo "zk-phi/company-same-mode-buffers")
+    :after company
     :ensure t
     :init
-    (add-hook 'c++-mode-hook (lambda ()
-                               '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
-    (add-hook 'c-mode-hook (lambda ()
-                             '(setq ac-sources (append ac-sources '(ac-source-c-headers)))))
+    (require 'company-same-mode-buffers)
+    (company-same-mode-buffers-initialize)
     )
-  (ac-config-default)
-  (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict")
-  (add-to-list 'ac-dictionary-directories "~/.emacs.d/my-data/ac-dict/ac-dict") ;; for symbolic link
-  (add-to-list 'ac-modes 'text-mode)         ;; text-modeでも自動的に有効にする
-  (ac-set-trigger-key "TAB")
-  (setq ac-comphist-file (my-set-history "ac-comphist.dat")) ;; my-set-history @00-auto-file-place.el
-  (setq ac-use-menu-map t
-        ac-disable-faces nil ;コメントや文字列リテラルでも補完を行う
-        ac-use-fuzzy t)      ; 曖昧マッチ
-  ;; yasnippet の binding を指定するとエラーが出るので回避する方法。
-  (setf (symbol-function 'yas-active-keys)
-        (lambda ()
-          (remove-duplicates (mapcan #'yas--table-all-keys (yas--get-snippet-tables)))))
+  ;; company-irony - Company と Irony の統合
+  (use-package company-irony
+    :ensure t
+    :after (company irony)
+    :config
+    )
+  ;; Company-irony-c-headers - C ヘッダファイル用の Company バックエンド
+  (use-package company-irony-c-headers
+    :ensure t
+    :after (company irony)
+    :config
+    )
+  ;; company-backends の設定 (yasnippet と company-same-mode-buffers は両立)
+  (setq company-backends
+        '((company-capf :with company-same-mode-buffers company-yasnippet)
+          (company-dabbrev-code :with company-same-mode-buffers company-yasnippet)
+          (company-irony-c-headers company-irony) ; Irony と Irony-C-Headers の組み合わせ
+          company-keywords
+          company-files
+          company-dabbrev))
+  )
+
+;;; Company-statics - Company の表示順をスマートにする
+(use-package company-statistics
+  :ensure t
+  :init
+  (setq company-statistics-file
+        (my-set-history "company-statistics-cache.el")) ; 履歴の保存場所 (@00-auto-file-place.el)
+  (company-statistics-mode)
+  )
+
+;;; Company-dwim - auto-complete に近い挙動で候補の絞り込みができる
+(use-package company-dwim
+  :straight '(company-dwim
+              :type git
+              :host github
+              :repo "zk-phi/company-dwim")
+  :ensure t
+  :init
+  (define-key company-active-map (kbd "TAB") 'company-dwim)
+  (setq company-frontends
+        '(company-pseudo-tooltip-unless-just-one-frontend
+          company-dwim-frontend
+          company-echo-metadata-frontend))
+  )
+
+;;; Company-anywhere - カーソルの位置がどこであっても company を起動できる
+(use-package company-anywhere
+  :straight '(company-anywhere
+              :type git
+              :host github
+              :repo "zk-phi/company-anywhere")
+  :ensure t
   )
 
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
@@ -308,13 +340,6 @@
   ;; Irony モードのインストール場所とオプションファイルの設定
   (setq irony-server-install-prefix    (expand-file-name "irony" my-history-dir))
   (setq irony-server-options-directory (expand-file-name "irony" my-history-dir))
-  :config
-  ;; Irony と Company の統合
-  (use-package company-irony-c-headers
-    :ensure t
-    :config
-    ;; Company バックエンドに Irony の補完を追加
-    (add-to-list 'company-backends '(company-irony-c-headers company-irony)))
   )
 
 ;;; Yasnippet - コードスニペットの管理と挿入
@@ -342,6 +367,17 @@
     )
   )
 
+;; ;;; GitHub Copilot の設定
+;; (use-package copilot
+;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+;;   :ensure t
+;;   :hook ((prog-mode . copilot-mode))  ;; プログラミング言語のバッファで Copilot を有効にする
+;;   :config
+;;   (setq copilot-node-executable "~/.nvm/versions/node/v21.5.0/bin/node")
+;;   (define-key copilot-mode-map (kbd "<tab>") 'copilot-accept-completion)
+;;   (define-key copilot-mode-map (kbd "TAB") 'copilot-accept-completion)
+;;   )
+
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :ensure t
@@ -359,7 +395,7 @@
     ;; C-q をプレフィックスキーとして設定
     (global-set-key (kbd "C-q") nil)
     (smartrep-define-key global-map "C-q"
-      '(( "p" . mc/mark-previous-like-this)
+      '(("p" . mc/mark-previous-like-this)
         ("n" . mc/mark-next-like-this)
         ("*" . mc/mark-all-like-this)
         ("d" . mc/mark-all-like-this-dwim)
@@ -408,7 +444,7 @@
   :diminish
   :init
   (helm-mode 1)
-  :bind (( "M-x"     . helm-M-x)
+  :bind (("M-x"     . helm-M-x)
          ("C-x C-f" . helm-find-files)
          ("C-x C-r" . helm-recentf)
          ("C-x C-y" . helm-show-kill-ring)
@@ -489,9 +525,9 @@
 (use-package helm-gtags
   :ensure t
   :diminish
-  :hook (( c-mode   . helm-gtags-mode)
+  :hook ((c-mode   . helm-gtags-mode)
          (c++-mode . helm-gtags-mode))
-  :bind (( [f11] . helm-gtags-find-tag)    ;; 関数の定義場所の検索
+  :bind (([f11] . helm-gtags-find-tag)    ;; 関数の定義場所の検索
          ([f12] . helm-gtags-find-rtag)   ;; 関数の使用箇所の検索
          ([f9]  . helm-gtags-find-symbol) ;; 変数の使用箇所の検索
          ("C-t" . helm-gtags-pop-stack)   ;; gtagsでジャンプする一つ前の状態に戻る
