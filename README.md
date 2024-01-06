@@ -14,6 +14,11 @@
 - **aspell** (スペルチェック): `sudo apt install aspell`, `~/.aspell.conf` に設定
 - **cmake** (irony-install-server 用): `sudo apt install cmake`
 - **libclang** (irony-install-server 用): `sudo apt-get install libclang-dev`
+- **node.js** (github copilot 用): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`, `export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm`, `nvm install 21`
+
+## 外部 Lisp パッケージのダウンロード
+- **stopwatch**: `git clone https://github.com/blue0513/stopwatch ~/emacs.d/loads/site-lisp/`
+- **initchart**: `git clone https://github.com/yuttie/initchart.git ~/emacs.d/loads/site-lisp/`
 
 # **パッケージの管理方法**
 - `~/.emacs.d/loads/elisp`および`~/.emacs.d/loads/site-lisp`下の設定ファイルを読み込み
@@ -34,5 +39,5 @@
 - `package.el`関連の設定は 20 番台に記述するのが一般的
 
 # **その他**
-- ターミナルでの Emacs 使用時には "xterm-256color" を利用
 - Irony モードの初回実行時には、サーバーの構築のために `M-x irony-install-server` を手動で実行する必要あり
+- ターミナルでの Emacs 使用時には "xterm-256color" を利用

@@ -1,3 +1,4 @@
+;;;;; [Group] Themes-and-Visuals - テーマとビジュアル関連 ;;;;;
 ;;; Color Theme Modern - モダンなカラーテーマの設定。選択可能なテーマの幅を広げる
 (use-package color-theme-modern
   :ensure t
@@ -11,12 +12,6 @@
   (enable-theme 'hober)
   )
 
-;;; Xclip - クリップボードとの共有を可能にする
-(use-package xclip
-  :ensure t
-  :init (xclip-mode 1) ; クリップボード共有を有効化
-  )
-
 ;;; Smart Mode Line - モードラインの外観と情報表示をカスタマイズ
 (use-package smart-mode-line
   :ensure t
@@ -25,19 +20,6 @@
         sml/theme 'dark
         sml/shorten-directory -1)  ; ディレクトリパスはフル表示
   (sml/setup)
-  )
-
-;;; Total Lines - バッファ内の総行数をモードラインに表示
-(use-package total-lines
-  :ensure t
-  :init (global-total-lines-mode t)
-  :config
-  (defun my-set-line-numbers ()
-    "モードラインに全行数を表示。"
-    (setq-default mode-line-front-space
-                  (append mode-line-front-space
-                          '((:eval (format " (%d)" (- total-lines 1))))))) ;; 「" (%d)"」の部分はお好みで
-  (add-hook 'after-init-hook 'my-set-line-numbers)
   )
 
 ;;; Hide Mode Line - 特定のモードでモードラインを隠す
@@ -50,24 +32,6 @@
 (use-package fill-column-indicator
   :ensure t
   :hook ((markdown-mode git-commit-mode) . fci-mode)
-  )
-
-;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
-;; dash - Emacs 用のモダンなリスト操作ライブラリ (git-gutter+ の依存パッケージ)
-(use-package dash :ensure t)
-(use-package git-gutter+
-  :ensure t
-  :after dash
-  :custom
-  (git-gutter+:modified-sign "~")
-  (git-gutter+:added-sign    "+")
-  (git-gutter+:deleted-sign  "-")
-  :custom-face
-  (git-gutter+:modified ((t (:background "#f1fa8c"))))
-  (git-gutter+:added    ((t (:background "#50fa7b"))))
-  (git-gutter+:deleted  ((t (:background "#ff79c6"))))
-  :config
-  (global-git-gutter+-mode +1)
   )
 
 ;;; Beacon - カーソルの位置を明確にするために点滅エフェクトを追加
@@ -98,10 +62,43 @@
   (highlight-indent-guides-method 'character)
   )
 
-;;; Aggressive Indent - コード編集時の自動インデント調整
-(use-package aggressive-indent
+;;; Highlight Symbol - シンボルのハイライトとナビゲーション
+(use-package highlight-symbol
   :ensure t
-  :hook (emacs-lisp-mode . aggressive-indent-mode)
+  :bind (([f3] . highlight-symbol-at-point)
+         ([f4] . highlight-symbol-remove-all))
+  :config
+  (setq highlight-symbol-colors '("DarkOrange" "DodgerBlue1" "DeepPink1"))
+  )
+
+;;; Rainbow-delimiters - 括弧の色分け
+;; 括弧を色分けして対応関係を視覚的に表示する
+(use-package rainbow-delimiters
+  :ensure t
+  :diminish
+  :hook (prog-mode . rainbow-delimiters-mode)
+  :bind (("C-c l" . rainbow-delimiters-using-stronger-colors)) ; より強調した色に変更するコマンド
+  :config
+  ;; 括弧の色をより強調するための関数
+  (defun rainbow-delimiters-using-stronger-colors ()
+    (interactive)
+    (cl-loop for index from 1 to rainbow-delimiters-max-face-count
+             do (let ((face (intern (format "rainbow-delimiters-depth-%d-face" index))))
+                  (cl-callf color-saturate-name (face-foreground face) 50))))
+  ;; 一致しない括弧をより目立たせる
+  (set-face-attribute 'rainbow-delimiters-unmatched-face nil
+                      :foreground     'unspecified
+                      :inherit        'error
+                      :strike-through t)
+  )
+
+
+
+;;;;; [Group] Buffer-and-File-management - バッファとファイル管理関連 ;;;;;
+;;; Xclip - クリップボードとの共有を可能にする
+(use-package xclip
+  :ensure t
+  :init (xclip-mode 1) ; クリップボード共有を有効化
   )
 
 ;;; Dashboard - Emacs のスタートアップ画面をカスタマイズ
@@ -111,13 +108,17 @@
   :hook (after-init . dashboard-setup-startup-hook)
   )
 
-;;; Smart Newline - 改行時の自動インデントと位置調整
-;; https://ainame.hateblo.jp/entry/2013/12/08/162032
-(use-package smart-newline
+;;; Total Lines - バッファ内の総行数をモードラインに表示
+(use-package total-lines
   :ensure t
-  :init
-  (dolist (mode '(c++-mode-hook c-mode-hook cc-mode-hook emacs-lisp-mode-hook lisp-mode-hook))
-    (add-hook mode (lambda () (smart-newline-mode 1))))
+  :init (global-total-lines-mode t)
+  :config
+  (defun my-set-line-numbers ()
+    "モードラインに全行数を表示。"
+    (setq-default mode-line-front-space
+                  (append mode-line-front-space
+                          '((:eval (format " (%d)" (- total-lines 1))))))) ;; 「" (%d)"」の部分はお好みで
+  (add-hook 'after-init-hook 'my-set-line-numbers)
   )
 
 ;;; Anzu - 検索や置換操作時にマッチ数や現在位置を表示
@@ -133,39 +134,77 @@
         anzu-replace-to-string-separator " => ")
   )
 
-;;; Ispell - スペルチェック機能の設定と辞書の指定
-(use-package ispell
+;;; Recentf - 最近使用したファイルの履歴管理
+(use-package recentf
   :ensure t
+  :init
+  (recentf-mode 1)
   :config
-  ;; aspell にパスを設定
-  (when (file-executable-p "/usr/bin/aspell")
-    (setq-default ispell-program-name "aspell")
-    (add-to-list 'ispell-extra-args "--sug-mode=ultra"))
-  ;; 日本語をスキップする設定
-  (add-to-list 'ispell-skip-region-alist '("[^\000-\377]+"))
-  ;; スペルチェックに英語の辞書を使用
-  (setq ispell-dictionary "american")
+  ;; メッセージを一時的に抑制するマクロ
+  (defmacro with-suppressed-message (&rest body)
+    "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
+    (declare (indent 0))
+    (let ((message-log-max nil))
+      `(with-temp-message (or (current-message) "") ,@body)))
+
+  ;; recentf の設定
+  (setq recentf-max-saved-items 2000                  ; 保存するファイルの数
+        recentf-max-menu-items 15                    ; メニューに表示するアイテムの数
+        recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
+        recentf-auto-cleanup 'never                  ; 自動整理の設定
+        ;; recentf の保存リストのパスをカスタマイズ (my-set-history@00-auto-file-place.el)
+        recentf-save-file (my-set-history "recentf-" user-full-name)
+        ;; 30秒ごとに recentf リストを自動保存
+        recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
   )
 
-;;; Irony - C/C++ のコード補完とシンボル情報の提供
-(use-package irony
+;;; Recentf-ext - Recentfの拡張機能
+(use-package recentf-ext
   :ensure t
-  :defer t
-  :after cc-mode
-  :hook ((c-mode . irony-mode)
-         (c++-mode . irony-mode)
-         (irony-mode . irony-cdb-autosetup-compile-options))
-  :init
-  ;; Irony モードのインストール場所とオプションファイルの設定
-  (setq irony-server-install-prefix    (expand-file-name "irony" my-history-dir))
-  (setq irony-server-options-directory (expand-file-name "irony" my-history-dir))
+  )
+
+;;; Move Text - テキスト行の移動機能
+(use-package move-text
+  :ensure t
+  :bind (( "C-M-p" . move-text-up)
+         ("C-M-n" . move-text-down))
+  )
+
+;;; Smooth-scroll - スムーズなスクロール操作（C-v など）
+(use-package smooth-scroll
+  :ensure t
   :config
-  ;; Irony と Company の統合
-  (use-package company-irony-c-headers
-    :ensure t
-    :config
-    ;; Company バックエンドに Irony の補完を追加
-    (add-to-list 'company-backends '(company-irony-c-headers company-irony)))
+  (smooth-scroll-mode t)                    ; smooth-scroll モードを有効化
+  (setq smooth-scroll/vscroll-step-size 8)  ; 垂直スクロールのステップサイズを設定
+  )
+
+
+
+;;;;; [Group] Code-editting-and-Completion -  コード編集と補完関連 ;;;;;
+;;; Google C Style - Google の C スタイルガイドに準拠したコーディング
+(use-package google-c-style
+  :ensure t
+  :hook (( c-mode-common   . (lambda ()
+                               (google-set-c-style)
+                               (google-make-newline-indent)))
+         (c++-mode-common . (lambda ()
+                              (google-set-c-style)
+                              (google-make-newline-indent))))
+  )
+
+;;; Aggressive Indent - コード編集時の自動インデント調整
+(use-package aggressive-indent
+  :ensure t
+  :hook (emacs-lisp-mode . aggressive-indent-mode)
+  )
+
+;;; Smart Newline - 改行時の自動インデントと位置調整
+;; https://ainame.hateblo.jp/entry/2013/12/08/162032
+(use-package smart-newline
+  :ensure t
+  :init
+  (dolist (mode '(c++-mode-hook c-mode-hook cc-mode-hook emacs-lisp-mode-hook lisp-mode-hook))
+    (add-hook mode (lambda () (smart-newline-mode 1))))
   )
 
 ;; Company - 自動補完機能の強化とカスタマイズ
@@ -257,6 +296,91 @@
           (remove-duplicates (mapcan #'yas--table-all-keys (yas--get-snippet-tables)))))
   )
 
+;;; Irony - C/C++ のコード補完とシンボル情報の提供
+(use-package irony
+  :ensure t
+  :defer t
+  :after cc-mode
+  :hook ((c-mode . irony-mode)
+         (c++-mode . irony-mode)
+         (irony-mode . irony-cdb-autosetup-compile-options))
+  :init
+  ;; Irony モードのインストール場所とオプションファイルの設定
+  (setq irony-server-install-prefix    (expand-file-name "irony" my-history-dir))
+  (setq irony-server-options-directory (expand-file-name "irony" my-history-dir))
+  :config
+  ;; Irony と Company の統合
+  (use-package company-irony-c-headers
+    :ensure t
+    :config
+    ;; Company バックエンドに Irony の補完を追加
+    (add-to-list 'company-backends '(company-irony-c-headers company-irony)))
+  )
+
+;;; Yasnippet - コードスニペットの管理と挿入
+(use-package yasnippet
+  :ensure t
+  :diminish
+  :init
+  (setq yas-snippet-dirs '("~/.emacs.d/my-data/snippets"
+                           "~/.emacs.d/my-data/snippets/snippets" ;; シンボリックリンク用
+                           "~/.emacs.d/loads/elisp/yasnippet-snippets/snippets"))
+  :config
+  (yas-global-mode 1)                             ; yasnippet のグローバルモードを有効化
+  (use-package yasnippet-snippets :ensure t)      ; yasnippet の追加スニペット集
+  (setq yas-prompt-functions '(yas-ido-prompt))   ; スニペット展開のプロンプト設定
+  (custom-set-variables '(yas-trigger-key "TAB")) ; トリガーキーを TAB に設定
+
+  ;; helm と yasnippet の統合
+  (use-package helm-c-yasnippet
+    :ensure t
+    :diminish
+    :bind (("C-c y" . helm-yas-complete))
+    :config
+    ;; helm のスペースマッチングを有効にする
+    (setq helm-yas-space-match-any-greedy t)
+    )
+  )
+
+;;; Multiple Cursors - 複数カーソルによる編集機能
+(use-package multiple-cursors
+  :ensure t
+  :config
+  (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@00-auto-file-place.el 関数を使った設定
+
+  (global-set-key (kbd "C-M-c") 'mc/edit-lines)
+  (global-set-key (kbd "C-*")   'mc/mark-all-like-this)
+
+  ;; Smartrepの設定
+  (use-package smartrep
+    :ensure t
+    :config
+    (declare-function smartrep-define-key "smartrep")
+    ;; C-q をプレフィックスキーとして設定
+    (global-set-key (kbd "C-q") nil)
+    (smartrep-define-key global-map "C-q"
+      '(( "p" . mc/mark-previous-like-this)
+        ("n" . mc/mark-next-like-this)
+        ("*" . mc/mark-all-like-this)
+        ("d" . mc/mark-all-like-this-dwim)
+        ("m" . mc/mark-more-like-this-extended)
+        ("u" . mc/unmark-next-like-this)
+        ("U" . mc/unmark-previous-like-this)
+        ("s" . mc/skip-to-next-like-this)
+        ("S" . mc/skip-to-previous-like-this)
+        ("i" . mc/insert-numbers)
+        ("o" . mc/sort-regions)
+        ("O" . mc/reverse-regions)))
+
+    ;; smartrepによるコマンド実行中のキー入力エコーを無効にする
+    ;; http://shakenbu.org/yanagi/d/?date=20140105
+    (advice-add 'smartrep-map-internal
+                :around (lambda (orig-fun &rest args)
+                          (let ((echo-keystrokes 0))
+                            (apply orig-fun args))))
+    )
+  )
+
 ;;;Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :ensure t
@@ -267,17 +391,17 @@
          )
   )
 
-;;; Google C Style - Google の C スタイルガイドに準拠したコーディング
-(use-package google-c-style
+;;; Auto Highlight Symbol の設定
+(use-package auto-highlight-symbol
   :ensure t
-  :hook (( c-mode-common   . (lambda ()
-                               (google-set-c-style)
-                               (google-make-newline-indent)))
-         (c++-mode-common . (lambda ()
-                              (google-set-c-style)
-                              (google-make-newline-indent))))
+  :config
+  (global-auto-highlight-symbol-mode t)
+  ;; C-x C-aで一括rename
   )
 
+
+
+;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Helm - 効率的なバッファやコマンドの検索
 (use-package helm
   :ensure t
@@ -398,26 +522,11 @@
   :ensure t
   )
 
-;;; Highlight Symbol - シンボルのハイライトとナビゲーション
-(use-package highlight-symbol
+;;; Swiper - インクリメンタルサーチ機能の強化
+(use-package swiper
   :ensure t
-  :bind (( [f3] . highlight-symbol-at-point)
-         ([f4] . highlight-symbol-remove-all))
+  :bind (("C-s" . swiper))
   :config
-  (setq highlight-symbol-colors '("DarkOrange" "DodgerBlue1" "DeepPink1"))
-  )
-
-;;; Auto Highlight Symbol の設定
-(use-package auto-highlight-symbol
-  :ensure t
-  :config
-  (global-auto-highlight-symbol-mode t)
-  ;; C-x C-aで一括rename
-  )
-
-;;; Imenu List - バッファ内のシンボルリスト表示
-(use-package imenu-list
-  :ensure t
   )
 
 ;;; Ivy - 効率的なバッファやファイルの検索
@@ -463,63 +572,6 @@
   ;; (global-set-key (kbd "M-g m m") 'avy-migemo-mode)
   )
 
-;;; Move Text - テキスト行の移動機能
-(use-package move-text
-  :ensure t
-  :bind (( "C-M-p" . move-text-up)
-         ("C-M-n" . move-text-down))
-  )
-
-;;; Mozc - 日本語入力の設定
-(use-package mozc
-  :ensure t
-  :config (prefer-coding-system 'utf-8)
-  )
-
-;;; Codic - プログラミング用語の翻訳と検索
-(use-package codic
-  :ensure t
-  )
-
-;;; Multiple Cursors - 複数カーソルによる編集機能
-(use-package multiple-cursors
-  :ensure t
-  :config
-  (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@00-auto-file-place.el 関数を使った設定
-
-  (global-set-key (kbd "C-M-c") 'mc/edit-lines)
-  (global-set-key (kbd "C-*")   'mc/mark-all-like-this)
-
-  ;; Smartrepの設定
-  (use-package smartrep
-    :ensure t
-    :config
-    (declare-function smartrep-define-key "smartrep")
-    ;; C-q をプレフィックスキーとして設定
-    (global-set-key (kbd "C-q") nil)
-    (smartrep-define-key global-map "C-q"
-      '(( "p" . mc/mark-previous-like-this)
-        ("n" . mc/mark-next-like-this)
-        ("*" . mc/mark-all-like-this)
-        ("d" . mc/mark-all-like-this-dwim)
-        ("m" . mc/mark-more-like-this-extended)
-        ("u" . mc/unmark-next-like-this)
-        ("U" . mc/unmark-previous-like-this)
-        ("s" . mc/skip-to-next-like-this)
-        ("S" . mc/skip-to-previous-like-this)
-        ("i" . mc/insert-numbers)
-        ("o" . mc/sort-regions)
-        ("O" . mc/reverse-regions)))
-
-    ;; smartrepによるコマンド実行中のキー入力エコーを無効にする
-    ;; http://shakenbu.org/yanagi/d/?date=20140105
-    (advice-add 'smartrep-map-internal
-                :around (lambda (orig-fun &rest args)
-                          (let ((echo-keystrokes 0))
-                            (apply orig-fun args))))
-    )
-  )
-
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :ensure t
@@ -544,50 +596,61 @@
     )
   )
 
-;;; Recentf - 最近使用したファイルの履歴管理
-(use-package recentf
-  :ensure t
-  :init
-  (recentf-mode 1)
-  :config
-  ;; メッセージを一時的に抑制するマクロ
-  (defmacro with-suppressed-message (&rest body)
-    "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
-    (declare (indent 0))
-    (let ((message-log-max nil))
-      `(with-temp-message (or (current-message) "") ,@body)))
-
-  ;; recentf の設定
-  (setq recentf-max-saved-items 2000                  ; 保存するファイルの数
-        recentf-max-menu-items 15                    ; メニューに表示するアイテムの数
-        recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
-        recentf-auto-cleanup 'never                  ; 自動整理の設定
-        ;; recentf の保存リストのパスをカスタマイズ (my-set-history@00-auto-file-place.el)
-        recentf-save-file (my-set-history "recentf-" user-full-name)
-        ;; 30秒ごとに recentf リストを自動保存
-        recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
-  )
-
-;;; Recentf-ext - Recentfの拡張機能
-(use-package recentf-ext
+;;; Imenu List - バッファ内のシンボルリスト表示
+(use-package imenu-list
   :ensure t
   )
 
-;;; Smooth-scroll - スムーズなスクロール操作（C-v など）
-(use-package smooth-scroll
+
+;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
+;;; Mozc - 日本語入力の設定
+(use-package mozc
+  :ensure t
+  :config (prefer-coding-system 'utf-8)
+  )
+
+;;; Codic - プログラミング用語の翻訳と検索
+(use-package codic
+  :ensure t
+  )
+
+;;; Ispell - スペルチェック機能の設定と辞書の指定
+(use-package ispell
   :ensure t
   :config
-  (smooth-scroll-mode t)                    ; smooth-scroll モードを有効化
-  (setq smooth-scroll/vscroll-step-size 8)  ; 垂直スクロールのステップサイズを設定
+  ;; aspell にパスを設定
+  (when (file-executable-p "/usr/bin/aspell")
+    (setq-default ispell-program-name "aspell")
+    (add-to-list 'ispell-extra-args "--sug-mode=ultra"))
+  ;; 日本語をスキップする設定
+  (add-to-list 'ispell-skip-region-alist '("[^\000-\377]+"))
+  ;; スペルチェックに英語の辞書を使用
+  (setq ispell-dictionary "american")
   )
 
-;;; Swiper - インクリメンタルサーチ機能の強化
-(use-package swiper
+
+;;;;; [Group] Git-and-Version-control - Git とバージョン管理関連 ;;;;;
+;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
+;; dash - Emacs 用のモダンなリスト操作ライブラリ (git-gutter+ の依存パッケージ)
+(use-package dash :ensure t)
+(use-package git-gutter+
   :ensure t
-  :bind (("C-s" . swiper))
+  :after dash
+  :custom
+  (git-gutter+:modified-sign "~")
+  (git-gutter+:added-sign    "+")
+  (git-gutter+:deleted-sign  "-")
+  :custom-face
+  (git-gutter+:modified ((t (:background "#f1fa8c"))))
+  (git-gutter+:added    ((t (:background "#50fa7b"))))
+  (git-gutter+:deleted  ((t (:background "#ff79c6"))))
   :config
+  (global-git-gutter+-mode +1)
   )
 
+
+
+;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
 ;;; Undo-tree - アンドゥの操作のツリー表示と管理
 ;; C-/ でundo
 ;; C-x u で樹形図表示
@@ -644,50 +707,4 @@
 ;;; S - 文字列操作のための追加機能
 (use-package s
   :ensure t
-  )
-
-;;; Yasnippet - コードスニペットの管理と挿入
-(use-package yasnippet
-  :ensure t
-  :diminish
-  :init
-  (setq yas-snippet-dirs '("~/.emacs.d/my-data/snippets"
-                           "~/.emacs.d/my-data/snippets/snippets" ;; シンボリックリンク用
-                           "~/.emacs.d/loads/elisp/yasnippet-snippets/snippets"))
-  :config
-  (yas-global-mode 1)                             ; yasnippet のグローバルモードを有効化
-  (use-package yasnippet-snippets :ensure t)      ; yasnippet の追加スニペット集
-  (setq yas-prompt-functions '(yas-ido-prompt))   ; スニペット展開のプロンプト設定
-  (custom-set-variables '(yas-trigger-key "TAB")) ; トリガーキーを TAB に設定
-
-  ;; helm と yasnippet の統合
-  (use-package helm-c-yasnippet
-    :ensure t
-    :diminish
-    :bind (("C-c y" . helm-yas-complete))
-    :config
-    ;; helm のスペースマッチングを有効にする
-    (setq helm-yas-space-match-any-greedy t)
-    )
-  )
-
-;;; Rainbow-delimiters - 括弧の色分け
-;; 括弧を色分けして対応関係を視覚的に表示する
-(use-package rainbow-delimiters
-  :ensure t
-  :diminish
-  :hook (prog-mode . rainbow-delimiters-mode)
-  :bind (("C-c l" . rainbow-delimiters-using-stronger-colors)) ; より強調した色に変更するコマンド
-  :config
-  ;; 括弧の色をより強調するための関数
-  (defun rainbow-delimiters-using-stronger-colors ()
-    (interactive)
-    (cl-loop for index from 1 to rainbow-delimiters-max-face-count
-             do (let ((face (intern (format "rainbow-delimiters-depth-%d-face" index))))
-                  (cl-callf color-saturate-name (face-foreground face) 50))))
-  ;; 一致しない括弧をより目立たせる
-  (set-face-attribute 'rainbow-delimiters-unmatched-face nil
-                      :foreground     'unspecified
-                      :inherit        'error
-                      :strike-through t)
   )
