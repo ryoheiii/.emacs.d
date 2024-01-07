@@ -1,6 +1,6 @@
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren
-  :ensure nil ;; built-in-package なのでインストール不要
+  :ensure nil ; built-in-package なのでインストール不要
   :hook (after-init . show-paren-mode)
   :config
   (setq show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる
@@ -8,7 +8,7 @@
 
 ;;; Whitespace - 空白文字の視覚化。スペース、タブ、行末の空白などを明確に表示
 (use-package whitespace
-  :ensure nil ;; built-in-package なのでインストール不要
+  :ensure nil ; built-in-package なのでインストール不要
   :defer t
   :diminish (global-whitespace-mode whitespace-mode)
   :init (global-whitespace-mode t)
@@ -37,7 +37,7 @@
 
 ;;; Grep - ファイル内検索機能の設定。特定のパターンに基づいてファイルを検索
 (use-package grep
-  :ensure nil ;; built-in-package なのでインストール不要
+  :ensure nil ; built-in-package なのでインストール不要
   :bind ("C-c g" . grep)
   :config
   (setq grep-command-before-query "grep -nr -e ")
@@ -59,14 +59,14 @@
 
 ;; Elec-pair - 括弧の自動補完設定。入力中の括弧を自動的にペアで補完
 (use-package elec-pair
-  :ensure nil ;; built-in-package なのでインストール不要
+  :ensure nil ; built-in-package なのでインストール不要
   :config
   (electric-pair-mode +1)
   )
 
 ;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存
 (use-package savehist
-  :ensure nil ;; built-in-package なのでインストール不要
+  :ensure nil ; built-in-package なのでインストール不要
   :defer 20
   :init (savehist-mode 1)
   :config
@@ -78,7 +78,7 @@
 
 ;;; Saveplace - カーソル位置の保存。ファイルを再度開いた時に前回のカーソル位置を保持
 (use-package saveplace
-  :ensure nil ;; built-in-package なのでインストール不要
+  :ensure nil ; built-in-package なのでインストール不要
   :init (setq save-place-limit nil)
   :config
   (save-place-mode 1)
@@ -94,7 +94,7 @@
 
 ;;; Uniquify - バッファ名のユニーク化。同名ファイルを開いた際にディレクトリ名で区別
 ;; (use-package uniquify
-;;   :ensure nil ;; built-in-package なのでインストール不要
+;;   :ensure nil ; built-in-package なのでインストール不要
 ;;   :config
 ;;   (setq uniquify-buffer-name-style 'forward)
 ;;   (setq uniquify-separator "/")         ;; rename after killing uniquified
@@ -126,13 +126,13 @@
   (define-prefix-command 'tab-bar-prefix-map)      ; 新しいプレフィックスコマンドを定義
   (global-set-key (kbd "C-z") 'tab-bar-prefix-map) ; C-z をプレフィックスキーとして設定
   ;; 各種キーバインド設定
-  (define-key tab-bar-prefix-map (kbd "n") 'tab-next)       ; 次のタブに切り替え
+  (define-key tab-bar-prefix-map (kbd "n")   'tab-next)     ; 次のタブに切り替え
   (define-key tab-bar-prefix-map (kbd "C-n") 'tab-next)     ; 次のタブに切り替え
-  (define-key tab-bar-prefix-map (kbd "p") 'tab-previous)   ; 前のタブに切り替え
+  (define-key tab-bar-prefix-map (kbd "p")   'tab-previous) ; 前のタブに切り替え
   (define-key tab-bar-prefix-map (kbd "C-p") 'tab-previous) ; 前のタブに切り替え
-  (define-key tab-bar-prefix-map (kbd "f") 'tab-new)        ; 新しいタブを開く
+  (define-key tab-bar-prefix-map (kbd "f")   'tab-new)      ; 新しいタブを開く
   (define-key tab-bar-prefix-map (kbd "C-f") 'tab-new)      ; 新しいタブを開く
-  (define-key tab-bar-prefix-map (kbd "k") 'tab-close)      ; タブを閉じる
+  (define-key tab-bar-prefix-map (kbd "k")   'tab-close)    ; タブを閉じる
   (define-key tab-bar-prefix-map (kbd "C-k") 'tab-close)    ; タブを閉じる
   ;; 特定のタブを選択するためのキーバインド設定
   (define-key tab-bar-prefix-map (kbd "1")  (lambda () (interactive) (tab-bar-select-tab 1)))

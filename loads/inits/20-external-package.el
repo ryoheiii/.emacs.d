@@ -167,7 +167,7 @@
 ;;; Move Text - テキスト行の移動機能
 (use-package move-text
   :ensure t
-  :bind (( "C-M-p" . move-text-up)
+  :bind (("C-M-p" . move-text-up)
          ("C-M-n" . move-text-down))
   )
 
@@ -428,9 +428,7 @@
   :ensure t
   :init
   (transient-mark-mode t)
-  :bind (("C-," . er/expand-region)
-         ;; ("C-M-," . er/contract-region)
-         )
+  :bind (("C-," . er/expand-region))
   )
 
 ;;; Auto Highlight Symbol の設定
@@ -438,7 +436,7 @@
   :ensure t
   :config
   (global-auto-highlight-symbol-mode t)
-  ;; C-x C-aで一括rename
+  ;; C-x C-aで一括 rename (emacs29 で正常に動作しない)
   )
 
 
@@ -660,8 +658,8 @@
   (migemo-init)
   )
 
-;; まだ helm から置き換える程でない (helm-swoop の変わりがないなど)
-;; ;;; Vertico - ミニバッファを用いたファジーファインダー UI (consult, orderless, marginalia と併用)
+;; まだ helm から置き換える程でない (helm-swoop の代替手段が存在しない等)
+;; ;;; Vertico - ミニバッファを用いたファジーファインダー UI (Consult, Orderless, Marginalia と併用)
 ;; (use-package vertico
 ;;   :ensure t
 ;;   :init
@@ -696,12 +694,10 @@
 (use-package consult
   :ensure t
   :bind (;; ("C-x b" . consult-buffer)      ; 文字化けするので helm を利用
-         ;; ("M-g g" . consult-goto-line)
-         ;; ("M-g M-g" . consult-goto-line)
          ("C-." . consult-goto-line))
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :config
-  (global-set-key [remap goto-line] 'consult-goto-line) ;; goto-line@00-key-binding を置き換え
+  (global-set-key [remap goto-line] 'consult-goto-line) ; goto-line@00-key-binding を置き換え
   (setq consult-project-root-function #'projectile-project-root)
   )
 
