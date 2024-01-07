@@ -368,16 +368,21 @@
     )
   )
 
-;; ;;; GitHub Copilot の設定
-;; (use-package copilot
-;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-;;   :ensure t
-;;   :hook ((prog-mode . copilot-mode))  ;; プログラミング言語のバッファで Copilot を有効にする
-;;   :config
-;;   (setq copilot-node-executable "~/.nvm/versions/node/v21.5.0/bin/node")
-;;   (define-key copilot-mode-map (kbd "<tab>") 'copilot-accept-completion)
-;;   (define-key copilot-mode-map (kbd "TAB") 'copilot-accept-completion)
-;;   )
+;;; Copilot - Github copilot による補完
+(use-package copilot
+  :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+  :ensure t
+  :hook ((prog-mode . copilot-mode))
+  :init
+  ;; Node.js の実行可能ファイルのパスを設定
+  (setq copilot-node-executable "~/.nvm/versions/node/v21.5.0/bin/node")
+  :bind (:map copilot-mode-map
+              ("C-M-<return>" . copilot-complete)           ; C-M-Enter で起動
+              ("C-c i"        . copilot-panel-complete)     ; C-c i で補完候補のパネル表示
+              ("C-c p"        . previous-completion)        ; C-c p で前の補完候補を表示
+              ("C-c n"        . copilot-next-completion)    ; C-c n で次の補完候補を表示
+              ("C-<return>"   . copilot-accept-completion)) ; C-Enter で補完を受け入れる
+  )
 
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
