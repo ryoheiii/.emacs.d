@@ -442,14 +442,17 @@
 (use-package helm
   :ensure t
   :diminish
+  :after migemo
   :init
   (helm-mode 1)
+  (helm-migemo-mode 1)
   :bind (("M-x"     . helm-M-x)
          ("C-x C-f" . helm-find-files)
          ("C-x C-r" . helm-recentf)
          ("C-x C-y" . helm-show-kill-ring)
          ("C-x g"   . helm-do-grep-ag)
-         ("C-x b"   . helm-buffers-list)
+         ;; ("C-x b"   . helm-buffers-list)
+         ("C-x b"   . helm-mini)
          ("C-x i"   . helm-imenu)
          :map helm-map
          ("C-h" . delete-backward-char)
@@ -459,11 +462,17 @@
          :map helm-read-file-map
          ("TAB" . helm-execute-persistent-action))
   :config
-  (setq helm-ff-file-name-history-use-recentf t
-        helm-display-function #'display-buffer
-        helm-buffer-details-flag nil
-        helm-delete-minibuffer-contents-from-point t
-        helm-ff-fuzzy-matching nil)
+  (setq helm-display-function #'display-buffer       ; Helm の表示に 'display-buffer' 関数を使用
+        helm-echo-input-in-header-line t             ; 入力を Helm のヘッダーラインに表示
+        helm-input-idle-delay 0.2                    ; 入力から画面の更新までの遅延時間（デフォルトは 0.01 秒）
+        helm-split-window-inside-p t                 ; Helm のウィンドウを現在のウィンドウ内に分割して表示
+        helm-move-to-line-cycle-in-source t          ; Helm バッファ内で候補の最後に到達したら先頭に戻る
+        helm-ff-file-name-history-use-recentf t      ; 'recentf' リストをファイル名の履歴として使用
+        helm-ff-search-library-in-sexp t             ; SEXP 内でライブラリの検索を有効化
+        helm-ff-fuzzy-matching nil                   ; ファジーマッチングを無効化
+        helm-buffer-details-flag nil                 ; バッファの詳細情報を非表示
+        helm-delete-minibuffer-contents-from-point t ; ミニバッファの内容を現在のポイントから削除
+        )
   ;; Emacsのコマンドと履歴のソース定義
   (defvar helm-source-emacs-commands
     (helm-build-sync-source "Emacs commands"
@@ -519,6 +528,22 @@
                         ;; and not required because the directory name is prepended
                         (substring input-pattern 1)
                       (concat ".*" input-pattern))))))
+  ;; helm-migemo fix
+  ;; http://emacs.rubikitch.com/helm-migemo/
+  (with-eval-after-load "helm-migemo"
+    (defun helm-compile-source--candidates-in-buffer (source)
+      (helm-aif (assoc 'candidates-in-buffer source)
+          (append source
+                  `((candidates
+                     . ,(or (cdr it)
+                            (lambda ()
+                              ;; Do not use `source' because other plugins
+                              ;; (such as helm-migemo) may change it
+                              (helm-candidates-in-buffer (helm-get-current-source)))))
+                    (volatile) (match identity)))
+        source))
+    (defalias 'helm-mp-3-get-patterns 'helm-mm-3-get-patterns)
+    (defalias 'helm-mp-3-search-base 'helm-mm-3-search-base))
   )
 
 ;;; Helm GTags - ソースコード内のシンボル検索とナビゲーション
@@ -527,15 +552,25 @@
   :diminish
   :hook ((c-mode   . helm-gtags-mode)
          (c++-mode . helm-gtags-mode))
-  :bind (([f11] . helm-gtags-find-tag)    ;; 関数の定義場所の検索
-         ([f12] . helm-gtags-find-rtag)   ;; 関数の使用箇所の検索
-         ([f9]  . helm-gtags-find-symbol) ;; 変数の使用箇所の検索
-         ("C-t" . helm-gtags-pop-stack)   ;; gtagsでジャンプする一つ前の状態に戻る
-         ([f6]  . helm-gtags-find-files)  ;; ファイルジャンプ
+  ;; グローバルにバインドする方針に変更
+  :bind (
+         :map helm-gtags-mode-map
+         ("C-t d"   . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)（旧 f11）
+         ("C-t C-d" . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)
+         ("C-t u"   . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)（旧 f12）
+         ("C-t C-u" . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)
+         ("C-t v"   . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (valiable)（旧 f9）
+         ("C-t C-v" . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (valiable)
+         ("C-t f"   . helm-gtags-find-files)       ; ファイルジャンプ     (find)（旧 f6）
+         ("C-t C-f" . helm-gtags-find-files)       ; ファイルジャンプ     (find)
+         ;; ("C-t")    . helm-gtags-pop-stack)     ; 前のバッファへ→previous-history に移管
+         ("C-t n"   . helm-gtags-previous-history) ; 次のバッファへ       (next)
+         ("C-t C-n" . helm-gtags-previous-history) ; 次のバッファへ       (next)
+         ("C-t p"   . helm-gtags-next-history)     ; 前のバッファへ       (perv)
+         ("C-t C-p" . helm-gtags-next-history)     ; 前のバッファへ       (perv)
          )
   :config
-  (custom-set-variables
-   '(helm-gtags-path-style 'root))
+  (custom-set-variables '(helm-gtags-path-style 'root))
   ;; GTAGSの自動更新関数
   (defun update-gtags ()
     (interactive)
@@ -558,23 +593,50 @@
   :ensure t
   )
 
+;;; Helm-swoop - インクリメンタルサーチ機能の強化
+(use-package helm-swoop
+  :ensure t
+  :bind (("C-x s" . helm-swoop))
+  :config
+  ;; 検索行のハイライト色を設定（例：明るい青の背景と白のテキスト）
+  (set-face-attribute 'helm-swoop-target-line-face nil
+                      :background "#0077ff" ; 明るい青
+                      :foreground "white")
+
+  ;; 検索語のハイライト色を設定（例：明るい緑の背景と黒のテキスト）
+  (set-face-attribute 'helm-swoop-target-word-face nil
+                      :background "#00ff00" ; 明るい緑
+                      :foreground "black")
+  )
+
 ;;; Swiper - インクリメンタルサーチ機能の強化
 (use-package swiper
   :ensure t
   :bind (("C-s" . swiper))
-  :config
   )
 
-;;; Ivy - 効率的なバッファやファイルの検索
+;;; Ivy - 効率的なバッファやファイルの検索 (swiper の強化)
 (use-package ivy
   :ensure t
+  :after ivy-migemo
   :config
   (ivy-mode 1)
   (setq ivy-use-virtual-buffers t
         enable-recursive-minibuffers t
         ivy-height 30  ;; minibufferのサイズを拡大
-        ivy-extra-directories nil
-        ivy-re-builders-alist '((t . ivy--regex-plus)))
+        ivy-extra-directories nil)
+  ;; swiper と連携
+  ;; https://github.com/ROCKTAKEY/ivy-migemo
+  (setq ivy-re-builders-alist '((t . ivy--regex-plus)
+                                (swiper . ivy-migemo--regex-plus)
+                                ;; (t . ivy--regex-fuzzy)             ; fuzzy バージョン
+                                ;; (swiper . ivy-migemo--regex-fuzzy) ; fuzzy バージョン
+                                ))
+  )
+
+;;; Ivy-migemo - Ivy で Migemo を利用 (Swiper/Ivy の強化)
+(use-package ivy-migemo
+  :ensure t
   )
 
 ;;; Migemo - 日本語を含む検索時の挙動改善
@@ -590,22 +652,51 @@
         migemo-regex-dictionary nil
         migemo-coding-system 'utf-8-unix)
   (migemo-init)
-  ;; Helmとの統合設定
-  (use-package helm
-    :init (helm-migemo-mode 1)
-    )
   )
 
-;;; Avy-Migemo - キーボードナビゲーションの強化と日本語対応
-(use-package avy-migemo
+;; まだ helm から置き換える程でない (helm-swoop の変わりがないなど)
+;; ;;; Vertico - ミニバッファを用いたファジーファインダー UI (consult, orderless, marginalia と併用)
+;; (use-package vertico
+;;   :ensure t
+;;   :init
+;;   (vertico-mode)
+;;   )
+
+;; ;;; Extensions/Vertico-directory - Vertico 拡張
+;; (use-package extensions/vertico-directory
+;;   :straight (:type built-in)
+;;   :after vertico
+;;   :ensure nil
+;;   :bind (:map vertico-map
+;;               ("C-l" . vertico-directory-up)
+;;               ("\d" . vertico-directory-delete-char))
+;;   )
+
+;; ;;; Orderless - マッチ方法を変更し、スペース区切りで入力をマッチ
+;; (use-package orderless
+;;   :ensure t
+;;   :custom (completion-styles '(orderless))
+;;   )
+
+;; ;;; Marginalia - ミニバッファの補完に傍注（追加情報）を付与
+;; (use-package marginalia
+;;   :ensure t
+;;   :init
+;;   (marginalia-mode)
+;;   )
+
+;;; Consult - コマンドの提供、候補リストの作成
+;; consult-goto-line が便利なのでこれだけ利用
+(use-package consult
   :ensure t
-  :init (avy-migemo-mode 1)
+  :bind (;; ("C-x b" . consult-buffer)      ; 文字化けするので helm を利用
+         ;; ("M-g g" . consult-goto-line)
+         ;; ("M-g M-g" . consult-goto-line)
+         ("C-." . consult-goto-line))
+  :hook (completion-list-mode . consult-preview-at-point-mode)
   :config
-  (setq avy-timeout-seconds nil)
-  (global-set-key (kbd "C-M-;") 'avy-migemo-goto-char-timer)
-  ;; 以下の行は必要に応じてアンコメントして使用
-  ;; (use-package avy-migemo-e.g.swiper :ensure t)
-  ;; (global-set-key (kbd "M-g m m") 'avy-migemo-mode)
+  (global-set-key [remap goto-line] 'consult-goto-line) ;; goto-line@00-key-binding を置き換え
+  (setq consult-project-root-function #'projectile-project-root)
   )
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
@@ -665,6 +756,7 @@
   )
 
 
+
 ;;;;; [Group] Git-and-Version-control - Git とバージョン管理関連 ;;;;;
 ;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
 ;; dash - Emacs 用のモダンなリスト操作ライブラリ (git-gutter+ の依存パッケージ)
@@ -696,13 +788,13 @@
   :init
   (global-undo-tree-mode)
   :config
-  (setq undo-tree-auto-save-history nil)  ; アンドゥ履歴の自動保存を無効化
+  (setq undo-tree-auto-save-history nil) ; アンドゥ履歴の自動保存を無効化
 
   ;; undo-tree-visualize 関数の動作をカスタマイズ
   (defun undo-tree-split-side-by-side (original-function &rest args)
     "Split undo-tree side-by-side."
-    (let ((split-height-threshold nil)   ; 縦分割の閾値
-          (split-width-threshold 0))    ; 横分割の閾値
+    (let ((split-height-threshold nil) ; 縦分割の閾値
+          (split-width-threshold 0))   ; 横分割の閾値
       (apply original-function args)))
 
   ;; undo-tree-visualize のアドバイスを追加

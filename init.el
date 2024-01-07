@@ -23,7 +23,7 @@
         ("melpa-stable" . "https://stable.melpa.org/packages/")
         ;;("marmalade"    . "https://marmalade-repo.org/packages/")
         ("gnu"          . "https://elpa.gnu.org/packages/")
-        ("org"          . "http://orgmode.org/elpa/")
+        ("org"          . "https://orgmode.org/elpa/")
         ))
 (setq package-pinned-packages
       '(
@@ -66,6 +66,7 @@
         (dumb-jump                 . "melpa-stable")
         (avy-migemo                . "melpa-stable")
         (ivy                       . "melpa-stable")
+        (ivy-migemo                . "melpa-stable")
         (ivy-yasnippet             . "melpa-stable")
         (eshell                    . "melpa-stable")
         (auto-complete             . "melpa-stable")
@@ -122,6 +123,10 @@
         (yasnippet-snippets        . "melpa-stable")
         (color-theme-modern        . "melpa-stable") ;; for hober color-theme
         (Aggressive-indent         . "melpa-stable")
+        (vertico                   . "melpa-stable")
+        (consult                   . "melpa-stable")
+        (orderless                 . "melpa-stable")
+        (marginalia                . "melpa-stable")
         ))
 ;; パッケージシステムの初期化
 (package-initialize)
