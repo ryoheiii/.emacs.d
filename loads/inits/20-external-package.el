@@ -68,7 +68,8 @@
   :bind (([f3] . highlight-symbol-at-point)
          ([f4] . highlight-symbol-remove-all))
   :config
-  (setq highlight-symbol-colors '("DarkOrange" "DodgerBlue1" "DeepPink1"))
+  (setq highlight-symbol-colors '("DeepSkyBlue1" "LimeGreen"  "HotPink1"      "Yellow"
+                                  "Cyan"         "OrangeRed1" "MediumOrchid1" "SkyBlue"))
   )
 
 ;;; Rainbow-delimiters - 括弧の色分け

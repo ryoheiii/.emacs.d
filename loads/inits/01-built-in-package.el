@@ -64,24 +64,6 @@
   (electric-pair-mode +1)
   )
 
-;;; Uniquify - バッファ名のユニーク化。同名ファイルを開いた際にディレクトリ名で区別
-;; (use-package uniquify
-;;   :ensure nil ;; built-in-package なのでインストール不要
-;;   :config
-;;   (setq uniquify-buffer-name-style 'forward)
-;;   (setq uniquify-separator "/")         ;; rename after killing uniquified
-;;   (setq uniquify-after-kill-buffer-p t) ;; don't muck with special buffers
-;;   (setq uniquify-ignore-buffers-re "^\\*")
-;;   )
-
-;; straight.el 導入による "Could not find package uniquify" エラー対策。
-;; ensure nil していてもEmacs の起動時に use-package がパッケージの存在を確認するためにエラーが発生する模様
-(require 'uniquify)
-(setq uniquify-buffer-name-style 'forward)
-(setq uniquify-separator "/")         ;; rename after killing uniquified
-(setq uniquify-after-kill-buffer-p t) ;; don't muck with special buffers
-(setq uniquify-ignore-buffers-re "^\\*")
-
 ;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存
 (use-package savehist
   :ensure nil ;; built-in-package なのでインストール不要
@@ -109,6 +91,24 @@
   :config
   (windmove-default-keybindings) ;; Shift + 矢印キーでウィンドウ間を移動
   )
+
+;;; Uniquify - バッファ名のユニーク化。同名ファイルを開いた際にディレクトリ名で区別
+;; (use-package uniquify
+;;   :ensure nil ;; built-in-package なのでインストール不要
+;;   :config
+;;   (setq uniquify-buffer-name-style 'forward)
+;;   (setq uniquify-separator "/")         ;; rename after killing uniquified
+;;   (setq uniquify-after-kill-buffer-p t) ;; don't muck with special buffers
+;;   (setq uniquify-ignore-buffers-re "^\\*")
+;;   )
+
+;; straight.el 導入による "Could not find package uniquify" エラー対策。
+;; ensure nil していてもEmacs の起動時に use-package がパッケージの存在を確認するためにエラーが発生する模様
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'forward)
+(setq uniquify-separator "/")         ;; rename after killing uniquified
+(setq uniquify-after-kill-buffer-p t) ;; don't muck with special buffers
+(setq uniquify-ignore-buffers-re "^\\*")
 
 ;;; Tab-bar - Emacsのタブ機能をカスタマイズ
 (use-package tab-bar
