@@ -12,20 +12,20 @@
 - **node.js** (github copilot 用): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`, `export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm`, `nvm install 21`
 
 ## .emacs.d のパス設定
-- **yasnippets**: ローカルスニペット置き場を`loads/inits/20-external-package.el`で変更
-- **migemo**: 辞書のインストール場所を`loads/inits/20-external-package.el`で変更
-- **ispell**: aspell の実行バイナリパスを`loads/inits/20-external-package.el`で変更
-- **copilot**: node.js の実行バイナリパスを`loads/inits/20-external-package.el`で変更
+- **yasnippets**: ローカルスニペット置き場を`loads/inits/20-external-package.el`で設定
+- **migemo**: 辞書のインストール場所を`loads/inits/20-external-package.el`で設定
+- **ispell**: aspell の実行バイナリパスを`loads/inits/20-external-package.el`で設定
+- **copilot**: node.js の実行バイナリパスを`loads/inits/20-external-package.el`で設定
 
 ## .emacs.d のパス設定（初回起動後）
-- **yasnippets**: インストールした`loads/elisp/yasnippet-snippets-<version>`のパス名を`loads/inits/20-external-package.el`で変更
-- **color-theme-modern**: インストールした`~/.emacs.d/loads/elisp/color-theme-modern-<version>`のパス名を`~/.emacs.d/loads/inits/20-external-package.el`で変更
+- **yasnippets**: インストールした`loads/elisp/yasnippet-snippets-<version>`のパス名を`loads/inits/20-external-package.el`で設定
+- **color-theme-modern**: インストールした`~/.emacs.d/loads/elisp/color-theme-modern-<version>`のパス名を`~/.emacs.d/loads/inits/20-external-package.el`で設定
 
 ## Irony サーバーの構築（初回起動後）
 - Emacs を起動後 `M-x irony-install-server` を実行
 
 # **パッケージの管理方法**
-- `~/.emacs.d/loads/elisp`および`~/.emacs.d/loads/site-lisp`下の設定ファイルを読み込み
+- `~/.emacs.d/loads/elisp`および`~/.emacs.d/loads/site-elisp`下の設定ファイルを読み込み
 
 # **設定ファイルの命名規則**
 (`~/.emacs.d/loads/inits/*.el`)
