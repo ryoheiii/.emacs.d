@@ -1,11 +1,6 @@
 <!-- -*- gfm -*- -->
-# **準備**
-## ローカル環境のパス設定
-- **yasnippets**: `loads/inits/20-external-package.el`で変更
-- **auto-complete**: `loads/inits/20-external-package.el`で変更
-- **migemo**: `loads/inits/20-external-package.el`で変更
-
-## パッケージのインストール
+# **準備～初回起動後**
+## Linux パッケージのインストール
 - **clang**: `sudo apt install clang`
 - **カラーテーマ**: `sudo apt install elpa-color-theme-modern`
 - **フォント**: `sudo apt install fonts-ricty-diminished`
@@ -16,9 +11,18 @@
 - **libclang** (irony-install-server 用): `sudo apt-get install libclang-dev`
 - **node.js** (github copilot 用): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`, `export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm`, `nvm install 21`
 
-## 外部 Lisp パッケージのダウンロード
-- **stopwatch**: `git clone https://github.com/blue0513/stopwatch ~/emacs.d/loads/site-lisp/`
-- **initchart**: `git clone https://github.com/yuttie/initchart.git ~/emacs.d/loads/site-lisp/`
+## .emacs.d のパス設定
+- **yasnippets**: ローカルスニペット置き場を`loads/inits/20-external-package.el`で変更
+- **migemo**: 辞書のインストール場所を`loads/inits/20-external-package.el`で変更
+- **ispell**: aspell の実行バイナリパスを`loads/inits/20-external-package.el`で変更
+- **copilot**: node.js の実行バイナリパスを`loads/inits/20-external-package.el`で変更
+
+## .emacs.d のパス設定（初回起動後）
+- **yasnippets**: インストールした`loads/elisp/yasnippet-snippets-<version>`のパス名を`loads/inits/20-external-package.el`で変更
+- **color-theme-modern**: インストールした`~/.emacs.d/loads/elisp/color-theme-modern-<version>`のパス名を`~/.emacs.d/loads/inits/20-external-package.el`で変更
+
+## Irony サーバーの構築（初回起動後）
+- Emacs を起動後 `M-x irony-install-server` を実行
 
 # **パッケージの管理方法**
 - `~/.emacs.d/loads/elisp`および`~/.emacs.d/loads/site-lisp`下の設定ファイルを読み込み
@@ -39,5 +43,4 @@
 - `package.el`関連の設定は 20 番台に記述するのが一般的
 
 # **その他**
-- Irony モードの初回実行時には、サーバーの構築のために `M-x irony-install-server` を手動で実行する必要あり
 - ターミナルでの Emacs 使用時には "xterm-256color" を利用

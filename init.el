@@ -11,7 +11,7 @@
         (normal-top-level-add-subdirs-to-load-path)))))
 
 ;; load-path に追加するディレクトリ
-(add-to-load-path "loads/elisp/" "loads/site-lisp/")
+(add-to-load-path "loads/elisp/" "loads/site-elisp/")
 
 ;;; パッケージの設定
 (require 'package)

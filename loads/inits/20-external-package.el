@@ -350,7 +350,7 @@
   :init
   (setq yas-snippet-dirs '("~/.emacs.d/my-data/snippets"
                            "~/.emacs.d/my-data/snippets/snippets" ;; シンボリックリンク用
-                           "~/.emacs.d/loads/elisp/yasnippet-snippets/snippets"))
+                           "~/.emacs.d/loads/elisp/yasnippet-snippets-1.0/snippets"))
   :config
   (yas-global-mode 1)                             ; yasnippet のグローバルモードを有効化
   (use-package yasnippet-snippets :ensure t)      ; yasnippet の追加スニペット集
@@ -568,10 +568,10 @@
          ("C-t f"   . helm-gtags-find-files)       ; ファイルジャンプ     (find)（旧 f6）
          ("C-t C-f" . helm-gtags-find-files)       ; ファイルジャンプ     (find)
          ;; ("C-t")    . helm-gtags-pop-stack)     ; 前のバッファへ→previous-history に移管
-         ("C-t n"   . helm-gtags-previous-history) ; 次のバッファへ       (next)
-         ("C-t C-n" . helm-gtags-previous-history) ; 次のバッファへ       (next)
-         ("C-t p"   . helm-gtags-next-history)     ; 前のバッファへ       (perv)
-         ("C-t C-p" . helm-gtags-next-history)     ; 前のバッファへ       (perv)
+         ("C-t p"   . helm-gtags-previous-history) ; 前のバッファへ       (perv)
+         ("C-t C-p" . helm-gtags-previous-history) ; 前のバッファへ       (perv)
+         ("C-t n"   . helm-gtags-next-history)     ; 次のバッファへ       (next)
+         ("C-t C-n" . helm-gtags-next-history)     ; 次のバッファへ       (next)
          )
   :config
   (custom-set-variables '(helm-gtags-path-style 'root))
@@ -837,4 +837,25 @@
 ;;; S - 文字列操作のための追加機能
 (use-package s
   :ensure t
+  )
+
+;;; Stopwatch
+(use-package stopwatch
+  :straight (stopwatch
+             :type git
+             :host github
+             :repo "blue0513/stopwatch") ; https://github.com/blue0513/stopwatch
+  :ensure nil ; MELPA からのインストールを回避
+  )
+
+;;; Initchart - 初期化処理の実行時間を記録
+(use-package initchart
+  :straight (initchart
+             :type git
+             :host github
+             :repo "yuttie/initchart") ; https://github.com/yuttie/initchart
+  :ensure nil ; MELPA からのインストールを回避
+  :config
+  (initchart-record-execution-time-of load file)
+  (initchart-record-execution-time-of require feature)
   )
