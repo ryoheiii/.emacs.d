@@ -389,6 +389,14 @@
               ("C-c n"        . copilot-next-completion)     ; C-c n     で次の補完候補を表示
               ("C-c C-n"      . copilot-next-completion)     ; C-c C-n   で次の補完候補を表示
               ("C-<return>"   . copilot-accept-completion))  ; C-Enter   で補完を受け入れる
+  :config
+  ;; *** Copilot の警告を抑止 ***
+  ;; [Warning (copilot): ... copilot--infer-indentation-offset found no mode-specific indentation offset]
+  ;; emacs-lisp-mode にて発生。copilot--indentation-alist への emacs-lisp-mode のダミー設定では抑制できず。
+  ;; lisp-indent-offset への値設定にて抑制できるが、emacs-lisp-mode の思想に反し、
+  ;; かつ aggresive-indent との競合が発生するため、警告抑止で対応する
+  (setq warning-suppress-log-types '((copilot copilot-no-mode-indent)))
+  (setq warning-suppress-types '((copilot copilot-no-mode-indent)))
   )
 
 ;;; Multiple Cursors - 複数カーソルによる編集機能
