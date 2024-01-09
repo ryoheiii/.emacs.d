@@ -18,16 +18,18 @@
 (setq package-user-dir (expand-file-name "loads/elisp/" user-emacs-directory))
 ;; パッケージアーカイブの設定
 (setq package-archives
-      '(
-        ("melpa"        . "https://melpa.org/packages/")
-        ("melpa-stable" . "https://stable.melpa.org/packages/")
-        ;;("marmalade"    . "https://marmalade-repo.org/packages/")
-        ("gnu"          . "https://elpa.gnu.org/packages/")
-        ("org"          . "https://orgmode.org/elpa/")
+      '(("gnu"          . "https://elpa.gnu.org/packages/")     ; GNU の公式パッケージ
+        ("melpa"        . "https://melpa.org/packages/")        ; 最大でもっとも更新が頻繁なパッケージ
+        ("melpa-stable" . "https://stable.melpa.org/packages/") ; MELPA の安定版
+        ;; ("org"          . "https://orgmode.org/elpa/")       ; Org の公式パッケージ
         ))
+;; パッケージアーカイブの優先度の設定（高い数値が高い優先度）
+(setq package-archive-priorities
+      '(("gnu"          . 3)
+        ("melpa-stable" . 2)
+        ("melpa"        . 1)))
 (setq package-pinned-packages
-      '(
-        (ace-window                . "melpa-stable")
+      '((ace-window                . "melpa-stable")
         (aggressive-indent         . "melpa-stable")
         (amx                       . "melpa-stable")
         (anzu                      . "melpa-stable")
