@@ -6,7 +6,7 @@ elpa/
 eln-cache/
 tmp/*
 loads/elisp/*
-loads/site-lisp/*
+loads/site-elisp/*
 my-data/snippets/*
 my-data/ac-dict/*
 
