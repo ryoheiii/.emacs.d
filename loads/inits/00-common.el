@@ -21,6 +21,10 @@
 ;;; ファイル保存時の設定
 (add-hook 'before-save-hook 'delete-trailing-whitespace) ;; 行末の空白を削除
 
+;;; ファイルの自動更新設定。ファイルの変更を自動的に反映
+(global-auto-revert-mode 1)
+(setq magit-auto-revert-mode t)
+
 ;;; 表示設定
 (global-font-lock-mode t) ;; ソースコードを色付け
 (transient-mark-mode t)

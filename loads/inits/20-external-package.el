@@ -1,3 +1,29 @@
+;;;;; [Group] Library - ライブラリ関連 ;;;;;
+;;; S - 文字列操作のための追加機能
+(use-package s
+  :ensure t
+  )
+
+;;; dash - Emacs 用のモダンなリスト操作ライブラリ (依存: git-gutter+)
+(use-package dash
+  :ensure t
+  )
+
+;;; Smartrep - キーバインドの連続入力を簡略化するマイナーモード
+(use-package smartrep
+  :ensure t
+  :config
+  ;; smartrepによるコマンド実行中のキー入力エコーを無効にする
+  ;; http://shakenbu.org/yanagi/d/?date=20140105
+  (advice-add 'smartrep-map-internal
+              :around (lambda (orig-fun &rest args)
+                        (let ((echo-keystrokes 0))
+                          (apply orig-fun args))))
+
+  )
+
+
+
 ;;;;; [Group] Themes-and-Visuals - テーマとビジュアル関連 ;;;;;
 ;;; Color Theme Modern - モダンなカラーテーマの設定。選択可能なテーマの幅を広げる
 (use-package color-theme-modern
@@ -330,6 +356,23 @@
   :ensure t
   )
 
+;;; Company-box - Company の補完候補をパネル表示 (GUI 限定)
+(use-package company-box
+  :disabled t
+  :ensure t
+  :hook (company-mode . company-box-mode)
+  )
+
+;;; Company-posframe - Company の補完候補をパネル表示 (GUI 限定)
+(use-package company-posframe
+  :disabled t
+  :ensure t
+  :after company
+  :diminish company-posframe-mode
+  :config
+  (company-posframe-mode 1)
+  )
+
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
 (use-package irony
   :ensure t
@@ -402,40 +445,36 @@
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :ensure t
+  :after smartrep
   :config
   (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@00-auto-file-place.el 関数を使った設定
-
-  (global-set-key (kbd "C-M-c") 'mc/edit-lines)
-  (global-set-key (kbd "C-*")   'mc/mark-all-like-this)
-
-  ;; Smartrepの設定
-  (use-package smartrep
-    :ensure t
-    :config
-    (declare-function smartrep-define-key "smartrep")
-    ;; C-q をプレフィックスキーとして設定
-    (global-set-key (kbd "C-q") nil)
-    (smartrep-define-key global-map "C-q"
-      '(("p" . mc/mark-previous-like-this)
-        ("n" . mc/mark-next-like-this)
-        ("*" . mc/mark-all-like-this)
-        ("d" . mc/mark-all-like-this-dwim)
-        ("m" . mc/mark-more-like-this-extended)
-        ("u" . mc/unmark-next-like-this)
-        ("U" . mc/unmark-previous-like-this)
-        ("s" . mc/skip-to-next-like-this)
-        ("S" . mc/skip-to-previous-like-this)
-        ("i" . mc/insert-numbers)
-        ("o" . mc/sort-regions)
-        ("O" . mc/reverse-regions)))
-
-    ;; smartrepによるコマンド実行中のキー入力エコーを無効にする
-    ;; http://shakenbu.org/yanagi/d/?date=20140105
-    (advice-add 'smartrep-map-internal
-                :around (lambda (orig-fun &rest args)
-                          (let ((echo-keystrokes 0))
-                            (apply orig-fun args))))
-    )
+  ;; Smartrep を用いてキーバインドを設定
+  (global-set-key (kbd "C-q") nil) ; C-q をプレフィックスキーとして設定
+  (smartrep-define-key global-map "C-q"
+    '(("p"   . mc/mark-previous-like-this)
+      ("C-p" . mc/mark-previous-like-this)
+      ("n"   . mc/mark-next-like-this)
+      ("C-n" . mc/mark-next-like-this)
+      ("*"   . mc/mark-all-like-this)
+      ("a"   . mc/mark-all-like-this)
+      ("C-a" . mc/mark-all-like-this)
+      ("d"   . mc/mark-all-like-this-dwim)
+      ("C-d" . mc/mark-all-like-this-dwim)
+      ("m"   . mc/mark-more-like-this-extended)
+      ("C-m" . mc/mark-more-like-this-extended)
+      ("u"   . mc/unmark-next-like-this)
+      ("C-u" . mc/unmark-next-like-this)
+      ("U"   . mc/unmark-previous-like-this)
+      ("s"   . mc/skip-to-next-like-this)
+      ("C-s" . mc/skip-to-next-like-this)
+      ("S"   . mc/skip-to-previous-like-this)
+      ("i"   . mc/insert-numbers)
+      ("C-i" . mc/insert-numbers)
+      ("l"   . mc/insert-letters)
+      ("C-l" . mc/insert-letters)
+      ("o"   . mc/sort-regions)
+      ("C-o" . mc/sort-regions)
+      ("O"   . mc/reverse-regions)))
   )
 
 ;;;Expand Region - 選択範囲をインクリメンタルに拡大・縮小
@@ -457,6 +496,15 @@
 
 
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
+;;; Popwin - ポップアップウィンドウの管理
+(use-package popwin
+  :ensure t
+  :custom
+  (popwin:popup-window-position 'bottom)
+  :config
+  (popwin-mode 1)
+  )
+
 ;;; Helm - 効率的なバッファやコマンドの検索
 (use-package helm
   :ensure t
@@ -756,6 +804,10 @@
 ;;; Codic - プログラミング用語の翻訳と検索
 (use-package codic
   :ensure t
+  :config
+  ;; TODO: トークン設定 (https://qiita.com/tewi_r/items/185a5a74e9eec9717990)
+  ;; (setq codic-api-token (my-lisp-load "codic-api-token"))
+  (push '("*Codic Result*") popwin:special-display-config)
   )
 
 ;;; Ispell - スペルチェック機能の設定と辞書の指定
@@ -776,8 +828,6 @@
 
 ;;;;; [Group] Git-and-Version-control - Git とバージョン管理関連 ;;;;;
 ;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
-;; dash - Emacs 用のモダンなリスト操作ライブラリ (git-gutter+ の依存パッケージ)
-(use-package dash :ensure t)
 (use-package git-gutter+
   :ensure t
   :after dash
@@ -796,6 +846,19 @@
 
 
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
+;;; Paradox - パッケージのインストールと更新
+(use-package paradox
+  :ensure t
+  :config
+  (paradox-enable)
+  (setq paradox-github-token t)
+  )
+
+;;; Free-keys - 未使用のキーバインドを表示
+(use-package free-keys
+  :ensure t
+  )
+
 ;;; Undo-tree - アンドゥの操作のツリー表示と管理
 ;; C-/ でundo
 ;; C-x u で樹形図表示
@@ -849,9 +912,14 @@
   (setq amx-save-file (my-set-history "amx-items")) ; Amx の履歴ファイルの保存場所 (@00-auto-file-place.el)
   )
 
-;;; S - 文字列操作のための追加機能
-(use-package s
+;;; Gcmh - メモリ使用量の最適化
+(use-package gcmh
   :ensure t
+  :diminish gcmh
+  :custom
+  (gcmh-verbose t)
+  :config
+  (gcmh-mode 1)
   )
 
 ;;; Stopwatch

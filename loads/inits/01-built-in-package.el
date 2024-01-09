@@ -103,7 +103,7 @@
 ;;   )
 
 ;; straight.el 導入による "Could not find package uniquify" エラー対策。
-;; ensure nil していてもEmacs の起動時に use-package がパッケージの存在を確認するためにエラーが発生する模様
+;; ensure nil していても Emacs の起動時に use-package がパッケージの存在を確認するためにエラーが発生する模様
 (require 'uniquify)
 (setq uniquify-buffer-name-style 'forward)
 (setq uniquify-separator "/")         ;; rename after killing uniquified
