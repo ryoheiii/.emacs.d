@@ -826,7 +826,7 @@
 
 
 
-;;;;; [Group] Git-and-Version-control - Git とバージョン管理関連 ;;;;;
+;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
 ;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
 (use-package git-gutter+
   :ensure t
@@ -843,6 +843,10 @@
   (global-git-gutter+-mode +1)
   )
 
+;;; Dsvn - SVN 管理ツール
+(use-package dsvn
+  :ensure t
+)
 
 
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
