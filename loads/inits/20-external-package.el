@@ -1,11 +1,11 @@
 ;;;;; [Group] Library - ライブラリ関連 ;;;;;
-;;; S - 文字列操作のための追加機能
-(use-package s
+;;; dash - Emacs 用のモダンなリスト操作ライブラリ
+(use-package dash
   :ensure t
   )
 
-;;; dash - Emacs 用のモダンなリスト操作ライブラリ (依存: git-gutter+)
-(use-package dash
+;;; S - 文字列操作のための追加機能
+(use-package s
   :ensure t
   )
 
@@ -414,7 +414,7 @@
 
 ;;; Copilot - Github copilot による補完
 (use-package copilot
-  ;; :disabled t
+  :disabled t
   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
   :ensure t
   :hook ((prog-mode . copilot-mode))
@@ -918,6 +918,7 @@
 
 ;;; Gcmh - メモリ使用量の最適化
 (use-package gcmh
+  :disabled t ; スリープからの復帰が遅くなるので無効化
   :ensure t
   :diminish gcmh
   :custom
@@ -932,7 +933,7 @@
              :type git
              :host github
              :repo "blue0513/stopwatch") ; https://github.com/blue0513/stopwatch
-  :ensure nil ; MELPA からのインストールを回避
+  :ensure t
   )
 
 ;;; Initchart - 初期化処理の実行時間を記録
@@ -941,7 +942,7 @@
              :type git
              :host github
              :repo "yuttie/initchart") ; https://github.com/yuttie/initchart
-  :ensure nil ; MELPA からのインストールを回避
+  :ensure t
   :config
   (initchart-record-execution-time-of load file)
   (initchart-record-execution-time-of require feature)
