@@ -37,6 +37,7 @@
   (package-install 'use-package))
 
 ;; use-package の設定
+(setq use-package-enable-imenu-support t)
 (eval-when-compile
   (require 'use-package))
 
