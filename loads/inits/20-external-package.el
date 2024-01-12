@@ -19,7 +19,6 @@
               :around (lambda (orig-fun &rest args)
                         (let ((echo-keystrokes 0))
                           (apply orig-fun args))))
-
   )
 
 
