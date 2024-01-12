@@ -1,51 +1,72 @@
-;;; WSL でのクリップボード操作
-;; copy (wsl -> win)
-(defun my/wsl-copy (start end)
-  (interactive "r")
-  (shell-command-on-region start end "clip.exe"))
-(global-set-key (kbd "C-c C-c") 'my/wsl-copy)
+;;; ファイルパス/ファイル名をクリップボードに保存
+(defun my/copy-to-clipboard-and-message (text message)
+  "Copy TEXT to the kill ring and display MESSAGE in the minibuffer."
+  (kill-new text)
+  (message message))
 
-;; paste (win -> wsl)
-(defun my/wsl-paste ()
+(defun my/copy-file-path ()
+  "Show the full path file name in the minibuffer and copy to kill ring."
   (interactive)
-  (insert (shell-command-to-string "powershell.exe -command 'Get-Clipboard'")))
-(global-set-key (kbd "C-c C-v") 'my/wsl-paste)
+  (when buffer-file-name
+    (my/copy-to-clipboard-and-message (file-truename buffer-file-name)
+                                      (format "Copied file path: %s" buffer-file-name))))
+
+(defun my/copy-file-name ()
+  "Show the file name in the minibuffer and copy it to the kill ring."
+  (interactive)
+  (when buffer-file-name
+    (let ((file-name (file-name-nondirectory buffer-file-name)))
+      (my/copy-to-clipboard-and-message file-name
+                                        (format "Copied file name: %s" file-name)))))
 
 ;;; デバッグプリントの挿入
 (defun my/insert-dbgprint (start end)
-  "inserts the dbgprintf() sentence"
+  "選択範囲内の変数代入文にデバッグ出力文 (dbgprintf) を挿入する
+
+   この関数は変数宣言と代入の両方にマッチし、各行に対して dbgprintf 文を生成して挿入する。
+   変数名は英字、アンダースコア、数字から成り、出力形式は整数を想定している。
+
+   PARAMETERS:
+     start (int): 選択範囲の開始位置
+     end (int)  : 選択範囲の終了位置
+
+   使用方法:
+     C 言語コード内でデバッグ出力を挿入したい範囲を選択し、この関数を実行する。"
   (interactive "r")
-  (let (result name value (case-fold-search-bak case-fold-search))
-    (setq case-fold-search nil)
+  (let ((result "")  ; Initialize result as an empty string
+        name
+        value)
     (save-excursion
       (goto-char start)
-      (goto-char (point-at-bol))
-      (while (< (point) end)
-        (when (looking-at "^\[ \t]*\\([A-Za-z][^ \t]+\\)[ \t]*=[ \t]*\\(.+?\\);")
-          (setq name (buffer-substring (match-beginning 1) (match-end 1)))
-          (setq value (buffer-substring (match-beginning 2) (match-end 2)))
+      (while (and (< (point) end) (not (eobp)))
+        ;; Match variable declarations with initialization and simple assignments
+        (when (looking-at "^[ \t]*\\(?:[A-Za-z_][A-Za-z0-9_]*[ \t]+\\)?\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]*=[ \t]*\\([^;\n]+\\);")
+          ;; Capture variable name and value from the line
+          (setq name (match-string-no-properties 1)
+                value (match-string-no-properties 2))
+          ;; Construct the debug print statement
           (setq result (concat result
-                               (format "dbgprintf(\"%s = %%d" name)
-                               (when (string-match "^[A-Z]" value)
-                                 (format " (%s)" value))
-                               (format "\\r\\n\", %s);\n" name))))
-        (forward-line 1)))
-    (insert-before-markers result)
-    (setq case-fold-search case-fold-search-bak)))
+                               (format "dbgprintf(\"%s = %%d\\r\\n\", %s);\n" name name))))
+        (forward-line 1)))  ; Move to the next line
+    (goto-char end)
+    (insert result)))  ; Insert the result into the buffer
 
 ;;; 選択範囲を isearch
 (defadvice isearch-mode (around isearch-mode-default-string
                                 (forward &optional regexp op-fun recursive-edit word-p) activate)
+  "Isearch with default text if there is a selection."
   (if (and transient-mark-mode mark-active (not (eq (mark) (point))))
-      (progn
-        (isearch-update-ring (buffer-substring-no-properties (mark) (point)))
+      (let ((search-text (buffer-substring-no-properties (mark) (point))))
+        (isearch-update-ring search-text)
         (deactivate-mark)
         ad-do-it
-        (if (not forward)
-            (isearch-repeat-backward)
-          (goto-char (mark))
-          (isearch-repeat-forward)))
+        (if forward
+            (progn
+              (goto-char (mark))
+              (isearch-repeat-forward))
+          (isearch-repeat-backward)))
     ad-do-it))
+
 
 ;;; nlinum.el の遅延更新
 (defadvice linum-schedule (around my-linum-schedule () activate)

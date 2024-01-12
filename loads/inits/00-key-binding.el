@@ -12,7 +12,7 @@
 (define-key global-map (kbd "C-.") 'goto-line)                     ; 指定行へ移動
 (define-key global-map (kbd "M-f") 'forward-symbol)
 (global-set-key [f7] 'toggle-truncate-lines)                       ; 折り返しの有効無効切替
-(global-set-key (kbd "C-c 0") 'my/copy-file-path)
+(global-set-key (kbd "C-c 0") 'my/copy-file-name)
 
 ;;; ウィンドウ操作に関するキーバインド
 (global-set-key "\C-c\C-r" 'window-resizer)                     ; ウィンドウリサイズ

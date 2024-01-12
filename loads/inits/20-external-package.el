@@ -212,12 +212,9 @@
 ;;; Google C Style - Google の C スタイルガイドに準拠したコーディング
 (use-package google-c-style
   :ensure t
-  :hook (( c-mode-common   . (lambda ()
-                               (google-set-c-style)
-                               (google-make-newline-indent)))
-         (c++-mode-common . (lambda ()
-                              (google-set-c-style)
-                              (google-make-newline-indent))))
+  :hook ((c-mode-common c++-mode-common) . (lambda ()
+                                             (google-set-c-style)
+                                             (google-make-newline-indent)))
   )
 
 ;;; Aggressive Indent - コード編集時の自動インデント調整
@@ -230,9 +227,8 @@
 ;; https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :ensure t
-  :init
-  (dolist (mode '(c++-mode-hook c-mode-hook cc-mode-hook emacs-lisp-mode-hook lisp-mode-hook))
-    (add-hook mode (lambda () (smart-newline-mode 1))))
+  :hook ((c++-mode c-mode cc-mode emacs-lisp-mode lisp-mode) . smart-newline-mode)
+  :bind (("C-m" . smart-newline))
   )
 
 ;; Company - 自動補完機能の強化とカスタマイズ
@@ -846,7 +842,7 @@
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn
   :ensure t
-)
+  )
 
 
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
