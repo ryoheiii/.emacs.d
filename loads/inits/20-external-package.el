@@ -415,7 +415,7 @@
   :hook ((prog-mode . copilot-mode))
   :init
   ;; Node.js の実行可能ファイルのパスを設定
-  (setq copilot-node-executable "~/.nvm/versions/node/v21.5.0/bin/node")
+  (setq copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node")
   :bind (:map copilot-mode-map
               ("C-M-<return>" . copilot-complete)            ; C-M-Enter で起動
               ("C-c c"        . copilot-clear-overlay)       ; C-c c     でオーバーレイをクリア

@@ -9,7 +9,7 @@
 - **aspell** (スペルチェック): `sudo apt install aspell`, `~/.aspell.conf` に設定
 - **cmake** (irony-install-server 用): `sudo apt install cmake`
 - **libclang** (irony-install-server 用): `sudo apt-get install libclang-dev`
-- **node.js** (github copilot 用): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`, `export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm`, `nvm install 21`
+- **node.js** (github copilot 用): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`; `export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm`; nvm ls-remote ;  `nvm install <version>`
 
 ## .emacs.d のパス設定
 - **yasnippets**: ローカルスニペット置き場を`loads/inits/20-external-package.el`で設定
