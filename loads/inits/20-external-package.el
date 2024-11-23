@@ -389,7 +389,7 @@
   :init
   (setq yas-snippet-dirs '("~/.emacs.d/my-data/snippets"
                            "~/.emacs.d/my-data/snippets/snippets" ;; シンボリックリンク用
-                           "~/.emacs.d/loads/elisp/yasnippet-snippets-1.0/snippets"))
+                           "~/.emacs.d/loads/elisp/yasnippet-snippets-1.1/snippets"))
   :config
   (yas-global-mode 1)                             ; yasnippet のグローバルモードを有効化
   (use-package yasnippet-snippets :ensure t)      ; yasnippet の追加スニペット集
@@ -823,9 +823,12 @@
 
 ;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
 ;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
+(use-package with-editor
+  :ensure t
+  :defer t)
 (use-package git-gutter+
   :ensure t
-  :after dash
+  :after with-editor dash
   :custom
   (git-gutter+:modified-sign "~")
   (git-gutter+:added-sign    "+")
@@ -842,7 +845,6 @@
 (use-package dsvn
   :ensure t
   )
-
 
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
 ;;; Paradox - パッケージのインストールと更新
