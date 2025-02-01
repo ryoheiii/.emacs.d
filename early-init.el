@@ -1,3 +1,4 @@
+;;;;;; [Group] Auto File Place ;;;;;
 ;;; Emacs の各種ディレクトリとファイルパスの設定
 (defvar my-emacs-dir   (expand-file-name user-emacs-directory))         ;; /path/to/userhome/.emacs.d/
 (defvar my-history-dir (expand-file-name "tmp/hist/" my-emacs-dir))     ;; /path/to/userhome/.emacs.d/tmp/hist/
