@@ -1,4 +1,4 @@
-;;;;;; [Group] Auto File Place ;;;;;
+;;;;;; [Group] Auto Files Place ;;;;;
 ;;; Emacs の各種ディレクトリとファイルパスの設定
 (defvar my-emacs-dir   (expand-file-name user-emacs-directory))         ;; /path/to/userhome/.emacs.d/
 (defvar my-history-dir (expand-file-name "tmp/hist/" my-emacs-dir))     ;; /path/to/userhome/.emacs.d/tmp/hist/
@@ -37,7 +37,16 @@
 (when (boundp 'native-comp-eln-load-path)
   (setq native-comp-eln-load-path (list (expand-file-name "eln-cache/" my-package-dir))))
 
+;;; emacs 起動後に ~/.emacs.d/eln-cache が存在する場合に削除
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (let ((default-eln-cache (expand-file-name "eln-cache/" my-emacs-dir)))
+              (when (file-exists-p default-eln-cache)
+                (delete-directory default-eln-cache t)
+                (message "Deleted unwanted default eln-cache at %s" default-eln-cache)))))
+
 ;;; elpa の保存先を変更
 (setq package-user-dir (expand-file-name "elpa/" my-package-dir))
-;; gnupg ディレクトリのパスを変更
+
+;;; gnupg ディレクトリのパスを変更
 (setq package-gnupghome-dir (expand-file-name "elpa/gnupg/" my-package-dir))
