@@ -488,6 +488,61 @@
   ;; C-x C-aで一括 rename (emacs29 で正常に動作しない)
   )
 
+;;; org-modern - 全体的なUI向上
+(use-package org-modern
+  :ensure t
+  :after org
+  :hook (org-mode . org-modern-mode)
+  )
+
+;;; org-download - 画像のクリップボード貼り付け
+(use-package org-download
+  :ensure t
+  :after org
+  :bind (:map org-mode-map
+              ("C-c i" . org-download-clipboard))
+  :custom
+  (org-download-method 'directory)
+  (org-download-image-dir "~/org/images/")
+  (org-download-heading-lvl nil)
+  (org-download-timestamp "_%Y%m%d-%H%M%S")
+  :config
+  (add-hook 'dired-mode-hook 'org-download-enable)
+  )
+
+;;; org-roam - ノート管理
+(use-package org-roam
+  :straight t
+  :ensure nil
+  :after org
+  :custom
+  (org-roam-directory "~/org/roam")
+  (org-roam-database-connector 'sqlite)
+  (org-roam-db-location "~/.emacs.d/tmp/database/org-roam.db")
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n g" . org-roam-graph)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n c" . org-roam-capture)
+         ;; Dailies
+         ("C-c n j" . org-roam-dailies-capture-today))
+  :config
+  (org-roam-db-autosync-mode)
+  )
+
+;;; org-agenda - スケジュール管理
+(use-package org-agenda
+  :ensure nil
+  :after org
+  :bind ("C-c a" . org-agenda)
+  :custom
+  (org-agenda-start-on-weekday nil)
+  (org-agenda-span 'week)
+  (org-agenda-use-time-grid t)
+  (org-agenda-time-grid '((daily today)
+                          (800 1000 1200 1400 1600 1800 2000)
+                          "......" "----------------"))
+  )
 
 
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
@@ -822,23 +877,23 @@
 
 
 ;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
-;;; Git Gutter+ - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
+;;; Git Gutter - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
 (use-package with-editor
   :ensure t
   :defer t)
-(use-package git-gutter+
+(use-package git-gutter
   :ensure t
   :after with-editor dash
   :custom
-  (git-gutter+:modified-sign "~")
-  (git-gutter+:added-sign    "+")
-  (git-gutter+:deleted-sign  "-")
+  (git-gutter:modified-sign "~")
+  (git-gutter:added-sign    "+")
+  (git-gutter:deleted-sign  "-")
   :custom-face
-  (git-gutter+:modified ((t (:background "#f1fa8c"))))
-  (git-gutter+:added    ((t (:background "#50fa7b"))))
-  (git-gutter+:deleted  ((t (:background "#ff79c6"))))
+  ;; (git-gutter:modified ((t (:background "#f1fa8c"))))
+  ;; (git-gutter:added    ((t (:background "#50fa7b"))))
+  ;; (git-gutter:deleted  ((t (:background "#ff79c6"))))
   :config
-  (global-git-gutter+-mode +1)
+  (global-git-gutter-mode +1)
   )
 
 ;;; Dsvn - SVN 管理ツール

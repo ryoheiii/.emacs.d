@@ -21,13 +21,15 @@
       '(("gnu"          . "https://elpa.gnu.org/packages/")     ; GNU の公式パッケージ
         ("melpa"        . "https://melpa.org/packages/")        ; 最大でもっとも更新が頻繁なパッケージ
         ("melpa-stable" . "https://stable.melpa.org/packages/") ; MELPA の安定版
-        ;; ("org"          . "https://orgmode.org/elpa/")       ; Org の公式パッケージ
+        ("org"          . "https://orgmode.org/elpa/")          ; Org の公式パッケージ
         ))
 ;; パッケージアーカイブの優先度の設定（高い数値が高い優先度）
 (setq package-archive-priorities
-      '(("gnu"          . 3)
-        ("melpa-stable" . 2)
-        ("melpa"        . 1)))
+      '(("gnu"          . 4)
+        ("melpa-stable" . 3)
+        ("melpa"        . 2)
+        ("org"          . 1)
+        ))
 ;; パッケージシステムの初期化
 (package-initialize)
 

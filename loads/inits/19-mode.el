@@ -96,3 +96,26 @@
             ;; subwordモードの有効化
             (subword-mode 1))
           )
+
+(use-package org
+  :ensure t
+  :defer t
+  :hook ((org-mode . visual-line-mode)   ;; 自動改行の有効化
+         (org-mode . org-indent-mode))   ;; インデントを自動調整
+  :custom
+  (org-hide-leading-stars t)             ;; 見出しの*を非表示
+  (org-startup-indented t)               ;; インデント表示をデフォルトで有効化
+  (org-src-fontify-natively t)           ;; ソースコードをシンタックスハイライト
+  (org-src-tab-acts-natively t)          ;; org-babelでタブキーを言語モードに連動
+  (org-edit-src-content-indentation 2)   ;; org-babelのソースコードインデント
+  (org-startup-folded 'content)          ;; 初期表示で折りたたむ
+  (org-log-done 'time)                   ;; タスク完了時に時間を記録
+  (org-log-into-drawer t)                ;; ログを :LOGBOOK: に格納
+  (org-adapt-indentation nil)            ;; インデントの自動調整をオフにする
+  (org-cycle-separator-lines 2)          ;; 見出しの間隔
+  (org-ellipsis " ▼")                   ;; 折りたたみ表示の記号変更
+  :config
+  (setq org-agenda-files '("~/org/agenda/"))  ;; アジェンダファイルのディレクトリ指定
+  (setq org-todo-keywords
+        '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
+  )
