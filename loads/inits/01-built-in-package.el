@@ -85,6 +85,12 @@
   (setq save-place-file (my-set-history "places")) ;; my-set-history @early-init.el
   )
 
+;;; 他プロセスの編集をバッファに反映
+(use-package autorevert
+  :init
+  (global-auto-revert-mode +1)
+  )
+
 ;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存
 (use-package files
   :ensure nil
