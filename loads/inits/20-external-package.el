@@ -207,7 +207,7 @@
 
 
 
-;;;;; [Group] Code-editting-and-Completion -  コード編集と補完関連 ;;;;;
+;;;;; [Group] Code-editting-and-Completion - コード編集と補完関連 ;;;;;
 ;;; Google C Style - Google の C スタイルガイドに準拠したコーディング
 (use-package google-c-style
   :ensure t
@@ -488,12 +488,45 @@
   ;; C-x C-aで一括 rename (emacs29 で正常に動作しない)
   )
 
+
+
+;;;;; [Group] Org - Org 関係 ;;;;;
+;;; org - org 設定
+(use-package org
+  :ensure t
+  :defer t
+  :hook ((org-mode . visual-line-mode))  ;; 自動改行の有効化
+  :custom
+  (org-hide-leading-stars t)             ;; 見出しの*を非表示
+  (org-startup-indented t)               ;; インデント表示をデフォルトで有効化
+  (org-src-fontify-natively t)           ;; ソースコードをシンタックスハイライト
+  (org-src-tab-acts-natively t)          ;; org-babelでタブキーを言語モードに連動
+  (org-edit-src-content-indentation 2)   ;; org-babelのソースコードインデント
+  (org-startup-folded 'content)          ;; 初期表示で折りたたむ
+  (org-log-done 'time)                   ;; タスク完了時に時間を記録
+  (org-log-into-drawer t)                ;; ログを :LOGBOOK: に格納
+  (org-adapt-indentation nil)            ;; インデントの自動調整をオフにする
+  (org-cycle-separator-lines 2)          ;; 見出しの間隔
+  (org-ellipsis " ▼")                   ;; 折りたたみ表示の記号変更
+  :config
+  (setq org-agenda-files '("~/org/agenda/"))  ;; アジェンダファイルのディレクトリ指定
+  (setq org-todo-keywords
+        '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
+  )
+
+;;; org-indent - インデントを自動調整
+(use-package org-indent
+  :ensure nil
+  :hook (org-mode . org-indent-mode)
+  )
+
 ;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いので一旦無効化
-;; (use-package org-modern
-;;   :ensure t
-;;   :after org
-;;   :hook (org-mode . org-modern-mode)
-;;   )
+(use-package org-modern
+  :disabled t
+  :ensure t
+  :after org
+  :hook (org-mode . org-modern-mode)
+  )
 
 ;;; org-download - 画像のクリップボード貼り付け
 (use-package org-download
@@ -536,6 +569,7 @@
   :after org
   :bind ("C-c a" . org-agenda)
   :custom
+  (setq org-agenda-files (file-expand-wildcards (concat org-directory "/*.org")))
   (org-agenda-start-on-weekday nil)
   (org-agenda-span 'week)
   (org-agenda-use-time-grid t)
