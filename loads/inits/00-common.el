@@ -136,3 +136,4 @@
 (setq inhibit-startup-message t) ;; 起動時のメッセージを表示しない
 (setq flyspell-use-meta-tab nil) ;; M-TABのキーバインドを変更しない
 (global-auto-revert-mode 1)      ;; バッファ自動再読み込み
+(setq native-comp-async-report-warnings-errors 'silent) ;; native-comp の警告を抑止
