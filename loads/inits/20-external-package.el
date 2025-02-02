@@ -118,6 +118,12 @@
                       :strike-through t)
   )
 
+;;; all-the-icons - icon setting
+(use-package all-the-icons
+  :ensure t
+  :if (display-graphic-p)
+  )
+
 
 
 ;;;;; [Group] Buffer-and-File-management - バッファとファイル管理関連 ;;;;;
@@ -947,6 +953,21 @@
 ;;; Free-keys - 未使用のキーバインドを表示
 (use-package free-keys
   :ensure t
+  )
+
+;;; undo-fu - undo と redo を強化
+(use-package undo-fu
+  :ensure t
+  :config
+  (with-eval-after-load 'evil
+    (setq evil-undo-system 'undo-fu))
+  )
+
+;;; undo-fu-session - undo 情報を Emacs 終了後も保持
+(use-package undo-fu-session
+  :ensure t
+  :config
+  (undo-fu-session-global-mode +1)
   )
 
 ;;; Undo-tree - アンドゥの操作のツリー表示と管理
