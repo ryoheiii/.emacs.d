@@ -158,3 +158,9 @@
   (define-key tab-bar-prefix-map (kbd "8")  (lambda () (interactive) (tab-bar-select-tab 8)))
   (define-key tab-bar-prefix-map (kbd "9")  (lambda () (interactive) (tab-bar-select-tab 9)))
   )
+
+;;; So-long - 長い行を含むファイルを最適化
+(use-package so-long
+  :init
+  (global-so-long-mode +1)
+  )
