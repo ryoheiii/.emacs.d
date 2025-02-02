@@ -72,7 +72,7 @@
   :config
   (setq savehist-additional-variables '(search-ring regexp-search-ring)
         savehist-autosave-interval 60             ;; save every minute
-        savehist-file (my-set-history "savehist") ;; my-set-history @00-auto-file-place.el
+        savehist-file (my-set-history "savehist") ;; my-set-history @early-init.el
         )
   )
 
@@ -82,8 +82,15 @@
   :init (setq save-place-limit nil)
   :config
   (save-place-mode 1)
-  (setq save-place-file (my-set-history "places")) ;; my-set-history @00-auto-file-place.el
+  (setq save-place-file (my-set-history "places")) ;; my-set-history @early-init.el
   )
+
+;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存
+(use-package files
+  :ensure nil
+  :config
+  (setq auto-save-visited-interval 30)
+  (auto-save-visited-mode +1))
 
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove

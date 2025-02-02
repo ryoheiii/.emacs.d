@@ -179,7 +179,7 @@
         recentf-max-menu-items 15                    ; メニューに表示するアイテムの数
         recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
         recentf-auto-cleanup 'never                  ; 自動整理の設定
-        ;; recentf の保存リストのパスをカスタマイズ (my-set-history@00-auto-file-place.el)
+        ;; recentf の保存リストのパスをカスタマイズ (my-set-history@early-init.el)
         recentf-save-file (my-set-history "recentf-" user-full-name)
         ;; 30秒ごとに recentf リストを自動保存
         recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
@@ -323,7 +323,7 @@
   :ensure t
   :init
   (setq company-statistics-file
-        (my-set-history "company-statistics-cache.el")) ; 履歴の保存場所 (@00-auto-file-place.el)
+        (my-set-history "company-statistics-cache.el")) ; 履歴の保存場所 (@early-init.el)
   (company-statistics-mode)
   )
 
@@ -442,7 +442,7 @@
   :ensure t
   :after smartrep
   :config
-  (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@00-auto-file-place.el 関数を使った設定
+  (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@early-init.el 関数を使った設定
   ;; Smartrep を用いてキーバインドを設定
   (global-set-key (kbd "C-q") nil) ; C-q をプレフィックスキーとして設定
   (smartrep-define-key global-map "C-q"
@@ -488,12 +488,12 @@
   ;; C-x C-aで一括 rename (emacs29 で正常に動作しない)
   )
 
-;;; org-modern - 全体的なUI向上
-(use-package org-modern
-  :ensure t
-  :after org
-  :hook (org-mode . org-modern-mode)
-  )
+;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いので一旦無効化
+;; (use-package org-modern
+;;   :ensure t
+;;   :after org
+;;   :hook (org-mode . org-modern-mode)
+;;   )
 
 ;;; org-download - 画像のクリップボード貼り付け
 (use-package org-download
@@ -518,7 +518,7 @@
   :custom
   (org-roam-directory "~/org/roam")
   (org-roam-database-connector 'sqlite)
-  (org-roam-db-location "~/.emacs.d/tmp/database/org-roam.db")
+  (org-roam-db-location (expand-file-name "org-roam.db") my-db-dir) ;; my-db-dir @early-init.el
   :bind (("C-c n l" . org-roam-buffer-toggle)
          ("C-c n f" . org-roam-node-find)
          ("C-c n g" . org-roam-graph)
@@ -946,7 +946,7 @@
   :ensure t
   :diminish  ; モードラインの表示を隠す
   :config
-  (setq undohist-directory (my-set-history "undohist")) ; アンドゥ履歴の保存場所 (@00-auto-file-place.el)
+  (setq undohist-directory (my-set-history "undohist")) ; アンドゥ履歴の保存場所 (@early-init.el)
   (undohist-initialize)                                 ; undohist を初期化
   )
 
@@ -965,7 +965,7 @@
 (use-package amx
   :ensure t
   :config
-  (setq amx-save-file (my-set-history "amx-items")) ; Amx の履歴ファイルの保存場所 (@00-auto-file-place.el)
+  (setq amx-save-file (my-set-history "amx-items")) ; Amx の履歴ファイルの保存場所 (@early-init.el)
   )
 
 ;;; Gcmh - メモリ使用量の最適化
