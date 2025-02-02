@@ -131,6 +131,12 @@
       scroll-step 1)
 (setq comint-scroll-show-maximum-output t) ;; shell-mode
 
+;;; ガベージコレクション設定
+(setq gc-cons-percentage 0.2
+      gc-cons-threshold (* 128 1024 1024))
+(add-hook 'focus-out-hook #'garbage-collect)
+(setq garbage-collection-messages t) ;; ガベージコレクションのメッセージを表示
+
 ;;; その他の設定
 (setq vc-follow-symlinks t)      ;; bzrやsvn管理下のファイルをシンボリックリンク経由で開くとき確認をとらない
 (setq inhibit-startup-message t) ;; 起動時のメッセージを表示しない
