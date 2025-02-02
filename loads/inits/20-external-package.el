@@ -967,6 +967,9 @@
 (use-package undo-fu-session
   :ensure t
   :config
+  (setq undo-fu-session-directory (my-set-history "undo-fu-session/"))
+  (unless (file-exists-p undo-fu-session-directory)
+    (make-directory undo-fu-session-directory t))
   (undo-fu-session-global-mode +1)
   )
 

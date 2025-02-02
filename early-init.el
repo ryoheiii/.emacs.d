@@ -5,6 +5,7 @@
 (defvar my-backup-dir  (expand-file-name "tmp/backup/" my-emacs-dir))   ;; /path/to/userhome/.emacs.d/tmp/backup/
 (defvar my-package-dir (expand-file-name "tmp/package/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/tmp/package/
 (defvar my-db-dir      (expand-file-name "tmp/database/" my-emacs-dir)) ;; /path/to/userhome/.emacs.d/tmp/database/
+(defvar my-elisp-dir   (expand-file-name "loads/elisp/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
 
 ;;; パス設定ヘルパ関数
 (defun my-set-history (&rest args)
@@ -51,3 +52,6 @@
 
 ;;; gnupg ディレクトリのパスを変更
 (setq package-gnupghome-dir (expand-file-name "elpa/gnupg/" my-package-dir))
+
+;;; straight 設定
+(setq straight-base-dir my-elisp-dir) ;; .last-package-update-day など

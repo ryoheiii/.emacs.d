@@ -15,7 +15,7 @@
 
 ;;; パッケージの設定
 (require 'package)
-(setq package-user-dir (expand-file-name "loads/elisp/" user-emacs-directory))
+(setq package-user-dir my-elisp-dir) ;; @early-init.el
 ;; パッケージアーカイブの設定
 (setq package-archives
       '(("gnu"          . "https://elpa.gnu.org/packages/")     ; GNU の公式パッケージ
