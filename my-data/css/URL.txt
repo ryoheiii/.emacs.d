@@ -1,0 +1,5 @@
+・github style
+　https://github.com/sindresorhus/github-markdown-css.git
+　- github-markdown.css: デフォルトのスタイルシート。ユーザーのシステム設定に応じてライトモードとダークモードを自動的に切り替える。
+　- github-markdown-light.css: ライトモード専用のスタイルシート。
+　- github-markdown-dark.css: ダークモード専用のスタイルシート。

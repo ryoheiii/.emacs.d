@@ -1,0 +1,138 @@
+/* 全体のスタイル */
+body {
+    font-family: "Inter", "Arial", sans-serif;
+    max-width: 800px;
+    margin: auto;
+    line-height: 1.3;
+    background-color: #ffffff;
+    color: #333;
+    padding: 30px;
+}
+
+/* 見出し */
+h1 {
+    font-size: 1.8rem;  /* 控えめなサイズ */
+    font-weight: 400;  /* 細め */
+    color: #222;
+    border-bottom: 1px solid #0077cc;  /* 細いボーダーを復活 */
+    padding-bottom: 6px;
+    margin-bottom: 15px;
+}
+
+/* **ページ内で最初の h1 のみ余白を縮める** */
+h1:first-of-type {
+    margin-top: 0px;  /* 最初のH1のみ余白を狭く */
+}
+
+h2 {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #333;
+    margin-top: 25px;
+    margin-bottom: 10px;
+}
+
+h3 {
+    font-size: 1.3rem;
+    font-weight: 400;
+    color: #444;
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+/* 水平線（区切り線） */
+hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, #0077cc, #ddd, #0077cc);
+    margin: 20px 0;
+}
+
+/* コードブロック */
+pre {
+    background: #252526;  /* 少し明るい VSCode ダークテーマ */
+    color: #eaeaea;
+    padding: 14px;
+    border-radius: 6px;  /* 角を少し丸く */
+    overflow-x: auto;
+    font-size: 14px;  /* 見やすいフォントサイズ */
+    font-family: "Consolas", "Courier New", monospace;
+    line-height: 1.4;
+    position: relative;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);  /* 立体感を追加 */
+}
+
+/* コードブロックの中の文字 */
+pre code {
+    display: block;
+    padding: 0;
+    margin: 0;
+    background: none;
+    color: #eaeaea;
+}
+
+/* コードブロックの選択時の強調表示 */
+pre code::selection {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* インラインコード */
+code {
+    background-color: #f4f4f4;
+    color: #d63384;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+}
+
+/* 引用ブロック */
+blockquote {
+    font-style: italic;
+    color: #555;
+    border-left: 4px solid #0077cc;
+    padding-left: 14px;
+    margin: 12px 0;
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+/* 表（テーブル） */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    background: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background: #0077cc;
+    color: white;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background: #f9f9f9;
+}
+
+/* リンク */
+a {
+    color: #0077cc;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: #0056b3;
+}
