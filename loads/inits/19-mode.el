@@ -32,7 +32,8 @@
 ;;; cc-mode の設定
 (use-package cc-mode
   :mode (("\\.C\\'"    . c-mode)
-         ("\\.cc\\'"   . cc-mode)
+         ;; ("\\.cc\\'"   . cc-mode)
+         ("\\.cc\\'"   . c-mode)
          ("\\.nut\\'"  . c++-mode)
          ("\\.cpp\\'"  . c++-mode)
          ("\\.hh\\'"   . c++-mode)

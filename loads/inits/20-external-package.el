@@ -585,6 +585,66 @@
   )
 
 
+
+;;;;; [Group] Markdown - Markdown 関係 ;;;;;
+;;; markdown-mode - markdown mode の設定
+(use-package markdown-mode
+  :ensure t
+  :mode ("\\.md\\'" . markdown-mode)
+  :hook ((markdown-mode . flyspell-mode)               ;; スペルチェック
+         (markdown-mode . visual-line-mode)            ;; 行の折り返し
+         (markdown-mode . (lambda ()                   ;; markdown-indent-on-enter
+                            (setq markdown-indent-on-enter t)))
+         (markdown-mode . display-line-numbers-mode))  ;; 行番号表示
+  ;; インデント設定
+  :custom
+  (markdown-indent-level 2)
+  (markdown-link-space-substitution-method 'underscores) ;; リンクのスペースをアンダースコアに置換
+  :bind (("C-c C-v h" . markdown-insert-header-dwim)     ;; 見出しを挿入
+         ("C-c C-v l" . markdown-insert-link)            ;; リンクを挿入
+         ("C-c C-v c" . markdown-insert-gfm-code-block)  ;; コードブロックを挿入
+         ("C-c C-v d" . markdown-insert-details)         ;; 折り畳み項目を挿入
+         )
+  :config
+  ;; コードブロックのシンタックスハイライト
+  (setq markdown-code-lang-modes
+        '(("bash"   . shell-script)
+          ("elisp"  . emacs-lisp)
+          ("python" . python))
+        )
+  ;; プレビュー機能
+  (add-hook 'markdown-mode-hook 'markdown-preview-mode)
+  ;; 画像を表示する設定（ImageMagick がインストールされていることが前提）
+  (setq markdown-image-use-cache t)
+  (add-hook 'markdown-mode-hook #'turn-off-auto-fill)
+  (add-hook 'markdown-mode-hook #'turn-on-visual-line-mode)
+  ;; 折りたたみ関数
+  (defun markdown-insert-details ()
+    "Insert <details> HTML tag with a <summary>."
+    (interactive)
+    (insert "<details><summary>text</summary><div>\n\n</div></details>"))
+  )
+
+;;; markdown-toc - 目次生成
+(use-package markdown-toc
+  :ensure t
+  :after markdown-mode
+  ;; :hook ((markdown-mode . markdown-toc-insert-toc)   ;; 保存時に目次を自動挿入
+  ;;        (before-save . markdown-toc-update-toc))    ;; 保存前に目次を更新
+  :bind (("C-c C-v t" . markdown-toc-generate-toc))  ;; 目次を手動で生成
+  :config
+  (setq markdown-toc-without-markdown-toc t)  ;; コメントを含めないようにする
+  (setq markdown-toc-headline-style 'atx)     ;; 見出しのスタイル
+  )
+
+;;; pandoc-mode - pandoc による HTML/PDF 変換
+(use-package pandoc-mode
+  :ensure t
+  :commands (pandoc-region pandoc-buffer)
+  )
+
+
+
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin

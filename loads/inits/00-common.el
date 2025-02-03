@@ -19,7 +19,21 @@
 (setq eol-mnemonic-unix "(LF)")
 
 ;;; ファイル保存時の設定
-(add-hook 'before-save-hook 'delete-trailing-whitespace) ;; 行末の空白を削除
+;; 行末の空白を削除
+;; (add-hook 'before-save-hook 'delete-trailing-whitespace)
+;; Markdown のときのみ delete-trailing-whitespace を解除
+(defun my-disable-delete-trailing-whitespace ()
+  "Temporarily disable `delete-trailing-whitespace' in `markdown-mode'."
+  (when (derived-mode-p 'markdown-mode)
+    (remove-hook 'before-save-hook 'delete-trailing-whitespace t)))
+(defun my-enable-delete-trailing-whitespace ()
+  "Enable `delete-trailing-whitespace' after exiting `markdown-mode'."
+  (unless (derived-mode-p 'markdown-mode)
+    (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
+(add-hook 'markdown-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook 'my-disable-delete-trailing-whitespace nil t)))
+(add-hook 'after-change-major-mode-hook 'my-enable-delete-trailing-whitespace)
 
 ;;; ファイルの自動更新設定。ファイルの変更を自動的に反映
 (global-auto-revert-mode 1)

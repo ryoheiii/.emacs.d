@@ -93,14 +93,14 @@
 
 ;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存
 (use-package files
-  :ensure nil
+  :ensure nil ; built-in-package なのでインストール不要
   :config
   (setq auto-save-visited-interval 30)
   (auto-save-visited-mode +1))
 
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove
-  :ensure nil ;; ビルトインパッケージなのでインストールは不要
+  :ensure nil ; built-in-package なのでインストール不要
   :config
   (windmove-default-keybindings) ;; Shift + 矢印キーでウィンドウ間を移動
   )
