@@ -164,3 +164,15 @@
   :init
   (global-so-long-mode +1)
   )
+
+;;; Display-fill-column-indicator - テキストの折り返し位置を視覚的に示す
+(use-package display-fill-column-indicator
+  :ensure nil
+  :hook ((prog-mode . display-fill-column-indicator-mode)
+         (markdown-mode . display-fill-column-indicator-mode))
+  ;; :init
+  ;; (global-display-fill-column-indicator-mode 1) ;; グローバルで有効化
+  :custom
+  (display-fill-column-indicator-column 120) ;; 折り返し位置
+  (display-fill-column-indicator-character ?|) ;; 表示する記号
+  )

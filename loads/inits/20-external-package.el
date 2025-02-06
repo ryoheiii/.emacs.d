@@ -52,11 +52,7 @@
   :hook ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
   )
 
-;;; Full Column Indicator - テキストの折り返し位置を視覚的に示す
-(use-package fill-column-indicator
-  :ensure t
-  :hook ((markdown-mode git-commit-mode) . fci-mode)
-  )
+
 
 ;;; Beacon - カーソルの位置を明確にするために点滅エフェクトを追加
 (use-package beacon
@@ -1044,7 +1040,7 @@
    ((executable-find "hunspell")
     (setq ispell-program-name "hunspell")
     (setq ispell-dictionary "en_US")
-    (setq ispell-extra-args '("-a" "--sug-mode=ultra")))
+    (setq ispell-extra-args '("-d" "en_US"))) ;; hunspell に適したオプション
    ;; aspell があれば使用
    ((executable-find "aspell")
     (setq ispell-program-name "aspell")
@@ -1058,19 +1054,25 @@
 (use-package flyspell
   :ensure t
   :hook
-  ((text-mode . (lambda ()
-                  (when (and (executable-find "aspell")
-                             (< (count-lines (point-min) (point-max)) 3000)) ;; 3000行以下なら有効
-                    (flyspell-mode 1))))
-   (prog-mode . flyspell-prog-mode)) ;; プログラムのコメントのみチェック
+  ((prog-mode . (lambda ()
+                  (unless (derived-mode-p 'emacs-lisp-mode 'html-mode) ;; Emacs Lisp, HTML を除外
+                    (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語コメントを無視
+                    (flyspell-prog-mode)))))
   :config
-  (unbind-key "C-," flyspell-mode-map)    ;; `C-.` の無効化
-  (unbind-key "C-." flyspell-mode-map)  ;; `C-M-i` の無効化
-  (unbind-key "C-;" flyspell-mode-map)  ;; `M-TAB` の無効化
-  (unbind-key "C-c $" flyspell-mode-map) ;; `C-c $` の無効化
-  (setq flyspell-issue-message-flag nil) ;; ミニバッファのメッセージを抑制
-  (setq ispell-skip-region-alist
-        '(("[^\000-\377]+"))) ;; 日本語をスペルチェック対象外にする
+  ;; 特定モードで flyspell を無効化
+  (add-hook 'text-mode-hook (lambda () (flyspell-mode -1)))
+  (add-hook 'html-mode-hook (lambda () (flyspell-mode -1)))
+  (add-hook 'markdown-mode-hook (lambda () (flyspell-mode -1)))
+
+  ;; キーバインドの無効化
+  (unbind-key "C-," flyspell-mode-map)
+  (unbind-key "C-." flyspell-mode-map)
+  (unbind-key "C-;" flyspell-mode-map)
+  (unbind-key "C-c $" flyspell-mode-map)
+
+  ;; ミニバッファのメッセージを抑制
+  (setq flyspell-issue-message-flag nil)
+
   ;; 3000行以上なら flyspell をオフにする
   (defun my-disable-flyspell-on-large-files ()
     "3000行以上のファイルでは flyspell を無効にする"
