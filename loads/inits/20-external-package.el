@@ -1028,39 +1028,28 @@
     (setq ispell-dictionary "en_US")
     (setq ispell-extra-args '("--sug-mode=ultra"))))
   (setq ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
-  (setq ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語をスペルチェック対象外にする
+  (setq ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
   )
 
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
   :ensure t
-  :hook
-  ((prog-mode . (lambda ()
-                  (unless (derived-mode-p 'emacs-lisp-mode 'html-mode) ;; Emacs Lisp, HTML を除外
-                    (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語コメントを無視
-                    (flyspell-prog-mode)))))
+  :hook ((prog-mode . (lambda ()
+                        (unless (derived-mode-p 'emacs-lisp-mode)                    ;; Emacs Lisp を除外
+                          (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
+                          (flyspell-prog-mode))))
+         ((text-mode html-mode markdown-mode) . (lambda () (flyspell-mode -1)))      ;; 無効化
+         (find-file . (lambda ()
+                        (when (> (buffer-size) 3000) ;; 3000行以上なら無効
+                          (flyspell-mode -1))))
+         )
+  :bind (:map flyspell-mode-map
+              ("C-," . nil)
+              ("C-." . nil)
+              ("C-;" . nil)
+              ("C-c $" . nil))
   :config
-  ;; 特定モードで flyspell を無効化
-  (add-hook 'text-mode-hook (lambda () (flyspell-mode -1)))
-  (add-hook 'html-mode-hook (lambda () (flyspell-mode -1)))
-  (add-hook 'markdown-mode-hook (lambda () (flyspell-mode -1)))
-
-  ;; キーバインドの無効化
-  (unbind-key "C-," flyspell-mode-map)
-  (unbind-key "C-." flyspell-mode-map)
-  (unbind-key "C-;" flyspell-mode-map)
-  (unbind-key "C-c $" flyspell-mode-map)
-
-  ;; ミニバッファのメッセージを抑制
-  (setq flyspell-issue-message-flag nil)
-
-  ;; 3000行以上なら flyspell をオフにする
-  (defun my-disable-flyspell-on-large-files ()
-    "3000行以上のファイルでは flyspell を無効にする"
-    (when (and flyspell-mode
-               (> (count-lines (point-min) (point-max)) 3000))
-      (flyspell-mode -1)))
-  (add-hook 'find-file-hook #'my-disable-flyspell-on-large-files)
+  (setq flyspell-issue-message-flag nil) ;; ミニバッファメッセージ抑制
   )
 
 ;;; flyspell-correct - スペルチェックの補助ツール
