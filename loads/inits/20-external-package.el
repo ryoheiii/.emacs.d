@@ -1147,30 +1147,20 @@
   (undo-fu-session-global-mode +1)
   )
 
-;;; Undo-tree - アンドゥの操作のツリー表示と管理
-;; C-/ でundo
-;; C-x u で樹形図表示
-(use-package undo-tree
+;;; Vundo - アンドゥの操作のツリー表示と管理
+(use-package vundo
   :ensure t
-  :diminish
-  :init
-  (global-undo-tree-mode)
+  :bind ("C-x u" . vundo)
   :config
-  (setq undo-tree-auto-save-history nil) ; アンドゥ履歴の自動保存を無効化
-
-  ;; undo-tree-visualize 関数の動作をカスタマイズ
-  (defun undo-tree-split-side-by-side (original-function &rest args)
-    "Split undo-tree side-by-side."
-    (let ((split-height-threshold nil) ; 縦分割の閾値
-          (split-width-threshold 0))   ; 横分割の閾値
-      (apply original-function args)))
-
-  ;; undo-tree-visualize のアドバイスを追加
-  (advice-add 'undo-tree-visualize :around #'undo-tree-split-side-by-side)
-
-  ;; アンドゥツリービジュアライザのキーバインド設定
-  (define-key undo-tree-visualizer-mode-map (kbd "RET") 'undo-tree-visualizer-quit)  ; RET で終了
-  (define-key undo-tree-visualizer-mode-map (kbd "C-g") 'undo-tree-visualizer-quit)  ; C-g で終了
+  (setq vundo-compact-display nil) ;; 画面を広めに使う
+  (setq vundo-window-max-height 8) ;; `vundo` のウィンドウ高さを大きくする
+  (setq vundo-roll-back-on-quit t) ;; `q` で抜けた時に元の位置に戻る
+  :init
+  (with-eval-after-load 'vundo
+    (define-key vundo-mode-map (kbd "C-f") 'vundo-forward)   ;; 次の状態へ (→)
+    (define-key vundo-mode-map (kbd "C-b") 'vundo-backward)  ;; 前の状態へ (←)
+    (define-key vundo-mode-map (kbd "C-n") 'vundo-next)      ;; 下の分岐へ (↓)
+    (define-key vundo-mode-map (kbd "C-p") 'vundo-previous)) ;; 上の分岐へ (↑)
   )
 
 ;;; Undohist - アンドゥ履歴のファイル保存
