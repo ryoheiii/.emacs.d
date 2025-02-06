@@ -16,8 +16,6 @@
 (use-package color-theme-modern
   :ensure t
   :config
-  (add-to-list 'custom-theme-load-path
-               (file-name-as-directory "~/.emacs.d/loads/elisp/color-theme-modern-0.0.3"))
   ;; テーマの適用
   ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
   (load-theme 'hober t t)

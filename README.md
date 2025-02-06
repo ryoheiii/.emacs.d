@@ -31,7 +31,6 @@ Emacs の初回起動後に、以下の設定を行う。
 
 ### 設定項目
 - **Yasnippets**: インストール後のパス (`loads/elisp/yasnippet-snippets-<version>`) を `loads/inits/20-external-package.el` で指定
-- **Color Theme Modern**: インストールされたパス (`~/.emacs.d/loads/elisp/color-theme-modern-<version>`) を `~/.emacs.d/loads/inits/20-external-package.el` で指定
 - **Irony サーバーの構築**: Emacs 起動後、以下コマンドを実行
   ```sh
   M-x irony-install-server
