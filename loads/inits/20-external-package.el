@@ -9,18 +9,6 @@
   :ensure t
   )
 
-;;; Smartrep - キーバインドの連続入力を簡略化するマイナーモード
-(use-package smartrep
-  :ensure t
-  :config
-  ;; smartrepによるコマンド実行中のキー入力エコーを無効にする
-  ;; http://shakenbu.org/yanagi/d/?date=20140105
-  (advice-add 'smartrep-map-internal
-              :around (lambda (orig-fun &rest args)
-                        (let ((echo-keystrokes 0))
-                          (apply orig-fun args))))
-  )
-
 
 
 ;;;;; [Group] Themes-and-Visuals - テーマとビジュアル関連 ;;;;;
@@ -441,37 +429,41 @@
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :ensure t
-  :after smartrep
   :config
   (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@early-init.el 関数を使った設定
-  ;; Smartrep を用いてキーバインドを設定
-  (global-set-key (kbd "C-q") nil) ; C-q をプレフィックスキーとして設定
-  (smartrep-define-key global-map "C-q"
-    '(("p"   . mc/mark-previous-like-this)
-      ("C-p" . mc/mark-previous-like-this)
-      ("n"   . mc/mark-next-like-this)
-      ("C-n" . mc/mark-next-like-this)
-      ("*"   . mc/mark-all-like-this)
-      ("a"   . mc/mark-all-like-this)
-      ("C-a" . mc/mark-all-like-this)
-      ("d"   . mc/mark-all-like-this-dwim)
-      ("C-d" . mc/mark-all-like-this-dwim)
-      ("m"   . mc/mark-more-like-this-extended)
-      ("C-m" . mc/mark-more-like-this-extended)
-      ("u"   . mc/unmark-next-like-this)
-      ("C-u" . mc/unmark-next-like-this)
-      ("U"   . mc/unmark-previous-like-this)
-      ("s"   . mc/skip-to-next-like-this)
-      ("C-s" . mc/skip-to-next-like-this)
-      ("S"   . mc/skip-to-previous-like-this)
-      ("i"   . mc/insert-numbers)
-      ("C-i" . mc/insert-numbers)
-      ("l"   . mc/insert-letters)
-      ("C-l" . mc/insert-letters)
-      ("o"   . mc/sort-regions)
-      ("C-o" . mc/sort-regions)
-      ("O"   . mc/reverse-regions)))
+
+  ;; `repeat-mode` 用の `repeat-map` を作成
+  (defvar-keymap my/mc-repeat-map
+    :doc "Keymap for repeating multiple-cursors commands"
+    :repeat t
+    "p"  'mc/mark-previous-like-this
+    "C-p" 'mc/mark-previous-like-this
+    "n"  'mc/mark-next-like-this
+    "C-n" 'mc/mark-next-like-this
+    "*"  'mc/mark-all-like-this
+    "a"  'mc/mark-all-like-this
+    "C-a" 'mc/mark-all-like-this
+    "d"  'mc/mark-all-like-this-dwim
+    "C-d" 'mc/mark-all-like-this-dwim
+    "m"  'mc/mark-more-like-this-extended
+    "C-m" 'mc/mark-more-like-this-extended
+    "u"  'mc/unmark-next-like-this
+    "C-u" 'mc/unmark-next-like-this
+    "U"  'mc/unmark-previous-like-this
+    "s"  'mc/skip-to-next-like-this
+    "C-s" 'mc/skip-to-next-like-this
+    "S"  'mc/skip-to-previous-like-this
+    "i"  'mc/insert-numbers
+    "C-i" 'mc/insert-numbers
+    "l"  'mc/insert-letters
+    "C-l" 'mc/insert-letters
+    "o"  'mc/sort-regions
+    "C-o" 'mc/sort-regions
+    "O"  'mc/reverse-regions)
+  (global-set-key (kbd "C-q") my/mc-repeat-map) ;; `C-q` をプレフィックスキーとして設定
+  (repeat-mode 1) ;; `repeat-mode` を有効化
   )
+
 
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region

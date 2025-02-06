@@ -176,3 +176,10 @@
   (display-fill-column-indicator-column 120) ;; 折り返し位置
   (display-fill-column-indicator-character ?|) ;; 表示する記号
   )
+
+;;; repeat - キーのリピート (multiple-cursors などで利用)
+(use-package repeat
+  :ensure nil
+  :init
+  (repeat-mode 1)
+  )
