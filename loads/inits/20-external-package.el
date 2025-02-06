@@ -1005,6 +1005,7 @@
   )
 
 
+
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
 ;;; Mozc - 日本語入力の設定
 (use-package mozc
@@ -1095,6 +1096,8 @@
   :ensure t
   )
 
+
+
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
 ;;; Paradox - パッケージのインストールと更新
 (use-package paradox
@@ -1168,17 +1171,6 @@
   :ensure t
   :config
   (setq amx-save-file (my-set-history "amx-items")) ; Amx の履歴ファイルの保存場所 (@early-init.el)
-  )
-
-;;; Gcmh - メモリ使用量の最適化
-(use-package gcmh
-  :disabled t ; スリープからの復帰が遅くなるので無効化
-  :ensure t
-  :diminish gcmh
-  :custom
-  (gcmh-verbose t)
-  :config
-  (gcmh-mode 1)
   )
 
 ;;; Stopwatch
