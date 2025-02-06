@@ -10,8 +10,8 @@
 - **フォント**: `sudo apt install fonts-ricty-diminished`
 - **GTAGS (ソースコード検索ツール)**: `sudo apt install global`
 - **Migemo (ローマ字で日本語検索)**: `sudo apt install cmigemo`
-- **Aspell (スペルチェック)**: `sudo apt install aspell`  
-  → `~/.aspell.conf` に設定を追加
+- **Hunspell (スペルチェック)**: `sudo apt install hunspell hunspell-en-us`
+- **Aspell (スペルチェック)**: `sudo apt install aspell aspell-en`
 - **CMake (irony-install-server 用)**: `sudo apt install cmake`
 - **Libclang (irony-install-server 用)**: `sudo apt install libclang-dev`
 - **Pandoc (Markdown 用)**: `sudo apt install pandoc`
@@ -24,7 +24,6 @@
 ### 設定する項目
 - **Yasnippets**: ローカルスニペットのパスを `loads/inits/20-external-package.el` で設定
 - **Migemo**: 辞書のインストール場所を `loads/inits/20-external-package.el` で設定
-- **Ispell**: Aspell の実行バイナリパスを `loads/inits/20-external-package.el` で設定
 - **Copilot**: Node.js の実行バイナリパスを `loads/inits/20-external-package.el` で設定
 
 ## 3. 初回起動後の追加設定

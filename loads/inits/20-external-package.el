@@ -999,18 +999,61 @@
   (push '("*Codic Result*") popwin:special-display-config)
   )
 
-;;; Ispell - スペルチェック機能の設定と辞書の指定
+;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
   :ensure t
   :config
-  ;; aspell にパスを設定
-  (when (file-executable-p "/usr/bin/aspell")
-    (setq-default ispell-program-name "aspell")
-    (add-to-list 'ispell-extra-args "--sug-mode=ultra"))
-  ;; 日本語をスキップする設定
-  (add-to-list 'ispell-skip-region-alist '("[^\000-\377]+"))
-  ;; スペルチェックに英語の辞書を使用
-  (setq ispell-dictionary "american")
+  (cond
+   ;; hunspell があれば優先
+   ((executable-find "hunspell")
+    (setq ispell-program-name "hunspell")
+    (setq ispell-dictionary "en_US")
+    (setq ispell-extra-args '("-a" "--sug-mode=ultra")))
+   ;; aspell があれば使用
+   ((executable-find "aspell")
+    (setq ispell-program-name "aspell")
+    (setq ispell-dictionary "en_US")
+    (setq ispell-extra-args '("--sug-mode=ultra"))))
+  (setq ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
+  (setq ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語をスペルチェック対象外にする
+  )
+
+;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
+(use-package flyspell
+  :ensure t
+  :hook
+  ((text-mode . (lambda ()
+                  (when (and (executable-find "aspell")
+                             (< (count-lines (point-min) (point-max)) 3000)) ;; 3000行以下なら有効
+                    (flyspell-mode 1))))
+   (prog-mode . flyspell-prog-mode)) ;; プログラムのコメントのみチェック
+  :config
+  (setq flyspell-issue-message-flag nil) ;; ミニバッファのメッセージを抑制
+  (setq ispell-skip-region-alist
+        '(("[^\000-\377]+"))) ;; 日本語をスペルチェック対象外にする
+  ;; 3000行以上なら flyspell をオフにする
+  (defun my-disable-flyspell-on-large-files ()
+    "3000行以上のファイルでは flyspell を無効にする"
+    (when (and flyspell-mode
+               (> (count-lines (point-min) (point-max)) 3000))
+      (flyspell-mode -1)))
+  (add-hook 'find-file-hook #'my-disable-flyspell-on-large-files)
+  )
+
+;;; flyspell-correct - スペルチェックの補助ツール
+(use-package flyspell-correct
+  :ensure t
+  :after flyspell
+  :bind (:map flyspell-mode-map
+              ("C-c C-/" . flyspell-correct-wrapper)) ;; C-/ で補正メニューを開く
+  )
+
+;;; flyspell-correct-popup - pop-up メニューで修正候補を選べるようにする
+(use-package flyspell-correct-popup
+  :ensure t
+  :after flyspell-correct
+  :custom
+  (flyspell-correct-interface #'flyspell-correct-popup)
   )
 
 
