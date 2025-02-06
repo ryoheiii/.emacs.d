@@ -1,0 +1,274 @@
+[WARNING] This document format requires a nonempty <title> element.
+  Defaulting to '-' as the title.
+  To specify a title, use 'title' in metadata or --metadata title="...".
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>-</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <style type="text/css">
+body {
+font-family: "Inter", "Arial", sans-serif;
+max-width: 800px;
+margin: auto;
+line-height: 1.5;
+background-color: #ffffff;
+color: #333;
+padding: 30px;
+}
+
+h1 {
+font-size: 1.8rem;
+font-weight: 400;
+color: #222;
+border-bottom: 1px solid #0077cc;
+padding-bottom: 6px;
+margin-bottom: 15px;
+}
+
+h1:first-of-type {
+margin-top: 0px;
+}
+h2 {
+font-size: 1.5rem;
+font-weight: 400;
+color: #333;
+margin-top: 25px;
+margin-bottom: 10px;
+}
+h3 {
+font-size: 1.3rem;
+font-weight: 400;
+color: #444;
+margin-top: 20px;
+margin-bottom: 8px;
+}
+
+hr {
+border: none;
+height: 1px;
+background: linear-gradient(to right, #0077cc, #ddd, #0077cc);
+margin: 20px 0;
+}
+
+pre {
+background: #252526;
+color: #eaeaea;
+padding: 14px;
+border-radius: 6px;
+overflow-x: auto;
+font-size: 14px;
+font-family: "Consolas", "Courier New", monospace;
+line-height: 1.4;
+position: relative;
+box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+pre code {
+display: block;
+padding: 0;
+margin: 0;
+background: none;
+color: #eaeaea;
+}
+
+pre code::selection {
+background: rgba(255, 255, 255, 0.2);
+}
+
+code {
+background-color: #f4f4f4;
+color: #d63384;
+padding: 2px 5px;
+border-radius: 3px;
+font-family: "Consolas", "Courier New", monospace;
+font-size: 13px;
+}
+
+blockquote {
+font-style: italic;
+color: #555;
+border-left: 4px solid #0077cc;
+padding-left: 14px;
+margin: 12px 0;
+background: #f8f9fa;
+padding: 8px 12px;
+border-radius: 4px;
+}
+
+table {
+width: 100%;
+border-collapse: collapse;
+margin: 15px 0;
+background: white;
+border: 1px solid #ddd;
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+th, td {
+border: 1px solid #ddd;
+padding: 8px;
+text-align: left;
+}
+th {
+background: #0077cc;
+color: white;
+font-weight: bold;
+}
+tr:nth-child(even) {
+background: #f9f9f9;
+}
+
+a {
+color: #0077cc;
+text-decoration: none;
+font-weight: 500;
+transition: color 0.2s;
+}
+a:hover {
+text-decoration: underline;
+color: #0056b3;
+}
+</style>
+</head>
+<body>
+<!-- -*- gfm -*- -->
+<h1 data-number="1" id="emacs-環境構築ガイド"><span class="header-section-number">1</span> Emacs 環境構築ガイド</h1>
+<h2 data-number="1.1" id="linux-パッケージのインストール"><span class="header-section-number">1.1</span> 1. Linux パッケージのインストール</h2>
+<p>以下のパッケージをインストールする</p>
+<h3 data-number="1.1.1" id="必須パッケージ"><span class="header-section-number">1.1.1</span> 必須パッケージ</h3>
+<ul>
+<li><strong>Clang</strong>: <code>sudo apt install clang</code></li>
+<li><strong>カラーテーマ</strong>: <code>sudo apt install elpa-color-theme-modern</code></li>
+<li><strong>フォント</strong>: <code>sudo apt install fonts-ricty-diminished</code></li>
+<li><strong>GTAGS (ソースコード検索ツール)</strong>: <code>sudo apt install global</code></li>
+<li><strong>Migemo (ローマ字で日本語検索)</strong>: <code>sudo apt install cmigemo</code></li>
+<li><strong>Aspell (スペルチェック)</strong>: <code>sudo apt install aspell</code><br />
+→ <code>~/.aspell.conf</code> に設定を追加</li>
+<li><strong>CMake (irony-install-server 用)</strong>: <code>sudo apt install cmake</code></li>
+<li><strong>Libclang (irony-install-server 用)</strong>: <code>sudo apt install libclang-dev</code></li>
+<li><strong>Pandoc (Markdown 用)</strong>: <code>sudo apt install pandoc</code></li>
+<li><strong>Node.js (GitHub Copilot 用)</strong>: <code>curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash export NVM_DIR=&quot;$([ -z &quot;${XDG_CONFIG_HOME-}&quot; ] &amp;&amp; printf %s &quot;${HOME}/.nvm&quot; || printf %s &quot;${XDG_CONFIG_HOME}/nvm&quot;)&quot; [ -s &quot;$NVM_DIR/nvm.sh&quot; ] &amp;&amp; \. &quot;$NVM_DIR/nvm.sh&quot; nvm ls-remote nvm install &lt;version&gt;</code></li>
+</ul>
+<h2 data-number="1.2" id="emacs-設定ファイルのパス設定"><span class="header-section-number">1.2</span> 2. Emacs 設定ファイルのパス設定</h2>
+<p>以下のパスを設定する。</p>
+<h3 data-number="1.2.1" id="設定する項目"><span class="header-section-number">1.2.1</span> 設定する項目</h3>
+<ul>
+<li><strong>Yasnippets</strong>: ローカルスニペットのパスを <code>loads/inits/20-external-package.el</code> で設定</li>
+<li><strong>Migemo</strong>: 辞書のインストール場所を <code>loads/inits/20-external-package.el</code> で設定</li>
+<li><strong>Ispell</strong>: Aspell の実行バイナリパスを <code>loads/inits/20-external-package.el</code> で設定</li>
+<li><strong>Copilot</strong>: Node.js の実行バイナリパスを <code>loads/inits/20-external-package.el</code> で設定</li>
+</ul>
+<h2 data-number="1.3" id="初回起動後の追加設定"><span class="header-section-number">1.3</span> 3. 初回起動後の追加設定</h2>
+<p>Emacs の初回起動後に、以下の設定を行う。</p>
+<h3 data-number="1.3.1" id="設定項目"><span class="header-section-number">1.3.1</span> 設定項目</h3>
+<ul>
+<li><p><strong>Yasnippets</strong>: インストール後のパス (<code>loads/elisp/yasnippet-snippets-&lt;version&gt;</code>) を <code>loads/inits/20-external-package.el</code> で指定</p></li>
+<li><p><strong>Color Theme Modern</strong>: インストールされたパス (<code>~/.emacs.d/loads/elisp/color-theme-modern-&lt;version&gt;</code>) を <code>~/.emacs.d/loads/inits/20-external-package.el</code> で指定</p></li>
+<li><p><strong>Irony サーバーの構築</strong>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="ex">M-x</span> irony-install-server</span></code></pre></div></li>
+</ul>
+<h2 data-number="1.4" id="パッケージ管理"><span class="header-section-number">1.4</span> 4. パッケージ管理</h2>
+<p>Emacs のパッケージは以下のディレクトリで管理する。 - <code>~/.emacs.d/loads/elisp</code> - <code>~/.emacs.d/loads/site-elisp</code></p>
+<h2 data-number="1.5" id="設定ファイルの命名規則"><span class="header-section-number">1.5</span> 5. 設定ファイルの命名規則</h2>
+<p>Emacs の設定ファイル (<code>~/.emacs.d/loads/inits/*.el</code>) には、以下の命名規則を適用する。</p>
+<h3 data-number="1.5.1" id="命名規則"><span class="header-section-number">1.5.1</span> 命名規則</h3>
+<ul>
+<li><strong>環境に依存しない設定ファイル</strong>
+<ul>
+<li>ファイル名の先頭に 2 桁の数字を付与 (例: <code>00-keybind.el</code>)</li>
+<li>数字は読み込み順を示し、<code>00</code> が最初、<code>99</code> が最後</li>
+<li>同じ数字を付けることも可能</li>
+</ul></li>
+<li><strong>環境依存の設定ファイル</strong>
+<ul>
+<li>環境ごとに以下のプレフィックスを使用:
+<ul>
+<li>Meadow: <code>meadow-</code></li>
+<li>Carbon Emacs: <code>carbon-emacs-</code></li>
+<li>Cocoa Emacs: <code>cocoa-emacs-</code></li>
+<li>Terminal (<code>emacs -nw</code>): <code>nw-</code></li>
+<li>Windows: <code>windows-</code></li>
+<li>Linux: <code>linux-</code></li>
+</ul></li>
+<li>例: <code>cocoa-emacs-appearance.el</code> (<code>&lt;環境&gt;-&lt;機能名&gt;.el</code>)</li>
+</ul></li>
+<li><strong>package.el 関連の設定は 20 番台に記述</strong></li>
+</ul>
+<h2 data-number="1.6" id="その他の注意点"><span class="header-section-number">1.6</span> 6. その他の注意点</h2>
+<ul>
+<li>ターミナルで Emacs を利用する際は、<code>xterm-256color</code> を設定</li>
+</ul>
+</body>
+</html>
