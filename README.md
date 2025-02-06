@@ -5,14 +5,14 @@
 以下のパッケージをインストールする
 
 ### 必須パッケージ
-- **Clang**: `sudo apt install clang`
+- **Clang**: `sudo apt install clang libclang-dev`
 - **カラーテーマ**: `sudo apt install elpa-color-theme-modern`
 - **フォント**: `sudo apt install fonts-ricty-diminished`
 - **GTAGS (ソースコード検索ツール)**: `sudo apt install global`
 - **Migemo (ローマ字で日本語検索)**: `sudo apt install cmigemo`
 - **Hunspell (スペルチェック)**: `sudo apt install hunspell hunspell-en-us`
 - **Aspell (スペルチェック)**: `sudo apt install aspell aspell-en`
-- **CMake (irony-install-server 用)**: `sudo apt install cmake`
+- **CMake and LLVM (irony-install-server 用)**: `sudo apt install cmake llvm`
 - **Libclang (irony-install-server 用)**: `sudo apt install libclang-dev`
 - **Pandoc (Markdown 用)**: `sudo apt install pandoc`
 - **Node.js (GitHub Copilot 用)**:
