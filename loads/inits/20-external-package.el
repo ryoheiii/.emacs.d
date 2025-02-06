@@ -28,7 +28,6 @@
 (use-package color-theme-modern
   :ensure t
   :config
-  ;; カスタムテーマのロードパスを追加
   (add-to-list 'custom-theme-load-path
                (file-name-as-directory "~/.emacs.d/loads/elisp/color-theme-modern-0.0.3"))
   ;; テーマの適用
@@ -478,7 +477,7 @@
       ("O"   . mc/reverse-regions)))
   )
 
-;;;Expand Region - 選択範囲をインクリメンタルに拡大・縮小
+;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :ensure t
   :init
@@ -486,12 +485,49 @@
   :bind (("C-," . er/expand-region))
   )
 
-;;; Auto Highlight Symbol の設定
-(use-package auto-highlight-symbol
+;;; symbol-overlay - シンボルの置換
+;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
+(use-package symbol-overlay
   :ensure t
+  :hook (prog-mode . symbol-overlay-mode)
+  :bind
+  (("C-x C-a" . my-symbol-overlay-rename-visible)     ;; ウィンドウ内のシンボルを置換
+   ("C-x a"   . my-symbol-overlay-rename-in-function) ;; 関数・メソッド内の置換
+   ("C-x C-g" . symbol-overlay-rename)                ;; バッファ全体のシンボルを置換
+   )
   :config
-  (global-auto-highlight-symbol-mode t)
-  ;; C-x C-aで一括 rename (emacs29 で正常に動作しない)
+  (defun my-symbol-overlay-rename-visible ()
+    "現在のウィンドウ内に表示されているシンボルのみをリネームする."
+    (interactive)
+    (let* ((symbol (symbol-overlay-get-symbol))
+           (new-name (read-string (format "Rename '%s' to: " symbol)))
+           (start (window-start))
+           (end (window-end)))
+      (save-excursion
+        (goto-char start)
+        (while (re-search-forward (regexp-quote symbol) end t)
+          (replace-match new-name)))))
+  (defun my-symbol-overlay-rename-in-function ()
+    "現在の関数やメソッド内に表示されているシンボルのみをリネームする."
+    (interactive)
+    (let* ((symbol (symbol-overlay-get-symbol))
+           (new-name (read-string (format "Rename '%s' to: " symbol)))
+           (start (cond
+                   ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
+                    (save-excursion (c-beginning-of-defun) (point)))
+                   ((derived-mode-p 'python-mode)
+                    (save-excursion (python-nav-beginning-of-defun) (point)))
+                   (t (point-min)))) ;; その他のモードではファイル全体
+           (end (cond
+                 ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
+                  (save-excursion (c-end-of-defun) (point)))
+                 ((derived-mode-p 'python-mode)
+                  (save-excursion (python-nav-end-of-defun) (point)))
+                 (t (point-max))))) ;; その他のモードではファイル全体
+      (save-excursion
+        (goto-char start)
+        (while (re-search-forward (regexp-quote symbol) end t)
+          (replace-match new-name)))))
   )
 
 
@@ -1028,6 +1064,10 @@
                     (flyspell-mode 1))))
    (prog-mode . flyspell-prog-mode)) ;; プログラムのコメントのみチェック
   :config
+  (unbind-key "C-," flyspell-mode-map)    ;; `C-.` の無効化
+  (unbind-key "C-." flyspell-mode-map)  ;; `C-M-i` の無効化
+  (unbind-key "C-;" flyspell-mode-map)  ;; `M-TAB` の無効化
+  (unbind-key "C-c $" flyspell-mode-map) ;; `C-c $` の無効化
   (setq flyspell-issue-message-flag nil) ;; ミニバッファのメッセージを抑制
   (setq ispell-skip-region-alist
         '(("[^\000-\377]+"))) ;; 日本語をスペルチェック対象外にする
