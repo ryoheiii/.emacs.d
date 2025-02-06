@@ -1012,15 +1012,6 @@
   :config (prefer-coding-system 'utf-8)
   )
 
-;;; Codic - プログラミング用語の翻訳と検索
-(use-package codic
-  :ensure t
-  :config
-  ;; TODO: トークン設定 (https://qiita.com/tewi_r/items/185a5a74e9eec9717990)
-  ;; (setq codic-api-token (my-lisp-load "codic-api-token"))
-  (push '("*Codic Result*") popwin:special-display-config)
-  )
-
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
   :ensure t
