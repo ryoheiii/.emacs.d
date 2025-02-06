@@ -374,14 +374,22 @@
   :ensure t
   :diminish
   :init
-  (setq yas-snippet-dirs '("~/.emacs.d/my-data/snippets"
-                           "~/.emacs.d/my-data/snippets/snippets" ;; シンボリックリンク用
-                           "~/.emacs.d/loads/elisp/yasnippet-snippets-1.1/snippets"))
+  ;; スニペットディレクトリの動的設定
+  (setq yas-snippet-dirs
+        (seq-filter #'file-exists-p
+                    (list (expand-file-name "~/.emacs.d/my-data/snippets")
+                          (expand-file-name "~/.emacs.d/my-data/snippets/snippets") ;; シンボリックリンク用
+                          (expand-file-name "~/.emacs.d/loads/elisp/yasnippet-snippets-1.1/snippets"))))
+  (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
   :config
-  (yas-global-mode 1)                             ; yasnippet のグローバルモードを有効化
-  (use-package yasnippet-snippets :ensure t)      ; yasnippet の追加スニペット集
-  (setq yas-prompt-functions '(yas-ido-prompt))   ; スニペット展開のプロンプト設定
-  (custom-set-variables '(yas-trigger-key "TAB")) ; トリガーキーを TAB に設定
+  ;; 追加スニペット集
+  (use-package yasnippet-snippets :ensure t)
+
+  ;; スニペット展開のプロンプト設定（エラーハンドリングも考慮）
+  (setq yas-prompt-functions '(yas-ido-prompt yas-no-prompt))
+
+  ;; トリガーキーを TAB に設定
+  (setq yas-trigger-key "TAB")
 
   ;; helm と yasnippet の統合
   (use-package helm-c-yasnippet
@@ -922,14 +930,19 @@
 (use-package migemo
   :ensure t
   :config
-  ;; Set your installed path
-  (setq migemo-command "cmigemo"
-        migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict"
+  ;; Set your installed path safely
+  (setq migemo-command (or (executable-find "cmigemo") "cmigemo")
+        migemo-dictionary (if (file-exists-p "/usr/share/cmigemo/utf-8/migemo-dict")
+                              "/usr/share/cmigemo/utf-8/migemo-dict"
+                            nil)
         migemo-options '("-q" "--emacs")
         migemo-user-dictionary nil
         migemo-regex-dictionary nil
-        migemo-coding-system 'utf-8-unix)
-  (migemo-init)
+        migemo-coding-system (if (display-graphic-p) 'utf-8 'utf-8-dos))
+
+  ;; Initialize only if command is found and dictionary exists
+  (when (and migemo-command migemo-dictionary)
+    (migemo-init))
   )
 
 ;; まだ helm から置き換える程でない (helm-swoop の代替手段が存在しない等)
