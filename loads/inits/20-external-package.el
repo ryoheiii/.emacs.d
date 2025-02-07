@@ -930,19 +930,13 @@
 (use-package migemo
   :ensure t
   :config
-  ;; Set your installed path safely
-  (setq migemo-command (or (executable-find "cmigemo") "cmigemo")
-        migemo-dictionary (if (file-exists-p "/usr/share/cmigemo/utf-8/migemo-dict")
-                              "/usr/share/cmigemo/utf-8/migemo-dict"
-                            nil)
+  (setq migemo-command "cmigemo"
+        migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict"
         migemo-options '("-q" "--emacs")
         migemo-user-dictionary nil
         migemo-regex-dictionary nil
-        migemo-coding-system (if (display-graphic-p) 'utf-8 'utf-8-dos))
-
-  ;; Initialize only if command is found and dictionary exists
-  (when (and migemo-command migemo-dictionary)
-    (migemo-init))
+        migemo-coding-system 'utf-8-unix)
+  (migemo-init)
   )
 
 ;; まだ helm から置き換える程でない (helm-swoop の代替手段が存在しない等)
