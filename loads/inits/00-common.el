@@ -6,12 +6,8 @@
 (set-keyboard-coding-system 'utf-8)
 ;; Macで日本語のファイル名を扱う場合用
 (when (eq system-type 'darwin)
-  (use-package ucs-normalize
-    :config
-    (set-file-name-coding-system 'utf-8-hfs)
-    (setq locale-coding-system 'utf-8-hfs)
-    )
-  )
+  (set-file-name-coding-system 'utf-8-hfs)
+  (setq locale-coding-system 'utf-8-hfs))
 
 ;;; 改行コードの表示
 (setq eol-mnemonic-dos  "(CRLF)")
@@ -21,19 +17,13 @@
 ;;; ファイル保存時の設定
 ;; 行末の空白を削除
 ;; (add-hook 'before-save-hook 'delete-trailing-whitespace)
-;; Markdown のときのみ delete-trailing-whitespace を解除
-(defun my-disable-delete-trailing-whitespace ()
-  "Temporarily disable `delete-trailing-whitespace' in `markdown-mode'."
-  (when (derived-mode-p 'markdown-mode)
-    (remove-hook 'before-save-hook 'delete-trailing-whitespace t)))
-(defun my-enable-delete-trailing-whitespace ()
-  "Enable `delete-trailing-whitespace' after exiting `markdown-mode'."
-  (unless (derived-mode-p 'markdown-mode)
+(defun my-toggle-delete-trailing-whitespace ()
+  "Markdown-mode のときのみ `delete-trailing-whitespace` を無効にする."
+  (if (derived-mode-p 'markdown-mode)
+      (remove-hook 'before-save-hook 'delete-trailing-whitespace t)
     (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
-(add-hook 'markdown-mode-hook
-          (lambda ()
-            (add-hook 'before-save-hook 'my-disable-delete-trailing-whitespace nil t)))
-(add-hook 'after-change-major-mode-hook 'my-enable-delete-trailing-whitespace)
+(add-hook 'markdown-mode-hook 'my-toggle-delete-trailing-whitespace)
+(add-hook 'after-change-major-mode-hook 'my-toggle-delete-trailing-whitespace)
 
 ;;; ファイルの自動更新設定。ファイルの変更を自動的に反映
 (global-auto-revert-mode 1)
@@ -54,7 +44,7 @@
 
 ;;; インターフェースの設定
 (menu-bar-mode -1)                    ;; メニューバーを消す
-(if window-system (tool-bar-mode 01)) ;; ツールバーを消す
+(if window-system (tool-bar-mode -1)) ;; ツールバーを消す
 
 ;;; カーソル設定
 (blink-cursor-mode 0) ;; カーソルの点滅を止める
@@ -68,12 +58,12 @@
 (setq ring-bell-function 'ignore) ;; エラー音を鳴らさない
 ;; save時にmode line を光らせる
 (add-hook 'after-save-hook
-      (lambda ()
-        (let ((orig-fg (face-background 'mode-line)))
-          (set-face-background 'mode-line "dark green")
-          (run-with-idle-timer 0.1 nil
-                   (lambda (fg) (set-face-background 'mode-line fg))
-                   orig-fg))))
+          (lambda ()
+            (let ((orig-fg (face-background 'mode-line)))
+              (set-face-background 'mode-line "dark green")
+              (run-with-idle-timer 0.1 nil
+                                   (lambda (fg) (set-face-background 'mode-line fg))
+                                   orig-fg))))
 
 ;;; 行設定
 (setq kill-whole-line t)         ;; 行の先頭でC-kを一回押すだけで行全体を消去する
