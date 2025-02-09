@@ -391,11 +391,16 @@
 (use-package copilot
   :disabled t
   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-  :straight t
-  :hook ((prog-mode . copilot-mode))
-  :init
-  ;; Node.js の実行可能ファイルのパスを設定
-  (setq copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node")
+  :hook (prog-mode . copilot-mode)
+  :custom
+  (copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node") ; Node.js の実行パス
+  ;; *** Copilot の警告を抑止 ***
+  ;; [Warning (copilot): ... copilot--infer-indentation-offset found no mode-specific indentation offset]
+  ;; emacs-lisp-mode にて発生。copilot--indentation-alist への emacs-lisp-mode のダミー設定では抑制できず。
+  ;; lisp-indent-offset への値設定にて抑制できるが、emacs-lisp-mode の思想に反し、
+  ;; かつ aggresive-indent との競合が発生するため、警告抑止で対応する
+  (warning-suppress-log-types '((copilot copilot-no-mode-indent)))  ; Copilot の警告抑制
+  (warning-suppress-types '((copilot copilot-no-mode-indent)))
   :bind (:map copilot-mode-map
               ("C-M-<return>" . copilot-complete)            ; C-M-Enter で起動
               ("C-c c"        . copilot-clear-overlay)       ; C-c c     でオーバーレイをクリア
@@ -407,14 +412,6 @@
               ("C-c n"        . copilot-next-completion)     ; C-c n     で次の補完候補を表示
               ("C-c C-n"      . copilot-next-completion)     ; C-c C-n   で次の補完候補を表示
               ("C-<return>"   . copilot-accept-completion))  ; C-Enter   で補完を受け入れる
-  :config
-  ;; *** Copilot の警告を抑止 ***
-  ;; [Warning (copilot): ... copilot--infer-indentation-offset found no mode-specific indentation offset]
-  ;; emacs-lisp-mode にて発生。copilot--indentation-alist への emacs-lisp-mode のダミー設定では抑制できず。
-  ;; lisp-indent-offset への値設定にて抑制できるが、emacs-lisp-mode の思想に反し、
-  ;; かつ aggresive-indent との競合が発生するため、警告抑止で対応する
-  (setq warning-suppress-log-types '((copilot copilot-no-mode-indent)))
-  (setq warning-suppress-types '((copilot copilot-no-mode-indent)))
   )
 
 ;;; Multiple Cursors - 複数カーソルによる編集機能
