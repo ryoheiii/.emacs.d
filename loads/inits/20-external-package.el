@@ -689,8 +689,8 @@
 (use-package popwin
   :straight t
   :custom
-  (popwin:popup-window-position 'bottom)
-  :config
+  (popwin:popup-window-position 'bottom) ;; ポップアップの位置を下部に設定
+  :init
   (popwin-mode 1)
   )
 
