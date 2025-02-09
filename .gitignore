@@ -7,10 +7,10 @@ eln-cache/
 tmp/*
 loads/elisp/*
 loads/site-elisp/*
-my-data/snippets/*
+custom/snippets/*
 
 !.gitkeep
 
 # 個別ファイル
-custom.el
+custom/custom.el
 21-external-package-not-commit.el

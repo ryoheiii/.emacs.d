@@ -15,7 +15,7 @@
 (defvar my-package-dir (expand-file-name "tmp/package/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/tmp/package/
 (defvar my-db-dir      (expand-file-name "tmp/database/" my-emacs-dir)) ;; /path/to/userhome/.emacs.d/tmp/database/
 (defvar my-elisp-dir   (expand-file-name "loads/elisp/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
-(defvar my-data-dir    (expand-file-name "my-data/" my-emacs-dir))      ;; /path/to/userhome/.emacs.d/my-data
+(defvar my-custom-dir  (expand-file-name "custom/" my-emacs-dir))       ;; /path/to/userhome/.emacs.d/custom
 
 ;;; パス設定ヘルパ関数
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))
@@ -24,13 +24,13 @@
 (defun my-set-package (&rest args) (expand-file-name (apply 'concat args) my-package-dir))
 (defun my-set-db (&rest args) (expand-file-name (apply 'concat args) my-db-dir))
 (defun my-set-elisp (&rest args) (expand-file-name (apply 'concat args) my-elisp-dir))
-(defun my-set-mydata (&rest args) (expand-file-name (apply 'concat args) my-data-dir))
+(defun my-set-custom (&rest args) (expand-file-name (apply 'concat args) my-custom-dir))
 
 ;;; システムのゴミ箱ディレクトリ
 (setq trash-directory (my-set-history "trash/"))
 
 ;;; カスタムファイル設定
-(setq custom-file (my-set-emacs "custom.el"))
+(setq custom-file (my-set-custom "custom.el"))
 (load custom-file 'noerror)
 
 ;;; バックアップ設定

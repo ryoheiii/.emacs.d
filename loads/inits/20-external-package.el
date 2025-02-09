@@ -367,8 +367,8 @@
   ;; スニペットディレクトリの動的設定
   (setq yas-snippet-dirs
         (seq-filter #'file-exists-p
-                    (list (my-set-mydata "snippets")
-                          (my-set-mydata "snippets/snippets") ;; シンボリックリンク用
+                    (list (my-set-custom "snippets")
+                          (my-set-custom "snippets/snippets") ;; シンボリックリンク用
                           (my-set-elisp "straight/build/yasnippet-snippets/snippets"))))
 
   (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
@@ -606,7 +606,7 @@
 ;;;;; [Group] Markdown - Markdown 関係 ;;;;;
 ;;; 変数定義（コンフィギュレーション）
 ;; Markdown 用のカスタム CSS ファイルのパス
-(defvar my-markdown-css-file (my-set-mydata "css/markdown-style.css")
+(defvar my-markdown-css-file (my-set-custom "css/markdown-style.css")
   "Path to custom markdown CSS file.")
 
 ;; Pandoc コマンドの設定
