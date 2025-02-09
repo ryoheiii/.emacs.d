@@ -33,7 +33,7 @@
 (use-package cc-mode
   :mode (("\\.C\\'"    . c-mode)
          ;; ("\\.cc\\'"   . cc-mode)
-         ("\\.cc\\'"   . c-mode)  ;; cc-mode ではなく c-mode に統一
+         ("\\.cc\\'"   . c-mode)  ; cc-mode ではなく c-mode に統一
          ("\\.nut\\'"  . c++-mode)
          ("\\.cpp\\'"  . c++-mode)
          ("\\.hh\\'"   . c++-mode)
@@ -47,9 +47,9 @@
   :config
   (defun my/cc-mode-setup ()
     "C/C++ モード共通の設定。"
-    (local-set-key (kbd "C-c c") 'compile)  ; コンパイル
-    (c-toggle-auto-hungry-state 1)          ; 自動改行 & 連続スペース一括削除
-    (auto-revert-mode)                      ; 外部変更の即時反映
+    (local-set-key (kbd "C-c c") 'compile) ; コンパイル
+    (c-toggle-auto-hungry-state 1)         ; 自動改行 & 連続スペース一括削除
+    (auto-revert-mode)                     ; 外部変更の即時反映
     (setq indent-tabs-mode nil
           c-basic-offset 4))
 

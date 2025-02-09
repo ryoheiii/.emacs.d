@@ -5,7 +5,7 @@
 ;;; Code:
 
 ;;;;; [Group] Debug ;;;;;
-(setq debug-on-error t)
+;; (setq debug-on-error t)
 
 
 
