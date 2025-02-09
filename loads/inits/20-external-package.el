@@ -363,33 +363,28 @@
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :straight t
-  :init
-  ;; スニペットディレクトリの動的設定
-  (setq yas-snippet-dirs
-        (seq-filter #'file-exists-p
-                    (list (my-set-custom "snippets")
-                          (my-set-custom "snippets/snippets") ;; シンボリックリンク用
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets"))))
-
-  (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
+  :custom
+  (yas-snippet-dirs
+   (list (my-set-custom "snippets")
+         (my-set-custom "snippets/snippets")                           ; シンボリックリンク用
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets"))) ; yasnippet-snippets パッケージから取得
+  (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))               ; スニペット展開のプロンプト
+  (yas-trigger-key "TAB")                                              ; トリガーキーを TAB に設定
   :config
-  ;; 追加スニペット集
-  (use-package yasnippet-snippets :straight t)
+  (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
+  )
 
-  ;; スニペット展開のプロンプト設定（エラーハンドリングも考慮）
-  (setq yas-prompt-functions '(yas-ido-prompt yas-no-prompt))
+;;; Yasnippet Snippets - 追加スニペット集
+(use-package yasnippet-snippets
+  :straight t
+  )
 
-  ;; トリガーキーを TAB に設定
-  (setq yas-trigger-key "TAB")
-
-  ;; helm と yasnippet の統合
-  (use-package helm-c-yasnippet
-    :straight t
-    :bind (("C-c y" . helm-yas-complete))
-    :config
-    ;; helm のスペースマッチングを有効にする
-    (setq helm-yas-space-match-any-greedy t)
-    )
+;;; Helm-c-yasnippet - Helm 経由のスニペット選択
+(use-package helm-c-yasnippet
+  :straight t
+  :bind (("C-c y" . helm-yas-complete))
+  :custom
+  (helm-yas-space-match-any-greedy t) ; Helm のスペースマッチングを有効化
   )
 
 ;;; Copilot - Github copilot による補完
