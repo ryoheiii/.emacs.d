@@ -373,7 +373,8 @@
         (seq-filter #'file-exists-p
                     (list (expand-file-name "~/.emacs.d/my-data/snippets")
                           (expand-file-name "~/.emacs.d/my-data/snippets/snippets") ;; シンボリックリンク用
-                          (expand-file-name "~/.emacs.d/loads/elisp/yasnippet-snippets-1.1/snippets"))))
+                          (expand-file-name "~/.emacs.d/loads/elisp/straight/build/yasnippet-snippets/snippets"))))
+
   (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
   :config
   ;; 追加スニペット集
