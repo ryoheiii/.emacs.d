@@ -1,8 +1,14 @@
+;;; 00-function.el --- ユーティリティ関数集 -*- lexical-binding: t; -*-
+;;; Commentary:
+;; 各種ユーティリティ関数を定義
+
+;;; Code:
+
+;;;;;; [Group] Package Management - `straight.el` 判定 ;;;;;;
 ;;; 指定した PACKAGE が `straight.el` で管理すべきかを判定する関数
 (defun my/should-use-straight (package)
   "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
- - `t` なら `straight t` を追加すべき
- - `nil` なら `straight t` は不要"
+`t` なら `straight t` を追加すべき、`nil` なら不要。"
   (interactive
    (list (intern (completing-read "Package name: " (mapcar #'symbol-name package-activated-list)))))
   (if (or (featurep package) (locate-library (symbol-name package)))
@@ -13,6 +19,7 @@
       (message "Package '%s' is NOT built-in. `straight t` is recommended." package)
       t)))
 
+;;;;;; [Group] File Operations - ファイル関連 ;;;;;;
 ;;; ファイルパス/ファイル名をクリップボードに保存
 (defun my/copy-to-clipboard-and-message (text message)
   "Copy TEXT to the kill ring and display MESSAGE in the minibuffer."
@@ -34,6 +41,7 @@
       (my/copy-to-clipboard-and-message file-name
                                         (format "Copied file name: %s" file-name)))))
 
+;;;;;; [Group] Debugging - デバッグ関連 ;;;;;;
 ;;; デバッグプリントの挿入
 (defun my/insert-dbgprint (start end)
   "選択範囲内の変数代入文にデバッグ出力文 (dbgprintf) を挿入する
@@ -67,9 +75,11 @@
     (insert result)))  ; Insert the result into the buffer
 
 
+;;;;;; [Group] Window Management - ウィンドウ管理 ;;;;;;
 ;;; ウィンドウ関連操作
 ;; 垂直分割
 (defun split-window-vertically-n (num_wins)
+  "ウィンドウを垂直方向に NUM_WINS 分割。"
   (interactive "p")
   (if (= num_wins 2)
       (split-window-vertically)
@@ -80,6 +90,7 @@
 
 ;; 水平分割
 (defun split-window-horizontally-n (num_wins)
+  "ウィンドウを水平方向に NUM_WINS 分割。"
   (interactive "p")
   (if (= num_wins 2)
       (split-window-horizontally)
@@ -90,6 +101,7 @@
 
 ;; 他のウィンドウへ移動、または新規分割
 (defun other-window-or-split ()
+  "他のウィンドウへ移動、または新規分割。"
   (interactive)
   (when (one-window-p)
     (if (>= (window-body-width) 270)
@@ -123,3 +135,6 @@
          (t
           (message "Quit")
           (throw 'end-flag t)))))))
+
+(provide '00-function)
+;;; 00-function.el ends here
