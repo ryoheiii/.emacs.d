@@ -594,8 +594,17 @@
 ;;;;; [Group] Markdown - Markdown 関係 ;;;;;
 ;;; 変数定義（コンフィギュレーション）
 ;; Markdown 用のカスタム CSS ファイルのパス
-(defvar my-markdown-css-file (my-set-custom "css/markdown-style.css")
+(defvar my-markdown-css-file
+  (my-set-custom "css/markdown-style.css")
   "Path to custom markdown CSS file.")
+
+;; CSS を遅延ロードしつつ HTML に埋め込む関数
+(defun my-markdown-load-css ()
+  "Load the content of the markdown CSS file."
+  (when (file-exists-p my-markdown-css-file)
+    (with-temp-buffer
+      (insert-file-contents my-markdown-css-file)
+      (buffer-string))))
 
 ;; Pandoc コマンドの設定
 ;; その他 option: "--toc --toc-depth=2", "--highlight-style=tango"
@@ -604,35 +613,26 @@
           " --css " my-markdown-css-file)
   "Pandoc command for Markdown export.")
 
-;; CSS を HTML に埋め込むために、CSS の内容を変数に格納
-(defvar my-markdown-css-content
-  (with-temp-buffer
-    (insert-file-contents my-markdown-css-file)
-    (buffer-string))
-  "Content of the markdown CSS file.")
-
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
   :straight t
   :mode ("\\.md\\'" . markdown-mode)
-  :hook ((markdown-mode . flyspell-mode)                     ;; スペルチェック
-         (markdown-mode . visual-line-mode)                  ;; 行の折り返し
-         (markdown-mode . (lambda ()                         ;; markdown-indent-on-enter
+  :hook ((markdown-mode . flyspell-mode)                              ; スペルチェック
+         (markdown-mode . visual-line-mode)                           ; 行の折り返し
+         (markdown-mode . (lambda ()                                  ; markdown-indent-on-enter
                             (setq markdown-indent-on-enter t)))
-         (markdown-mode . display-line-numbers-mode)         ;; 行番号表示
-         (markdown-mode . outline-minor-mode)                ;; 見出しの折りたたみ
+         (markdown-mode . display-line-numbers-mode)                  ; 行番号表示
+         (markdown-mode . outline-minor-mode)                         ; 見出しの折りたたみ
          (markdown-mode . (lambda ()
-                            (setq markdown-enable-math t)    ;; 数式を有効化
-                            (setq markdown-fontify-code-blocks-natively t) ;; コードブロックの色付け
-                            (electric-pair-mode t)))         ;; 括弧の自動補完
-         )
-  ;; インデント設定
+                            (setq markdown-enable-math t)             ; 数式を有効化
+                            markdown-fontify-code-blocks-natively t)) ; コードブロックの色付け
+         (markdown-mode . electric-pair-mode))                        ; 括弧の自動補完
   :custom
   (markdown-indent-level 2)
-  (markdown-link-space-substitution-method 'underscores) ;; リンクのスペースをアンダースコアに置換
-  (markdown-header-scaling t)                            ;; 見出しサイズの自動調整
+  (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
+  (markdown-header-scaling t)                            ; 見出しサイズの自動調整
   ;; markdown コマンドを pandoc に置き換え
-  (markdown-command my-markdown-pandoc-command)
+  (markdown-command my-markdown-pandoc-command)          ; Pandoc で Markdown をエクスポート
   (markdown-export-command my-markdown-pandoc-command)
   (markdown-xhtml-header-content
    (format "<meta charset='utf-8'>\n
@@ -641,24 +641,20 @@
             <style>\n%s\n</style>\n
             <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
             <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
-           my-markdown-css-content))
-  :bind (("C-c C-v h" . markdown-insert-header-dwim)     ;; 見出しを挿入
-         ("C-c C-v l" . markdown-insert-link)            ;; リンクを挿入
-         ("C-c C-v c" . markdown-insert-gfm-code-block)  ;; コードブロックを挿入
-         ("C-c C-v d" . markdown-insert-details)         ;; 折り畳み項目を挿入
-         )
-  :config
+           (my-markdown-load-css)))
   ;; コードブロックのシンタックスハイライト
-  (setq markdown-code-lang-modes
-        '(("bash"   . shell-script)
-          ("elisp"  . emacs-lisp)
-          ("python" . python))
-        )
-  ;; 画像を表示する設定（ImageMagick がインストールされていることが前提）
-  (setq markdown-image-use-cache t)
-  (add-hook 'markdown-mode-hook #'turn-off-auto-fill)
-  (add-hook 'markdown-mode-hook #'turn-on-visual-line-mode)
-  ;; 折りたたみ関数
+  (markdown-code-lang-modes
+   '(("bash"   . shell-script)
+     ("elisp"  . emacs-lisp)
+     ("python" . python)))
+  ;; 画像を表示する設定
+  (markdown-image-use-cache t) ; キャッシュして表示
+  :bind (("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
+         ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
+         ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
+         ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
+  :config
+  ;; 折りたたみ HTML タグを挿入する関数
   (defun markdown-insert-details ()
     "Insert <details> HTML tag with a <summary>."
     (interactive)
@@ -669,20 +665,21 @@
 (use-package markdown-toc
   :straight t
   :after markdown-mode
-  :hook ((markdown-mode . markdown-toc-mode)       ;; テーブルの自動整形
-         ;; (markdown-mode . markdown-toc-insert-toc) ;; 保存時に目次を自動挿入
-         ;; (before-save . markdown-toc-update-toc)   ;; 保存前に目次を更新
+  :hook ((markdown-mode . markdown-toc-mode)          ; テーブルの自動整形
+         ;; (markdown-mode . markdown-toc-insert-toc) ; 保存時に目次を自動挿入
+         ;; (before-save . markdown-toc-update-toc)   ; 保存前に目次を更新
          )
-  :bind (("C-c C-v t" . markdown-toc-generate-toc))  ;; 目次を手動で生成
-  :config
-  (setq markdown-toc-without-markdown-toc t)  ;; コメントを含めないようにする
-  (setq markdown-toc-headline-style 'atx)     ;; 見出しのスタイル
+  :bind (("C-c C-v t" . markdown-toc-generate-toc))   ; 目次を手動で生成
+  :custom
+  (markdown-toc-without-markdown-toc t)               ; コメントを含めない
+  (markdown-toc-headline-style 'atx)                  ; 見出しのスタイル
   )
 
-;;; pandoc-mode - フォーマット変換を簡易に
+;;; pandoc-mode - Markdown を他の形式に変換
 (use-package pandoc-mode
   :straight t
-  :commands (markdown-mode pandoc-mode)
+  :commands (pandoc-mode)
+  :hook (markdown-mode . pandoc-mode)
   )
 
 
