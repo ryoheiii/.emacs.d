@@ -1,15 +1,27 @@
+;;; 00-font.el --- フォント設定 -*- lexical-binding: t; -*-
+;;; Commentary:
+;; GUI環境でのフォント設定
+
+;;; Code:
+
 (when (display-graphic-p)
-  ;;; Ricty Diminished Discord フォントの設定
+  ;;;;;; [Group] Font Settings - フォント設定 ;;;;;;
+  ;; Ricty Diminished Discord フォントの設定
   ;; インストール: sudo apt install fonts-ricty-diminished
-  (let ((font-name "Ricty Diminished Discord")
-        (font-size 150)) ;; フォントサイズ
-    ;; 基本フォント
-    (set-face-attribute 'default nil :font (format "%s-%d" font-name (/ font-size 10)))
+  (let* ((font-name "Ricty Diminished Discord")
+         (font-size 15)  ;; フォントサイズ（ポイント単位）
+         (font-spec (format "%s-%d" font-name font-size))
+         (japanese-charsets '(japanese-jisx0208
+                              japanese-jisx0212
+                              katakana-jisx0201
+                              unicode)))
+    ;; 基本フォントの設定
+    (set-face-attribute 'default nil :font font-spec)
 
     ;; 日本語フォントの設定（幅を統一）
-    (dolist (charset '(japanese-jisx0208
-                       japanese-jisx0212
-                       katakana-jisx0201
-                       unicode))
+    (dolist (charset japanese-charsets)
       (set-fontset-font t charset (font-spec :family font-name))))
   )
+
+(provide '00-font)
+;;; 00-font.el ends here
