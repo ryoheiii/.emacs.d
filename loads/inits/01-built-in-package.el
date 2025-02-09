@@ -1,16 +1,23 @@
-;;; Ediff - diff 設定
+;;; 01-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
+;;; Commentary:
+;; Emacs 組み込みパッケージの設定
+
+;;; Code:
+
+;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
 (use-package ediff
   :custom
-  (ediff-window-setup-function 'ediff-setup-windows-plain)  ;; コントロールバッファを同一フレームに
-  (ediff-split-window-function 'split-window-horizontally)  ;; diff のバッファを左右に配置
+  (ediff-window-setup-function 'ediff-setup-windows-plain) ;; コントロールバッファを同一フレームに表示
+  (ediff-split-window-function 'split-window-horizontally) ;; diff のバッファを左右に配置
   )
 
-
+;;;;;; [Group] Completion - 補完 ;;;;;;
 ;;; Icomplete - 補完可能なものを随時表示
 (use-package icomplete
   :hook (after-init . icomplete-mode)
   )
 
+;;;;;; [Group] Visual Enhancements - 視覚的な補助 ;;;;;;
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren
   :hook (after-init . show-paren-mode)
@@ -40,6 +47,25 @@
   (set-face-attribute 'whitespace-empty nil :background "Black")
   )
 
+;;; Display-fill-column-indicator - テキストの折り返し位置を視覚的に示す
+(use-package display-fill-column-indicator
+  :hook ((prog-mode . display-fill-column-indicator-mode)
+         (markdown-mode . display-fill-column-indicator-mode))
+  :custom
+  (display-fill-column-indicator-column 120)
+  (display-fill-column-indicator-character ?|)
+  )
+
+;;; 表示設定
+(use-package display-time
+  :hook (after-init . display-time-mode)
+  :custom
+  (display-time-day-and-date t)
+  (display-time-string-forms '((format "%s/%s (%s) %s:%s"
+                                       month day dayname 24-hours minutes)))
+  )
+
+;;;;;; [Group] Search - 検索 ;;;;;;
 ;;; Grep - ファイル内検索機能の設定。特定のパターンに基づいてファイルを検索
 (use-package grep
   :bind ("C-c g" . grep)
@@ -61,6 +87,7 @@
                            (+ (length grep-command-before-query) 1)))
   )
 
+;;;;;; [Group] Editing - 編集補助 ;;;;;;
 ;; Elec-pair - 括弧の自動補完設定。入力中の括弧を自動的にペアで補完
 (use-package elec-pair
   :hook (after-init . electric-pair-mode)
@@ -96,6 +123,7 @@
   (auto-save-visited-mode +1)
   )
 
+;;;;;; [Group] Window & Buffer Management - ウィンドウ・バッファ管理 ;;;;;;
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove
   :config
@@ -137,18 +165,10 @@
                 `(lambda () (interactive) (tab-bar-select-tab ,(1+ i)))))
   )
 
+;;;;;; [Group] Performance Optimization - パフォーマンス最適化 ;;;;;;
 ;;; So-long - 長い行を含むファイルを最適化
 (use-package so-long
   :hook (after-init . global-so-long-mode)
-  )
-
-;;; Display-fill-column-indicator - テキストの折り返し位置を視覚的に示す
-(use-package display-fill-column-indicator
-  :hook ((prog-mode . display-fill-column-indicator-mode)
-         (markdown-mode . display-fill-column-indicator-mode))
-  :custom
-  (display-fill-column-indicator-column 120)
-  (display-fill-column-indicator-character ?|)
   )
 
 ;;; repeat - キーのリピート (multiple-cursors などで利用)
@@ -156,13 +176,5 @@
   :hook (after-init . repeat-mode)
   )
 
-;;; 表示設定
-(use-package display-time
-  :hook (after-init . display-time-mode)
-  :custom
-  (display-time-day-and-date t)
-  (display-time-string-forms
-   '((format "%s/%s (%s) %s:%s"
-             month day dayname
-             24-hours minutes)))
-  )
+(provide '01-built-in-package)
+;;; 01-built-in-package.el ends here
