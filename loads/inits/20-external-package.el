@@ -716,19 +716,19 @@
          ("TAB" . helm-execute-persistent-action)
          :map helm-read-file-map
          ("TAB" . helm-execute-persistent-action))
+  :custom
+  (helm-display-function #'display-buffer)       ; 'display-buffer' を使用
+  (helm-echo-input-in-header-line t)             ; 入力をヘッダーラインに表示
+  (helm-input-idle-delay 0.2)                    ; 入力から画面更新までの遅延時間 (デフォルトは 0.01 秒)
+  (helm-split-window-inside-p t)                 ; Helm のウィンドウを現在のウィンドウ内に分割して表示
+  (helm-move-to-line-cycle-in-source t)          ; バッファ内で候補の最後に到達したら先頭に戻る
+  (helm-ff-file-name-history-use-recentf t)      ; 'recentf' をファイル名の履歴として使用
+  (helm-ff-search-library-in-sexp t)             ; SEXP 内でライブラリ検索
+  (helm-ff-fuzzy-matching nil)                   ; ファジーマッチを無効化
+  (helm-buffer-details-flag nil)                 ; バッファの詳細を非表示
+  (helm-delete-minibuffer-contents-from-point t) ; ミニバッファの内容を削除
   :config
-  (setq helm-display-function #'display-buffer       ; Helm の表示に 'display-buffer' 関数を使用
-        helm-echo-input-in-header-line t             ; 入力を Helm のヘッダーラインに表示
-        helm-input-idle-delay 0.2                    ; 入力から画面の更新までの遅延時間（デフォルトは 0.01 秒）
-        helm-split-window-inside-p t                 ; Helm のウィンドウを現在のウィンドウ内に分割して表示
-        helm-move-to-line-cycle-in-source t          ; Helm バッファ内で候補の最後に到達したら先頭に戻る
-        helm-ff-file-name-history-use-recentf t      ; 'recentf' リストをファイル名の履歴として使用
-        helm-ff-search-library-in-sexp t             ; SEXP 内でライブラリの検索を有効化
-        helm-ff-fuzzy-matching nil                   ; ファジーマッチングを無効化
-        helm-buffer-details-flag nil                 ; バッファの詳細情報を非表示
-        helm-delete-minibuffer-contents-from-point t ; ミニバッファの内容を現在のポイントから削除
-        )
-  ;; Emacsのコマンドと履歴のソース定義
+  ;; Emacsのコマンドと履歴の Helm ソース定義
   (defvar helm-source-emacs-commands
     (helm-build-sync-source "Emacs commands"
       :candidates (lambda ()
@@ -737,7 +737,8 @@
                       cmds))
       :coerce #'intern-soft
       :action #'command-execute)
-    "A simple helm source for Emacs commands.")
+    "A Helm source for Emacs commands.")
+
   (defvar helm-source-emacs-commands-history
     (helm-build-sync-source "Emacs commands history"
       :candidates (lambda ()
@@ -747,42 +748,51 @@
                       cmds))
       :coerce #'intern-soft
       :action #'command-execute)
-    "Emacs commands history")
+    "Emacs commands history.")
+
   ;; 検索パターンの変換
   (defun helm-buffers-list-pattern-transformer (pattern)
+    "Helm のバッファ検索時のパターン変換."
     (if (equal pattern "")
         pattern
       (let* ((first-char (substring pattern 0 1))
-             (pattern (cond ( (equal first-char "*") (concat " " pattern))
+             (pattern (cond ((equal first-char "*") (concat " " pattern))
                             ((equal first-char "=") (concat "*" (substring pattern 1)))
                             (t pattern))))
         (setq pattern (replace-regexp-in-string "\\." "\\\\." pattern))
         (setq pattern (replace-regexp-in-string "\\*" "\\\\*" pattern))
         pattern)))
 
-  ;; Emulate `kill-line' in helm minibuffer
-  (defadvice helm-delete-minibuffer-contents (before emulate-kill-line activate)
-    "Emulate `kill-line' in helm minibuffer"
-    (kill-new (buffer-substring (point) (field-end))))
+  ;; 'kill-line' のエミュレーション
+  (advice-add 'helm-delete-minibuffer-contents
+              :before
+              (lambda ()
+                "Emulate `kill-line` in Helm minibuffer."
+                (kill-new (buffer-substring (point) (field-end)))))
 
-  (defadvice helm-ff-kill-or-find-buffer-fname (around execute-only-if-file-exist activate)
-    "Execute command only if CANDIDATE exists"
-    (when (file-exists-p candidate)
-      ad-do-it))
+  ;; 'helm-ff-kill-or-find-buffer-fname' をファイルが存在する場合のみ実行
+  (advice-add 'helm-ff-kill-or-find-buffer-fname
+              :around
+              (lambda (orig-fun &rest args)
+                "Execute command only if CANDIDATE exists."
+                (when (file-exists-p (car args))
+                  (apply orig-fun args))))
 
-  (defadvice helm-ff--transform-pattern-for-completion (around my-transform activate)
-    "Transform the pattern to reflect my intention"
-    (let* ((pattern (ad-get-arg 0))
-           (input-pattern (file-name-nondirectory pattern))
-           (dirname (file-name-directory pattern)))
-      (setq input-pattern (replace-regexp-in-string "\\." "\\\\." input-pattern))
-      (setq ad-return-value
-            (concat dirname
-                    (if (string-match "^\\^" input-pattern)
-                        ;; '^' is a pattern for basename
-                        ;; and not required because the directory name is prepended
-                        (substring input-pattern 1)
-                      (concat ".*" input-pattern))))))
+  ;; 'helm-ff--transform-pattern-for-completion' のカスタマイズ
+  (advice-add 'helm-ff--transform-pattern-for-completion
+              :around
+              (lambda (orig-fun pattern)
+                "Transform the pattern to reflect intention."
+                (let* ((input-pattern (file-name-nondirectory pattern))
+                       (dirname (file-name-directory pattern)))
+                  (setq input-pattern (replace-regexp-in-string "\\." "\\\\." input-pattern))
+                  (concat dirname (if (string-match "^\\^" input-pattern)
+                                      ;; '^' is a pattern for basename
+                                      ;; and not required because the directory name is prepended
+                                      (substring input-pattern 1)
+                                    (concat ".*" input-pattern))))))
+
+
   ;; helm-migemo fix
   ;; http://emacs.rubikitch.com/helm-migemo/
   (with-eval-after-load "helm-migemo"
@@ -792,8 +802,6 @@
                   `((candidates
                      . ,(or (cdr it)
                             (lambda ()
-                              ;; Do not use `source' because other plugins
-                              ;; (such as helm-migemo) may change it
                               (helm-candidates-in-buffer (helm-get-current-source)))))
                     (volatile) (match identity)))
         source))
@@ -801,59 +809,52 @@
     (defalias 'helm-mp-3-search-base 'helm-mm-3-search-base))
   )
 
-;;; Helm GTags - ソースコード内のシンボル検索とナビゲーション
+;;; Helm-gtags - ソースコード内のシンボル検索とナビゲーション
 (use-package helm-gtags
   :straight t
   :hook ((c-mode   . helm-gtags-mode)
          (c++-mode . helm-gtags-mode))
-  ;; グローバルにバインドする方針に変更
-  :bind (
-         :map helm-gtags-mode-map
-         ("C-t d"   . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)（旧 f11）
-         ("C-t C-d" . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)
-         ("C-t u"   . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)（旧 f12）
-         ("C-t C-u" . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)
-         ("C-t v"   . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (valiable)（旧 f9）
-         ("C-t C-v" . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (valiable)
-         ("C-t f"   . helm-gtags-find-files)       ; ファイルジャンプ     (find)（旧 f6）
-         ("C-t C-f" . helm-gtags-find-files)       ; ファイルジャンプ     (find)
-         ;; ("C-t")    . helm-gtags-pop-stack)     ; 前のバッファへ→previous-history に移管
-         ("C-t p"   . helm-gtags-previous-history) ; 前のバッファへ       (perv)
-         ("C-t C-p" . helm-gtags-previous-history) ; 前のバッファへ       (perv)
-         ("C-t n"   . helm-gtags-next-history)     ; 次のバッファへ       (next)
-         ("C-t C-n" . helm-gtags-next-history)     ; 次のバッファへ       (next)
-         )
+  :bind (:map helm-gtags-mode-map
+              ("C-t d"   . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)
+              ("C-t C-d" . helm-gtags-find-tag)
+              ("C-t u"   . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)
+              ("C-t C-u" . helm-gtags-find-rtag)
+              ("C-t v"   . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (variable)
+              ("C-t C-v" . helm-gtags-find-symbol)
+              ("C-t f"   . helm-gtags-find-files)       ; ファイルの検索 (find)
+              ("C-t C-f" . helm-gtags-find-files)
+              ("C-t p"   . helm-gtags-previous-history) ; 前の履歴へ移動 (previous)
+              ("C-t C-p" . helm-gtags-previous-history)
+              ("C-t n"   . helm-gtags-next-history)     ; 次の履歴へ移動 (next)
+              ("C-t C-n" . helm-gtags-next-history))
+  :custom
+  (helm-gtags-path-style 'root)  ; プロジェクトルート基準でタグを検索
+  ;; (helm-gtags-ignore-case t)     ; 大文字小文字を区別しない検索
+  ;; (helm-gtags-auto-update t)     ; ファイル変更時に自動でタグを更新
   :config
-  (custom-set-variables '(helm-gtags-path-style 'root))
-  ;; GTAGSの自動更新関数
+  ;; 'global -uv' を用いた GTAGS の自動更新
   (defun update-gtags ()
+    "Update GTAGS database."
     (interactive)
-    (when (and (buffer-file-name)
-               (executable-find "global"))
+    (when (and (buffer-file-name) (executable-find "global"))
       (start-process "gtags-update" nil "global" "-uv")))
-  ;; 必要に応じてアンコメントして使用
-  ;; (add-hook 'after-save-hook 'update-gtags)
   )
 
-;;; Helm AG - ファイルの内容を高速検索
+;;; Helm-ag - ファイルの内容を高速検索
 (use-package helm-ag
   :straight t
   )
 
 ;;; Helm-swoop - インクリメンタルサーチ機能の強化
+;;; helm-swoop - インクリメンタルサーチ強化
 (use-package helm-swoop
   :straight t
   :bind (("C-x s" . helm-swoop))
-  :config
+  :custom-face
   ;; 検索行のハイライト色を設定（例：明るい青の背景と白のテキスト）
-  (set-face-attribute 'helm-swoop-target-line-face nil
-                      :background "#0077ff" ; 明るい青
-                      :foreground "white")
-
+  (helm-swoop-target-line-face ((t (:background "#0077ff" :foreground "white"))))
   ;; 検索語のハイライト色を設定（例：明るい緑の背景と黒のテキスト）
-  (set-face-attribute 'helm-swoop-target-word-face nil
-                      :background "#00ff00" ; 明るい緑
-                      :foreground "black")
+  (helm-swoop-target-word-face ((t (:background "#00ff00" :foreground "black"))))
   )
 
 ;;; Swiper - インクリメンタルサーチ機能の強化
@@ -866,19 +867,20 @@
 (use-package ivy
   :straight t
   :after ivy-migemo
-  :config
+  :init
   (ivy-mode 1)
-  (setq ivy-use-virtual-buffers t
-        enable-recursive-minibuffers t
-        ivy-height 30  ;; minibufferのサイズを拡大
-        ivy-extra-directories nil)
+  :custom
+  (ivy-use-virtual-buffers t)
+  (enable-recursive-minibuffers t)
+  (ivy-height 30)
+  (ivy-extra-directories nil)
   ;; swiper と連携
   ;; https://github.com/ROCKTAKEY/ivy-migemo
-  (setq ivy-re-builders-alist '((t . ivy--regex-plus)
-                                (swiper . ivy-migemo--regex-plus)
-                                ;; (t . ivy--regex-fuzzy)             ; fuzzy バージョン
-                                ;; (swiper . ivy-migemo--regex-fuzzy) ; fuzzy バージョン
-                                ))
+  (ivy-re-builders-alist '((t . ivy--regex-plus)
+                           (swiper . ivy-migemo--regex-plus)
+                           ;; (t . ivy--regex-fuzzy)             ; fuzzy バージョン
+                           ;; (swiper . ivy-migemo--regex-fuzzy) ; fuzzy バージョン
+                           ))
   )
 
 ;;; Ivy-migemo - Ivy で Migemo を利用 (Swiper/Ivy の強化)
@@ -887,7 +889,6 @@
   )
 
 ;;; Migemo - 日本語を含む検索時の挙動改善
-;; 参考: http://rubikitch.com/2014/08/20/migemo/
 (use-package migemo
   :straight t
   :config
@@ -938,9 +939,8 @@
   :bind (;; ("C-x b" . consult-buffer)      ; 文字化けするので helm を利用
          ("C-." . consult-goto-line))
   :hook (completion-list-mode . consult-preview-at-point-mode)
-  :config
-  (global-set-key [remap goto-line] 'consult-goto-line) ; goto-line@00-key-binding を置き換え
-  (setq consult-project-root-function #'projectile-project-root)
+  :custom
+  (consult-project-root-function #'projectile-project-root)
   )
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
