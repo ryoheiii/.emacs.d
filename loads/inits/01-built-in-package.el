@@ -17,7 +17,6 @@
   :hook (after-init . icomplete-mode)
   )
 
-
 ;;;;;; [Group] Visual Enhancements - 視覚的な補助 ;;;;;;
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren

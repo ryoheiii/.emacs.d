@@ -13,5 +13,5 @@ custom/snippets/*
 
 # 個別ファイル
 custom/custom.el
-21-external-package-not-commit.el
+99-private.el
 README.html

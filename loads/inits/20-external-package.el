@@ -366,8 +366,38 @@
   :custom
   (yas-snippet-dirs
    (list (my-set-custom "snippets")
-         (my-set-custom "snippets/snippets")                           ; シンボリックリンク用
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets"))) ; yasnippet-snippets パッケージから取得
+         ;; シンボリックリンク用
+         (my-set-custom "snippets/snippets")
+         ;; yasnippet-snippets パッケージから取得
+         ;; (my-set-elisp "straight/build/yasnippet-snippets/snippets") ; 必要最小限に絞る
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-ts-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-lang-common")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-ts-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/cc-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/cmake-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-ts-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/dockerfile-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/emacs-lisp-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/git-commit-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-ts-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-interaction-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-automake-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-bsdmake-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-gmake-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-ts-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/org-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/prog-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-ts-mode")
+         (my-set-elisp "straight/build/yasnippet-snippets/snippets/text-mode")
+         ))
   (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))               ; スニペット展開のプロンプト
   (yas-trigger-key "TAB")                                              ; トリガーキーを TAB に設定
   :config
@@ -636,11 +666,11 @@
   (markdown-export-command my-markdown-pandoc-command)
   (markdown-xhtml-header-content
    (format "<meta charset='utf-8'>\n
-            <meta name='viewport' content='width=device-width, initial-scale=1'>\n
-            <title>Markdown Export</title>\n
-            <style>\n%s\n</style>\n
-            <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
-            <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
+         <meta name='viewport' content='width=device-width, initial-scale=1'>\n
+         <title>Markdown Export</title>\n
+         <style>\n%s\n</style>\n
+         <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
+         <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
            (my-markdown-load-css)))
   ;; コードブロックのシンタックスハイライト
   (markdown-code-lang-modes
@@ -946,30 +976,35 @@
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :straight t
-  :after projectfile
-  :commands
-  (neotree-show neotree-hide neotree-dir neotree-find)
-  ;; :bind (([f8] . neotree-toggle)) ; うまくバインドできない
-  :preface
-  (bind-key [f8] 'neotree-toggle)
+  :after projectile
+  :bind ([f8] . neotree-toggle)
+  :custom
+  (neo-theme 'ascii)              ;; アイコンを ASCII にする
+  (neo-smart-open t)              ;; カレントディレクトリを自動的に開く
+  (neo-autorefresh t)             ;; 自動更新を有効化
+  (neo-window-width 35)           ;; ウィンドウ幅を 35 に設定
+  :config
+  ;; `neotree-toggle` をカスタマイズ
   (defun neotree-toggle ()
+    "Toggle NeoTree, opening at the project root or current file."
     (interactive)
     (let ((project-dir (ignore-errors (projectile-project-root)))
-          (file-name (buffer-file-name))
-          (neo-smart-open t))
-      (if (and (fboundp 'neo-global--window-exists-p)
-               (neo-global--window-exists-p))
+          (file-name (buffer-file-name)))
+      (if (neo-global--window-exists-p)
           (neotree-hide)
         (progn
           (neotree-show)
-          (if project-dir (neotree-dir project-dir))
-          (if file-name   (neotree-find file-name)))))
-    )
+          (when project-dir (neotree-dir project-dir))
+          (when file-name   (neotree-find file-name))))))
   )
 
 ;;; Imenu List - バッファ内のシンボルリスト表示
 (use-package imenu-list
   :straight t
+  :bind ("C-c i" . imenu-list-smart-toggle)
+  :custom
+  (imenu-list-focus-after-activation t) ; 開いたら自動でフォーカスを移動
+  ;; (imenu-list-auto-resize t)            ; サイズを自動調整
   )
 
 
@@ -977,48 +1012,44 @@
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
 ;;; Mozc - 日本語入力の設定
 (use-package mozc
-  :straight t
-  :config (prefer-coding-system 'utf-8)
+  :config
+  (set-language-environment "Japanese")
+  (prefer-coding-system 'utf-8)
   )
 
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
-  :straight t
+  :custom
+  (ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
+  (ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
+  (ispell-dictionary "en_US")
   :config
   (cond
-   ;; hunspell があれば優先
    ((executable-find "hunspell")
-    (setq ispell-program-name "hunspell")
-    (setq ispell-dictionary "en_US")
-    (setq ispell-extra-args '("-d" "en_US"))) ;; hunspell に適したオプション
-   ;; aspell があれば使用
+    (setq ispell-program-name "hunspell"
+          ispell-extra-args '("-d" "en_US"))) ;; hunspell に適したオプション
    ((executable-find "aspell")
-    (setq ispell-program-name "aspell")
-    (setq ispell-dictionary "en_US")
-    (setq ispell-extra-args '("--sug-mode=ultra"))))
-  (setq ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
-  (setq ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
+    (setq ispell-program-name "aspell"
+          ispell-extra-args '("--sug-mode=ultra"))))
   )
 
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
-  :straight t
   :hook ((prog-mode . (lambda ()
-                        (unless (derived-mode-p 'emacs-lisp-mode)                    ;; Emacs Lisp を除外
-                          (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
+                        (unless (derived-mode-p 'emacs-lisp-mode)                    ; Emacs Lisp を除外
+                          (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ; 日本語無視
                           (flyspell-prog-mode))))
-         ((text-mode html-mode markdown-mode) . (lambda () (flyspell-mode -1)))      ;; 無効化
+         ((text-mode html-mode markdown-mode) . (lambda () (flyspell-mode -1)))      ; text-mode では無効化
          (find-file . (lambda ()
-                        (when (> (buffer-size) 3000) ;; 3000行以上なら無効
-                          (flyspell-mode -1))))
-         )
+                        (when (> (buffer-size) 3000)                                 ; 3000行以上なら無効
+                          (flyspell-mode -1)))))
   :bind (:map flyspell-mode-map
               ("C-," . nil)
               ("C-." . nil)
               ("C-;" . nil)
               ("C-c $" . nil))
-  :config
-  (setq flyspell-issue-message-flag nil) ;; ミニバッファメッセージ抑制
+  :custom
+  (flyspell-issue-message-flag nil) ; ミニバッファメッセージ抑制
   )
 
 ;;; flyspell-correct - スペルチェックの補助ツール
@@ -1026,7 +1057,7 @@
   :straight t
   :after flyspell
   :bind (:map flyspell-mode-map
-              ("C-c C-/" . flyspell-correct-wrapper)) ;; C-/ で補正メニューを開く
+              ("C-c C-/" . flyspell-correct-wrapper)) ; C-/ で補正メニューを開く
   )
 
 ;;; flyspell-correct-popup - pop-up メニューで修正候補を選べるようにする
@@ -1040,23 +1071,24 @@
 
 
 ;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
-;;; Git Gutter - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
+;;; with-editor - Emacs から Git コミットメッセージを編集
 (use-package with-editor
   :straight t
   :defer t)
+;;; Git Gutter - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
 (use-package git-gutter
   :straight t
-  :after with-editor dash
+  :after with-editor
   :custom
-  (git-gutter:modified-sign "~")
-  (git-gutter:added-sign    "+")
-  (git-gutter:deleted-sign  "-")
+  (git-gutter:modified-sign "~")  ;; 変更
+  (git-gutter:added-sign    "+")  ;; 追加
+  (git-gutter:deleted-sign  "-")  ;; 削除
   :custom-face
   ;; (git-gutter:modified ((t (:background "#f1fa8c"))))
   ;; (git-gutter:added    ((t (:background "#50fa7b"))))
   ;; (git-gutter:deleted  ((t (:background "#ff79c6"))))
   :config
-  (global-git-gutter-mode +1)
+  (global-git-gutter-mode t)
   )
 
 ;;; Dsvn - SVN 管理ツール
@@ -1067,17 +1099,35 @@
 
 
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
-;;; Paradox - パッケージのインストールと更新
+;;; Paradox - パッケージ管理 UI の強化
 (use-package paradox
   :straight t
   :config
   (paradox-enable)
-  (setq paradox-github-token t)
+  :custom
+  (paradox-github-token t)
+  )
+
+;;; Which-key - 使用可能なキーバインドの表示
+(use-package which-key
+  :straight t
+  :custom
+  (which-key-max-description-length 40) ; 説明の最大長
+  (which-key-use-C-h-commands t)        ; C-h コマンドを使用
+  :hook
+  (after-init . which-key-mode)         ; Emacs 起動後に which-key モードを有効化
   )
 
 ;;; Free-keys - 未使用のキーバインドを表示
 (use-package free-keys
   :straight t
+  )
+
+;;; Amx - M-x コマンドの履歴強化
+(use-package amx
+  :straight t
+  :custom
+  (amx-save-file (my-set-history "amx-items"))
   )
 
 ;;; undo-fu - undo と redo を強化
@@ -1091,61 +1141,44 @@
 ;;; undo-fu-session - undo 情報を Emacs 終了後も保持
 (use-package undo-fu-session
   :straight t
+  :custom
+  (undo-fu-session-directory (my-set-history "undo-fu-session/"))
   :config
-  (setq undo-fu-session-directory (my-set-history "undo-fu-session/"))
   (unless (file-exists-p undo-fu-session-directory)
     (make-directory undo-fu-session-directory t))
-  (undo-fu-session-global-mode +1)
+  (undo-fu-session-global-mode t)
   )
 
-;;; Vundo - アンドゥの操作のツリー表示と管理
+;;; Vundo - アンドゥの操作をツリー表示で管理
 (use-package vundo
   :straight t
   :bind ("C-x u" . vundo)
+  :custom
+  (vundo-compact-display nil)  ; 画面を広めに使う
+  (vundo-window-max-height 8)  ; vundo ウィンドウの高さを大きくする
+  (vundo-roll-back-on-quit t)  ; `q` で抜けた時に元の位置に戻る
   :config
-  (setq vundo-compact-display nil) ;; 画面を広めに使う
-  (setq vundo-window-max-height 8) ;; `vundo` のウィンドウ高さを大きくする
-  (setq vundo-roll-back-on-quit t) ;; `q` で抜けた時に元の位置に戻る
-  :init
-  (with-eval-after-load 'vundo
-    (define-key vundo-mode-map (kbd "C-f") 'vundo-forward)   ;; 次の状態へ (→)
-    (define-key vundo-mode-map (kbd "C-b") 'vundo-backward)  ;; 前の状態へ (←)
-    (define-key vundo-mode-map (kbd "C-n") 'vundo-next)      ;; 下の分岐へ (↓)
-    (define-key vundo-mode-map (kbd "C-p") 'vundo-previous)) ;; 上の分岐へ (↑)
+  (define-key vundo-mode-map (kbd "C-f") 'vundo-forward)  ; 次の状態へ (→)
+  (define-key vundo-mode-map (kbd "C-b") 'vundo-backward) ; 前の状態へ (←)
+  (define-key vundo-mode-map (kbd "C-n") 'vundo-next)     ; 下の分岐へ (↓)
+  (define-key vundo-mode-map (kbd "C-p") 'vundo-previous) ; 上の分岐へ (↑)
   )
 
 ;;; Undohist - アンドゥ履歴のファイル保存
 (use-package undohist
   :straight t
-  :config
-  (setq undohist-directory (my-set-history "undohist")) ; アンドゥ履歴の保存場所 (@early-init.el)
-  (undohist-initialize)                                 ; undohist を初期化
-  )
-
-;;; Which-key - 使用可能なキーバインドの表示
-(use-package which-key
-  :straight t
   :custom
-  (which-key-max-description-length 40)  ; 説明の最大長
-  (which-key-use-C-h-commands t)         ; C-h コマンドを使用
-  :hook
-  (after-init . which-key-mode)          ; Emacs 起動後に which-key モードを有効化
-  )
-
-;;; Amx - M-x コマンドの強化（コマンド履歴などを改善）
-(use-package amx
-  :straight t
+  (undohist-directory (my-set-history "undohist"))
   :config
-  (setq amx-save-file (my-set-history "amx-items")) ; Amx の履歴ファイルの保存場所 (@early-init.el)
+  (undohist-initialize)
   )
 
-;;; Stopwatch
+;;; Stopwatch - シンプルなストップウォッチ
 (use-package stopwatch
   :straight (stopwatch
              :type git
              :host github
              :repo "blue0513/stopwatch") ; https://github.com/blue0513/stopwatch
-  :straight t
   )
 
 ;;; Initchart - 初期化処理の実行時間を記録
@@ -1154,7 +1187,6 @@
              :type git
              :host github
              :repo "yuttie/initchart") ; https://github.com/yuttie/initchart
-  :straight t
   :config
   (initchart-record-execution-time-of load file)
   (initchart-record-execution-time-of require feature)
