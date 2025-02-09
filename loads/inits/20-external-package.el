@@ -17,11 +17,7 @@
 (use-package diminish
   :straight t)
 
-;;; 20-themes-and-visuals.el --- テーマとビジュアル関連の設定 -*- lexical-binding: t; -*-
-;;; Commentary:
-;; Emacs のテーマやビジュアル関連の設定を管理する
 
-;;; Code:
 
 ;;;;;; [Group] Themes - テーマ関連 ;;;;;;
 ;;; color-theme-modern - モダンなカラーテーマの適用
