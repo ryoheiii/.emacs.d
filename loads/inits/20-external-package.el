@@ -1,12 +1,12 @@
 ;;;;; [Group] Library - ライブラリ関連 ;;;;;
 ;;; dash - Emacs 用のモダンなリスト操作ライブラリ
 (use-package dash
-  :ensure t
+  :straight t
   )
 
 ;;; S - 文字列操作のための追加機能
 (use-package s
-  :ensure t
+  :straight t
   )
 
 
@@ -14,7 +14,7 @@
 ;;;;; [Group] Themes-and-Visuals - テーマとビジュアル関連 ;;;;;
 ;;; Color Theme Modern - モダンなカラーテーマの設定。選択可能なテーマの幅を広げる
 (use-package color-theme-modern
-  :ensure t
+  :straight t
   :config
   ;; テーマの適用
   ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
@@ -24,7 +24,7 @@
 
 ;;; Smart Mode Line - モードラインの外観と情報表示をカスタマイズ
 (use-package smart-mode-line
-  :ensure t
+  :straight t
   :config
   (setq sml/no-confirm-load-theme t
         sml/theme 'dark
@@ -34,7 +34,7 @@
 
 ;;; Hide Mode Line - 特定のモードでモードラインを隠す
 (use-package hide-mode-line
-  :ensure t
+  :straight t
   :hook ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
   )
 
@@ -42,15 +42,14 @@
 
 ;;; Beacon - カーソルの位置を明確にするために点滅エフェクトを追加
 (use-package beacon
-  :ensure t
+  :straight t
   :custom (beacon-color "yellow")
   :config (beacon-mode 1)
   )
 
 ;;; Volatile Highlights - 一時的なハイライト（選択範囲など）の強調表示
 (use-package volatile-highlights
-  :ensure t
-  :diminish
+  :straight t
   :hook (after-init . volatile-highlights-mode)
   :custom-face
   (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
@@ -58,9 +57,8 @@
 
 ;;; Highlight Indent Guides - インデントレベルを視覚的に区別するためのガイド表示
 (use-package highlight-indent-guides
-  :ensure t
+  :straight t
   :if (version< emacs-version "29") ; emacs29 で位置ズレが発生するようになるため無効化
-  :diminish
   :hook (emacs-lisp-mode . highlight-indent-guides-mode)
   :custom
   (highlight-indent-guides-auto-enabled t)
@@ -70,7 +68,7 @@
 
 ;;; Highlight Symbol - シンボルのハイライトとナビゲーション
 (use-package highlight-symbol
-  :ensure t
+  :straight t
   :bind (([f3] . highlight-symbol-at-point)
          ([f4] . highlight-symbol-remove-all))
   :config
@@ -81,8 +79,7 @@
 ;;; Rainbow-delimiters - 括弧の色分け
 ;; 括弧を色分けして対応関係を視覚的に表示する
 (use-package rainbow-delimiters
-  :ensure t
-  :diminish
+  :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
   :bind (("C-c l" . rainbow-delimiters-using-stronger-colors)) ; より強調した色に変更するコマンド
   :config
@@ -101,7 +98,7 @@
 
 ;;; all-the-icons - icon setting
 (use-package all-the-icons
-  :ensure t
+  :straight t
   :if (display-graphic-p)
   )
 
@@ -111,20 +108,19 @@
 ;;; Xclip - クリップボードとの共有を可能にする
 (use-package xclip
   ;; :disabled t
-  :ensure t
+  :straight t
   :init (xclip-mode 1) ; クリップボード共有を有効化
   )
 
 ;;; Dashboard - Emacs のスタートアップ画面をカスタマイズ
 (use-package dashboard
-  :ensure t
-  :diminish (dashboard-mode page-break-lines-mode)
+  :straight t
   :hook (after-init . dashboard-setup-startup-hook)
   )
 
 ;;; Total Lines - バッファ内の総行数をモードラインに表示
 (use-package total-lines
-  :ensure t
+  :straight t
   :init (global-total-lines-mode t)
   :config
   (defun my-set-line-numbers ()
@@ -138,7 +134,7 @@
 ;;; Anzu - 検索や置換操作時にマッチ数や現在位置を表示
 ;; https://qiita.com/syohex/items/56cf3b7f7d9943f7a7ba
 (use-package anzu
-  :ensure t
+  :straight t
   :init
   (global-anzu-mode 1)
   :config
@@ -150,7 +146,7 @@
 
 ;;; Recentf - 最近使用したファイルの履歴管理
 (use-package recentf
-  :ensure t
+  :straight t
   :init
   (recentf-mode 1)
   :config
@@ -174,19 +170,19 @@
 
 ;;; Recentf-ext - Recentfの拡張機能
 (use-package recentf-ext
-  :ensure t
+  :straight t
   )
 
 ;;; Move Text - テキスト行の移動機能
 (use-package move-text
-  :ensure t
+  :straight t
   :bind (("C-M-p" . move-text-up)
          ("C-M-n" . move-text-down))
   )
 
 ;;; Smooth-scroll - スムーズなスクロール操作（C-v など）
 (use-package smooth-scroll
-  :ensure t
+  :straight t
   :config
   (smooth-scroll-mode t)                    ; smooth-scroll モードを有効化
   (setq smooth-scroll/vscroll-step-size 8)  ; 垂直スクロールのステップサイズを設定
@@ -197,7 +193,7 @@
 ;;;;; [Group] Code-editting-and-Completion - コード編集と補完関連 ;;;;;
 ;;; Google C Style - Google の C スタイルガイドに準拠したコーディング
 (use-package google-c-style
-  :ensure t
+  :straight t
   :hook ((c-mode-common c++-mode-common) . (lambda ()
                                              (google-set-c-style)
                                              (google-make-newline-indent)))
@@ -205,22 +201,21 @@
 
 ;;; Aggressive Indent - コード編集時の自動インデント調整
 (use-package aggressive-indent
-  :ensure t
+  :straight t
   :hook (emacs-lisp-mode . aggressive-indent-mode)
   )
 
 ;;; Smart Newline - 改行時の自動インデントと位置調整
 ;; https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
-  :ensure t
+  :straight t
   :hook ((c++-mode c-mode cc-mode emacs-lisp-mode lisp-mode) . smart-newline-mode)
   :bind (("C-m" . smart-newline))
   )
 
 ;; Company - 自動補完機能の強化とカスタマイズ
 (use-package company
-  :ensure t
-  :diminish company-mode
+  :straight t
   :after company-statistics
   :init
   (global-company-mode 1)
@@ -278,20 +273,20 @@
                 :host github
                 :repo "zk-phi/company-same-mode-buffers")
     :after company
-    :ensure t
+    :straight t
     :init
     (require 'company-same-mode-buffers)
     (company-same-mode-buffers-initialize)
     )
   ;; company-irony - Company と Irony の統合
   (use-package company-irony
-    :ensure t
+    :straight t
     :after (company irony)
     :config
     )
   ;; Company-irony-c-headers - C ヘッダファイル用の Company バックエンド
   (use-package company-irony-c-headers
-    :ensure t
+    :straight t
     :after (company irony)
     :config
     )
@@ -307,7 +302,7 @@
 
 ;;; Company-statics - Company の表示順をスマートにする
 (use-package company-statistics
-  :ensure t
+  :straight t
   :init
   (setq company-statistics-file
         (my-set-history "company-statistics-cache.el")) ; 履歴の保存場所 (@early-init.el)
@@ -320,7 +315,7 @@
               :type git
               :host github
               :repo "zk-phi/company-dwim")
-  :ensure t
+  :straight t
   :init
   (define-key company-active-map (kbd "TAB") 'company-dwim)
   (setq company-frontends
@@ -335,29 +330,28 @@
               :type git
               :host github
               :repo "zk-phi/company-anywhere")
-  :ensure t
+  :straight t
   )
 
 ;;; Company-box - Company の補完候補をパネル表示 (GUI 限定)
 (use-package company-box
   :disabled t
-  :ensure t
+  :straight t
   :hook (company-mode . company-box-mode)
   )
 
 ;;; Company-posframe - Company の補完候補をパネル表示 (GUI 限定)
 (use-package company-posframe
   :disabled t
-  :ensure t
+  :straight t
   :after company
-  :diminish company-posframe-mode
   :config
   (company-posframe-mode 1)
   )
 
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
 (use-package irony
-  :ensure t
+  :straight t
   :defer t
   :after cc-mode
   :hook ((c-mode . irony-mode)
@@ -371,8 +365,7 @@
 
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
-  :ensure t
-  :diminish
+  :straight t
   :init
   ;; スニペットディレクトリの動的設定
   (setq yas-snippet-dirs
@@ -383,7 +376,7 @@
   (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
   :config
   ;; 追加スニペット集
-  (use-package yasnippet-snippets :ensure t)
+  (use-package yasnippet-snippets :straight t)
 
   ;; スニペット展開のプロンプト設定（エラーハンドリングも考慮）
   (setq yas-prompt-functions '(yas-ido-prompt yas-no-prompt))
@@ -393,8 +386,7 @@
 
   ;; helm と yasnippet の統合
   (use-package helm-c-yasnippet
-    :ensure t
-    :diminish
+    :straight t
     :bind (("C-c y" . helm-yas-complete))
     :config
     ;; helm のスペースマッチングを有効にする
@@ -406,7 +398,7 @@
 (use-package copilot
   :disabled t
   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-  :ensure t
+  :straight t
   :hook ((prog-mode . copilot-mode))
   :init
   ;; Node.js の実行可能ファイルのパスを設定
@@ -434,7 +426,7 @@
 
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
-  :ensure t
+  :straight t
   :config
   (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@early-init.el 関数を使った設定
 
@@ -473,7 +465,7 @@
 
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
-  :ensure t
+  :straight t
   :init
   (transient-mark-mode t)
   :bind (("C-," . er/expand-region))
@@ -482,7 +474,7 @@
 ;;; symbol-overlay - シンボルの置換
 ;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
 (use-package symbol-overlay
-  :ensure t
+  :straight t
   :hook (prog-mode . symbol-overlay-mode)
   :bind
   (("C-x C-a" . my-symbol-overlay-rename-visible)     ;; ウィンドウ内のシンボルを置換
@@ -529,7 +521,7 @@
 ;;;;; [Group] Org - Org 関係 ;;;;;
 ;;; org - org 設定
 (use-package org
-  :ensure t
+  :straight t
   :defer t
   :hook ((org-mode . visual-line-mode))  ;; 自動改行の有効化
   :custom
@@ -552,21 +544,20 @@
 
 ;;; org-indent - インデントを自動調整
 (use-package org-indent
-  :ensure nil
   :hook (org-mode . org-indent-mode)
   )
 
 ;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いので一旦無効化
 (use-package org-modern
   :disabled t
-  :ensure t
+  :straight t
   :after org
   :hook (org-mode . org-modern-mode)
   )
 
 ;;; org-download - 画像のクリップボード貼り付け
 (use-package org-download
-  :ensure t
+  :straight t
   :after org
   :bind (:map org-mode-map
               ("C-c i" . org-download-clipboard))
@@ -582,7 +573,6 @@
 ;;; org-roam - ノート管理
 (use-package org-roam
   :straight t
-  :ensure nil
   :after org
   :custom
   (org-roam-directory "~/org/roam")
@@ -601,7 +591,6 @@
 
 ;;; org-agenda - スケジュール管理
 (use-package org-agenda
-  :ensure nil
   :after org
   :bind ("C-c a" . org-agenda)
   :custom
@@ -638,7 +627,7 @@
 
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
-  :ensure t
+  :straight t
   :mode ("\\.md\\'" . markdown-mode)
   :hook ((markdown-mode . flyspell-mode)                     ;; スペルチェック
          (markdown-mode . visual-line-mode)                  ;; 行の折り返し
@@ -679,8 +668,6 @@
           ("elisp"  . emacs-lisp)
           ("python" . python))
         )
-  ;; プレビュー機能
-  (add-hook 'markdown-mode-hook 'markdown-preview-mode)
   ;; 画像を表示する設定（ImageMagick がインストールされていることが前提）
   (setq markdown-image-use-cache t)
   (add-hook 'markdown-mode-hook #'turn-off-auto-fill)
@@ -694,7 +681,7 @@
 
 ;;; markdown-toc - 目次生成
 (use-package markdown-toc
-  :ensure t
+  :straight t
   :after markdown-mode
   :hook ((markdown-mode . markdown-toc-mode)       ;; テーブルの自動整形
          ;; (markdown-mode . markdown-toc-insert-toc) ;; 保存時に目次を自動挿入
@@ -708,7 +695,7 @@
 
 ;;; pandoc-mode - フォーマット変換を簡易に
 (use-package pandoc-mode
-  :ensure t
+  :straight t
   :commands (markdown-mode pandoc-mode)
   )
 
@@ -717,7 +704,7 @@
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
-  :ensure t
+  :straight t
   :custom
   (popwin:popup-window-position 'bottom)
   :config
@@ -726,8 +713,7 @@
 
 ;;; Helm - 効率的なバッファやコマンドの検索
 (use-package helm
-  :ensure t
-  :diminish
+  :straight t
   :after migemo
   :init
   (helm-mode 1)
@@ -834,8 +820,7 @@
 
 ;;; Helm GTags - ソースコード内のシンボル検索とナビゲーション
 (use-package helm-gtags
-  :ensure t
-  :diminish
+  :straight t
   :hook ((c-mode   . helm-gtags-mode)
          (c++-mode . helm-gtags-mode))
   ;; グローバルにバインドする方針に変更
@@ -867,21 +852,14 @@
   ;; (add-hook 'after-save-hook 'update-gtags)
   )
 
-;;; Helm Descbinds - コマンドとキーバインドの検索（helm-M-x でキーバインドを表示）
-(use-package helm-descbinds
-  :ensure t
-  :after helm
-  :init (helm-descbinds-mode 1)
-  )
-
 ;;; Helm AG - ファイルの内容を高速検索
 (use-package helm-ag
-  :ensure t
+  :straight t
   )
 
 ;;; Helm-swoop - インクリメンタルサーチ機能の強化
 (use-package helm-swoop
-  :ensure t
+  :straight t
   :bind (("C-x s" . helm-swoop))
   :config
   ;; 検索行のハイライト色を設定（例：明るい青の背景と白のテキスト）
@@ -897,13 +875,13 @@
 
 ;;; Swiper - インクリメンタルサーチ機能の強化
 (use-package swiper
-  :ensure t
+  :straight t
   :bind (("C-s" . swiper))
   )
 
 ;;; Ivy - 効率的なバッファやファイルの検索 (swiper の強化)
 (use-package ivy
-  :ensure t
+  :straight t
   :after ivy-migemo
   :config
   (ivy-mode 1)
@@ -922,13 +900,13 @@
 
 ;;; Ivy-migemo - Ivy で Migemo を利用 (Swiper/Ivy の強化)
 (use-package ivy-migemo
-  :ensure t
+  :straight t
   )
 
 ;;; Migemo - 日本語を含む検索時の挙動改善
 ;; 参考: http://rubikitch.com/2014/08/20/migemo/
 (use-package migemo
-  :ensure t
+  :straight t
   :config
   (setq migemo-command "cmigemo"
         migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict"
@@ -942,7 +920,7 @@
 ;; まだ helm から置き換える程でない (helm-swoop の代替手段が存在しない等)
 ;; ;;; Vertico - ミニバッファを用いたファジーファインダー UI (Consult, Orderless, Marginalia と併用)
 ;; (use-package vertico
-;;   :ensure t
+;;   :straight t
 ;;   :init
 ;;   (vertico-mode)
 ;;   )
@@ -959,13 +937,13 @@
 
 ;; ;;; Orderless - マッチ方法を変更し、スペース区切りで入力をマッチ
 ;; (use-package orderless
-;;   :ensure t
+;;   :straight t
 ;;   :custom (completion-styles '(orderless))
 ;;   )
 
 ;; ;;; Marginalia - ミニバッファの補完に傍注（追加情報）を付与
 ;; (use-package marginalia
-;;   :ensure t
+;;   :straight t
 ;;   :init
 ;;   (marginalia-mode)
 ;;   )
@@ -973,7 +951,7 @@
 ;;; Consult - コマンドの提供、候補リストの作成
 ;; consult-goto-line が便利なのでこれだけ利用
 (use-package consult
-  :ensure t
+  :straight t
   :bind (;; ("C-x b" . consult-buffer)      ; 文字化けするので helm を利用
          ("C-." . consult-goto-line))
   :hook (completion-list-mode . consult-preview-at-point-mode)
@@ -984,7 +962,7 @@
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
-  :ensure t
+  :straight t
   :after projectfile
   :commands
   (neotree-show neotree-hide neotree-dir neotree-find)
@@ -1008,7 +986,7 @@
 
 ;;; Imenu List - バッファ内のシンボルリスト表示
 (use-package imenu-list
-  :ensure t
+  :straight t
   )
 
 
@@ -1016,13 +994,13 @@
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
 ;;; Mozc - 日本語入力の設定
 (use-package mozc
-  :ensure t
+  :straight t
   :config (prefer-coding-system 'utf-8)
   )
 
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
-  :ensure t
+  :straight t
   :config
   (cond
    ;; hunspell があれば優先
@@ -1041,7 +1019,7 @@
 
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
-  :ensure t
+  :straight t
   :hook ((prog-mode . (lambda ()
                         (unless (derived-mode-p 'emacs-lisp-mode)                    ;; Emacs Lisp を除外
                           (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
@@ -1062,7 +1040,7 @@
 
 ;;; flyspell-correct - スペルチェックの補助ツール
 (use-package flyspell-correct
-  :ensure t
+  :straight t
   :after flyspell
   :bind (:map flyspell-mode-map
               ("C-c C-/" . flyspell-correct-wrapper)) ;; C-/ で補正メニューを開く
@@ -1070,7 +1048,7 @@
 
 ;;; flyspell-correct-popup - pop-up メニューで修正候補を選べるようにする
 (use-package flyspell-correct-popup
-  :ensure t
+  :straight t
   :after flyspell-correct
   :custom
   (flyspell-correct-interface #'flyspell-correct-popup)
@@ -1081,10 +1059,10 @@
 ;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
 ;;; Git Gutter - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
 (use-package with-editor
-  :ensure t
+  :straight t
   :defer t)
 (use-package git-gutter
-  :ensure t
+  :straight t
   :after with-editor dash
   :custom
   (git-gutter:modified-sign "~")
@@ -1100,7 +1078,7 @@
 
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn
-  :ensure t
+  :straight t
   )
 
 
@@ -1108,7 +1086,7 @@
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
 ;;; Paradox - パッケージのインストールと更新
 (use-package paradox
-  :ensure t
+  :straight t
   :config
   (paradox-enable)
   (setq paradox-github-token t)
@@ -1116,12 +1094,12 @@
 
 ;;; Free-keys - 未使用のキーバインドを表示
 (use-package free-keys
-  :ensure t
+  :straight t
   )
 
 ;;; undo-fu - undo と redo を強化
 (use-package undo-fu
-  :ensure t
+  :straight t
   :config
   (with-eval-after-load 'evil
     (setq evil-undo-system 'undo-fu))
@@ -1129,7 +1107,7 @@
 
 ;;; undo-fu-session - undo 情報を Emacs 終了後も保持
 (use-package undo-fu-session
-  :ensure t
+  :straight t
   :config
   (setq undo-fu-session-directory (my-set-history "undo-fu-session/"))
   (unless (file-exists-p undo-fu-session-directory)
@@ -1139,7 +1117,7 @@
 
 ;;; Vundo - アンドゥの操作のツリー表示と管理
 (use-package vundo
-  :ensure t
+  :straight t
   :bind ("C-x u" . vundo)
   :config
   (setq vundo-compact-display nil) ;; 画面を広めに使う
@@ -1155,8 +1133,7 @@
 
 ;;; Undohist - アンドゥ履歴のファイル保存
 (use-package undohist
-  :ensure t
-  :diminish  ; モードラインの表示を隠す
+  :straight t
   :config
   (setq undohist-directory (my-set-history "undohist")) ; アンドゥ履歴の保存場所 (@early-init.el)
   (undohist-initialize)                                 ; undohist を初期化
@@ -1164,8 +1141,7 @@
 
 ;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
-  :ensure t
-  :diminish which-key-mode
+  :straight t
   :custom
   (which-key-max-description-length 40)  ; 説明の最大長
   (which-key-use-C-h-commands t)         ; C-h コマンドを使用
@@ -1175,7 +1151,7 @@
 
 ;;; Amx - M-x コマンドの強化（コマンド履歴などを改善）
 (use-package amx
-  :ensure t
+  :straight t
   :config
   (setq amx-save-file (my-set-history "amx-items")) ; Amx の履歴ファイルの保存場所 (@early-init.el)
   )
@@ -1186,7 +1162,7 @@
              :type git
              :host github
              :repo "blue0513/stopwatch") ; https://github.com/blue0513/stopwatch
-  :ensure t
+  :straight t
   )
 
 ;;; Initchart - 初期化処理の実行時間を記録
@@ -1195,7 +1171,7 @@
              :type git
              :host github
              :repo "yuttie/initchart") ; https://github.com/yuttie/initchart
-  :ensure t
+  :straight t
   :config
   (initchart-record-execution-time-of load file)
   (initchart-record-execution-time-of require feature)

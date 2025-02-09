@@ -1,6 +1,5 @@
 ;;; hs-minor-mode（関数折りたたみ）の設定
 (use-package hideshow
-  :ensure nil
   :bind (("C-\\" . hs-toggle-hiding)
          ("<f5>" . hs-toggle-hiding))
   :hook ((c-mode          . hs-minor-mode)
@@ -12,7 +11,6 @@
 ;;; emacs-lisp-mode
 (use-package elisp-mode
   :mode ("\\.el\\'" . emacs-lisp-mode)
-  :ensure nil
   :hook (emacs-lisp-mode . my/emacs-lisp-mode-setup)
   :config
   (defun my/emacs-lisp-mode-setup ()
@@ -42,7 +40,6 @@
          ("\\.hpp\\'"  . c++-mode)
          ("\\.log\\'"  . c-mode)
          ("\\.cfg\\'"  . c-mode))
-  :ensure nil
   :hook ((c-mode-common . my/cc-mode-setup)
          (c++-mode      . my/c++-mode-setup))
   :config
@@ -67,7 +64,6 @@
 (use-package text-mode
   :mode (("\\.txt\\'" . text-mode)
          ("\\.tmp\\'" . text-mode)) ; コミットログ記載時にスニペットを展開したいため
-  :ensure nil
   :hook (text-mode . my/text-mode-setup)
   :config
   (defun my/text-mode-setup ()

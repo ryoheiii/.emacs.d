@@ -1,6 +1,5 @@
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren
-  :ensure nil ; built-in-package なのでインストール不要
   :hook (after-init . show-paren-mode)
   :config
   (setq show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる
@@ -8,9 +7,7 @@
 
 ;;; Whitespace - 空白文字の視覚化。スペース、タブ、行末の空白などを明確に表示
 (use-package whitespace
-  :ensure nil ; built-in-package なのでインストール不要
   :defer t
-  :diminish (global-whitespace-mode whitespace-mode)
   :init (global-whitespace-mode t)
   :config
   (setq whitespace-style '(face       ; faceを使って視覚化する。
@@ -37,7 +34,6 @@
 
 ;;; Grep - ファイル内検索機能の設定。特定のパターンに基づいてファイルを検索
 (use-package grep
-  :ensure nil ; built-in-package なのでインストール不要
   :bind ("C-c g" . grep)
   :config
   (setq grep-command-before-query "grep -nr -e ")
@@ -59,14 +55,12 @@
 
 ;; Elec-pair - 括弧の自動補完設定。入力中の括弧を自動的にペアで補完
 (use-package elec-pair
-  :ensure nil ; built-in-package なのでインストール不要
   :config
   (electric-pair-mode +1)
   )
 
 ;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存
 (use-package savehist
-  :ensure nil ; built-in-package なのでインストール不要
   :defer 20
   :init (savehist-mode 1)
   :config
@@ -78,7 +72,6 @@
 
 ;;; Saveplace - カーソル位置の保存。ファイルを再度開いた時に前回のカーソル位置を保持
 (use-package saveplace
-  :ensure nil ; built-in-package なのでインストール不要
   :init (setq save-place-limit nil)
   :config
   (save-place-mode 1)
@@ -93,14 +86,12 @@
 
 ;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存
 (use-package files
-  :ensure nil ; built-in-package なのでインストール不要
   :config
   (setq auto-save-visited-interval 30)
   (auto-save-visited-mode +1))
 
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove
-  :ensure nil ; built-in-package なのでインストール不要
   :config
   (windmove-default-keybindings) ;; Shift + 矢印キーでウィンドウ間を移動
   )
@@ -125,7 +116,6 @@
 
 ;;; Tab-bar - Emacsのタブ機能をカスタマイズ
 (use-package tab-bar
-  :ensure nil ; 組み込みパッケージなのでインストールは不要
   :config
   ;; タブバーを有効化します。
   (tab-bar-mode 1)
@@ -167,7 +157,6 @@
 
 ;;; Display-fill-column-indicator - テキストの折り返し位置を視覚的に示す
 (use-package display-fill-column-indicator
-  :ensure nil
   :hook ((prog-mode . display-fill-column-indicator-mode)
          (markdown-mode . display-fill-column-indicator-mode))
   ;; :init
@@ -179,7 +168,6 @@
 
 ;;; repeat - キーのリピート (multiple-cursors などで利用)
 (use-package repeat
-  :ensure nil
   :init
   (repeat-mode 1)
   )

@@ -31,20 +31,6 @@ Emacs の初回起動後に、以下の設定を行う。
 
 ### 設定項目
 - **Yasnippets**: インストール後のパス (`loads/elisp/yasnippet-snippets-<version>`) を `loads/inits/20-external-package.el` で指定
-- **Irony**: インストール後のファイル (`loads/elisp/irony-<version>/irony.el`) の以下の記述を修正
-  ```lisp
-  ;; Package-Version: 1.6.1
-  ;; Package-Revision: v1.6.1-0-g40e0ce19eb85
-  ```
-  **↓ 修正後**
-  ```lisp
-  ;; Version: 1.6.1
-  ```
-  **理由**:  
-  MELPA が `irony.el` のバージョンヘッダーを書き換えてしまうため、`irony-install-server` 実行時に以下のエラーが発生する。
-  ```
-  Couldn't find irony.el's version header
-  ```
 - **Irony サーバーの構築**: Emacs 起動後、以下コマンドを実行
   ```sh
   M-x irony-install-server
