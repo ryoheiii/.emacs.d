@@ -7,7 +7,9 @@
 ;;;;; [Group] Debug ;;;;;
 (setq debug-on-error t)
 
-;;;;; [Group] Auto Files Place ;;;;;
+
+
+;;;;; [Group] Auto Files Place - 自動生成ファイル関連制御 ;;;;;
 ;;; Emacs の各種ディレクトリとファイルパスの設定
 (defvar my-emacs-dir   (expand-file-name user-emacs-directory))         ;; /path/to/userhome/.emacs.d/
 (defvar my-elisp-dir   (expand-file-name "loads/elisp/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
@@ -73,7 +75,17 @@
                 (delete-directory default-snippets t)
                 (message "Deleted unwanted default snippets at %s" default-snippets)))))
 
-;;;;; [Group] Straight.el ;;;;;
+
+
+;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;
+(menu-bar-mode -1)    ; メニューバーを消す
+(when window-system
+  (tool-bar-mode -1)) ; ツールバーを消す
+(blink-cursor-mode 0) ; カーソルの点滅を止める
+
+
+
+;;;;; [Group] Package Management - パッケージ管理 ;;;;;
 ;;; **straight.el の設定**
 (setq straight-base-dir (my-set-elisp "")) ;; .last-package-update-day など
 

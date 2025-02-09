@@ -44,10 +44,6 @@
 (add-hook 'after-change-major-mode-hook 'my-toggle-delete-trailing-whitespace)
 
 ;;;;;; [Group] UI Settings - インターフェース ;;;;;;
-(menu-bar-mode -1)                      ; メニューバーを消す
-(when window-system
-  (tool-bar-mode -1))                   ; ツールバーを消す
-(blink-cursor-mode 0)                   ; カーソルの点滅を止める
 (column-number-mode t)                  ; カーソル位置の列番号表示
 (line-number-mode t)                    ; カーソル位置の行番号表示
 (setq frame-title-format (format "%%f - Emacs@%s" (system-name))) ; タイトルバーにフルパス表示
