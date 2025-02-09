@@ -1,4 +1,4 @@
-;;; 01-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
+;;; 19-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; Emacs 組み込みパッケージの設定
 
@@ -182,5 +182,5 @@
   :hook (after-init . repeat-mode)
   )
 
-(provide '01-built-in-package)
-;;; 01-built-in-package.el ends here
+(provide '18-built-in-package)
+;;; 18-built-in-package.el ends here

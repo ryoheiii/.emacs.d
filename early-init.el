@@ -65,9 +65,9 @@
                 (message "Deleted unwanted default eln-cache at %s" default-eln-cache)))))
 
 ;;; emacs 起動後に ~/.emacs.d/snippets が生成される課題への対策
-;; 初期状態で yas-snippet-dirs を nil に設定し、yasnippet ロード時に明示的に設定
-(setq yas-snippet-dirs '())
-;; ディレクトリが存在する場合に削除 (Package install 時に生成されてしまう課題への対応)
+;; ;; 初期状態で yas-snippet-dirs を nil に設定し、yasnippet ロード時に明示的に設定
+;; (setq yas-snippet-dirs '())
+;; ディレクトリが存在する場合に削除 (Package install 時に一度生成されてしまう課題への対応)
 (add-hook 'emacs-startup-hook
           (lambda ()
             (let ((default-snippets (my-set-emacs "snippets/")))

@@ -1,6 +1,6 @@
-;;; 00-font.el --- フォント設定 -*- lexical-binding: t; -*-
+;;; 01-ui.el --- UI 設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; GUI環境でのフォント設定
+;; Emacs の UI 設定
 
 ;;; Code:
 
@@ -23,5 +23,5 @@
       (set-fontset-font t charset (font-spec :family font-name))))
   )
 
-(provide '00-font)
-;;; 00-font.el ends here
+(provide '01-ui)
+;;; 01-ui.el ends here

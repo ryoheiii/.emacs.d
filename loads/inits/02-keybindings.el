@@ -1,4 +1,4 @@
-;;; 00-key-bindings.el --- キーバインド設定 -*- lexical-binding: t; -*-
+;;; 02-keybindings.el --- キーバインド設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; Emacs のキーバインド設定
 
@@ -26,5 +26,5 @@
 ;; (global-set-key (kbd "C-t") 'next-multiframe-window)     ; 次のフレームのウィンドウへ移動
 ;; (global-set-key (kbd "C-q") 'previous-multiframe-window) ; 前のフレームのウィンドウへ移動
 
-(provide '01-key-bindings)
-;;; 00-key-bindings.el ends here
+(provide '02-keybindings.el)
+;;; 02-keybindings.el ends here

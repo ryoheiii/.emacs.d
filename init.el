@@ -4,11 +4,11 @@
 
 ;;; Code:
 
-;;; `use-package` の設定
+;;;;; [Group] Use-package 設定 ;;;;;
 (use-package use-package
   :straight t)
 
-;;; ロードパスの追加関数
+;;;;; [Group] ロードパスの追加 ;;;;;
 (defun add-to-load-path (&rest paths)
   "Add specified PATHS to the Emacs load-path."
   (dolist (path paths)
@@ -19,7 +19,7 @@
 
 (add-to-load-path "loads/elisp/" "loads/site-elisp/")
 
-;;; init-loader - 設定ファイルを整理し、分割された設定を読み込む
+;;;;; [Group] Init-loader 設定 ;;;;;
 (use-package init-loader
   :straight t
   :custom

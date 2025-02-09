@@ -1,4 +1,4 @@
-;;; 19-mode.el --- 各種モード設定 -*- lexical-binding: t; -*-
+;;; 19-language-modes.el --- 各種モード設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; 主要なメジャーモードの設定を行う
 
@@ -74,5 +74,5 @@
     (subword-mode 1))                              ; CamelCase も単語として移動
   )
 
-(provide '19-mode)
-;;; 19-mode.el ends here
+(provide '21-language-modes)
+;;; 19-language-modes.el ends here

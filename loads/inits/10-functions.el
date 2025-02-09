@@ -1,4 +1,4 @@
-;;; 00-function.el --- ユーティリティ関数集 -*- lexical-binding: t; -*-
+;;; 10-functions.el --- ユーティリティ関数集 -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; 各種ユーティリティ関数を定義
 
@@ -136,5 +136,5 @@
           (message "Quit")
           (throw 'end-flag t)))))))
 
-(provide '00-function)
-;;; 00-function.el ends here
+(provide '10-functions)
+;;; 10-functions.el ends here

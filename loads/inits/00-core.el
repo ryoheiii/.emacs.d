@@ -1,6 +1,6 @@
-;;; 00-common.el --- 基本設定  -*- lexical-binding: t; -*-
+;;; 00-core.el --- 基本設定  -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; Emacs の共通設定
+;; Emacs の基本設定
 
 ;;; Code:
 
@@ -124,5 +124,5 @@
       flyspell-use-meta-tab nil
       native-comp-async-report-warnings-errors 'silent)
 
-(provide '00-common)
-;;; 00-common.el ends here
+(provide '00-core)
+;;; 00-core.el ends here
