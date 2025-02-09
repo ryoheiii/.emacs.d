@@ -33,11 +33,12 @@
 ;;; smart-mode-line - モードラインの外観と情報表示を最適化
 (use-package smart-mode-line
   :straight t
+  :init
+  (sml/setup)
   :config
   (setq sml/no-confirm-load-theme t
         sml/theme 'dark
-        sml/shorten-directory -1)  ;; ディレクトリパスはフル表示
-  (sml/setup)
+        sml/shorten-directory nil) ; ディレクトリパスはフル表示
   )
 
 ;;; hide-mode-line - 特定のモードでモードラインを非表示
@@ -135,10 +136,11 @@
 (use-package total-lines
   :straight t
   :hook (after-init . global-total-lines-mode)
-  :custom
-  (mode-line-front-space
-   (append mode-line-front-space
-           '((:eval (format " (%d)" (- total-lines 1)))))) ;; モードラインに総行数を表示
+  :config
+  (setq mode-line-front-space
+        (append mode-line-front-space
+                '((:eval (when (bound-and-true-p total-lines)
+                           (format " (%d)" (- total-lines 1))))))) ;; モードラインに総行数を表示
   )
 
 ;;; recentf - 最近使用したファイルの履歴管理
@@ -363,45 +365,46 @@
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :straight t
+  :after yasnippet-snippets
   :custom
   (yas-snippet-dirs
-   (list (my-set-custom "snippets")
-         ;; シンボリックリンク用
-         (my-set-custom "snippets/snippets")
-         ;; yasnippet-snippets パッケージから取得
-         ;; (my-set-elisp "straight/build/yasnippet-snippets/snippets") ; 必要最小限に絞る
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-ts-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-lang-common")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-ts-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/cc-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/cmake-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-ts-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/dockerfile-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/emacs-lisp-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/git-commit-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-ts-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-interaction-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-automake-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-bsdmake-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-gmake-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-ts-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/org-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/prog-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-ts-mode")
-         (my-set-elisp "straight/build/yasnippet-snippets/snippets/text-mode")
-         ))
-  (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))               ; スニペット展開のプロンプト
-  (yas-trigger-key "TAB")                                              ; トリガーキーを TAB に設定
+   (seq-filter #'file-exists-p
+               (list (my-set-custom "snippets")
+                     ;; シンボリックリンク用
+                     (my-set-custom "snippets/snippets")
+                     ;; yasnippet-snippets パッケージから取得
+                     ;; (my-set-elisp "straight/build/yasnippet-snippets/snippets") ; 必要最小限に絞る
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-ts-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-lang-common")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-ts-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/cc-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/cmake-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-ts-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/dockerfile-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/emacs-lisp-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/git-commit-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-ts-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-interaction-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-automake-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-bsdmake-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-gmake-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-ts-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/org-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/prog-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-ts-mode")
+                     (my-set-elisp "straight/build/yasnippet-snippets/snippets/text-mode"))))
+  (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))  ; スニペット展開のプロンプト
+  (yas-trigger-key "TAB")                                 ; トリガーキーを TAB に設定
   :config
-  (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
+  (yas-global-mode 1)
   )
 
 ;;; Yasnippet Snippets - 追加スニペット集

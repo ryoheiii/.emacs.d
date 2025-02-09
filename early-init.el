@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-;;; [Group] Debug ;;;
+;;;;; [Group] Debug ;;;;;
 (setq debug-on-error t)
 
 ;;;;; [Group] Auto Files Place ;;;;;
@@ -53,15 +53,25 @@
 (when (boundp 'native-comp-eln-load-path)
   (setq native-comp-eln-load-path (list (my-set-package "eln-cache/"))))
 
-;;; emacs 起動後に ~/.emacs.d/eln-cache が存在する場合に削除
+;;; emacs 起動後に ~/.emacs.d/eln-cache が生成される課題への対策
+;; ディレクトリが存在する場合に削除
 (add-hook 'emacs-startup-hook
           (lambda ()
-            (let ((default-eln-cache (expand-file-name "eln-cache/" my-emacs-dir)))
+            (let ((default-eln-cache (my-set-emacs "eln-cache/")))
               (when (file-exists-p default-eln-cache)
                 (delete-directory default-eln-cache t)
                 (message "Deleted unwanted default eln-cache at %s" default-eln-cache)))))
 
-
+;;; emacs 起動後に ~/.emacs.d/snippets が生成される課題への対策
+;; 初期状態で yas-snippet-dirs を nil に設定し、yasnippet ロード時に明示的に設定
+(setq yas-snippet-dirs '())
+;; ディレクトリが存在する場合に削除 (Package install 時に生成されてしまう課題への対応)
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (let ((default-snippets (my-set-emacs "snippets/")))
+              (when (file-exists-p default-snippets)
+                (delete-directory default-snippets t)
+                (message "Deleted unwanted default snippets at %s" default-snippets)))))
 
 ;;;;; [Group] Straight.el ;;;;;
 ;;; **straight.el の設定**
