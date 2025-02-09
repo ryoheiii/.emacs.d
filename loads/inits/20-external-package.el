@@ -455,8 +455,8 @@
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :straight t
-  :init
-  (transient-mark-mode t)
+  :custom
+  (transient-mark-mode t) ; 明示的に選択範囲を表示
   :bind (("C-," . er/expand-region))
   )
 
@@ -465,12 +465,11 @@
 (use-package symbol-overlay
   :straight t
   :hook (prog-mode . symbol-overlay-mode)
-  :bind
-  (("C-x C-a" . my-symbol-overlay-rename-visible)     ;; ウィンドウ内のシンボルを置換
-   ("C-x a"   . my-symbol-overlay-rename-in-function) ;; 関数・メソッド内の置換
-   ("C-x C-g" . symbol-overlay-rename)                ;; バッファ全体のシンボルを置換
-   )
+  :bind (("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
+         ("C-x a"   . my-symbol-overlay-rename-in-function) ; 関数・メソッド内の置換
+         ("C-x C-g" . symbol-overlay-rename))               ; バッファ全体のシンボルを置換
   :config
+  ;; 現在のウィンドウ内のシンボルをリネーム
   (defun my-symbol-overlay-rename-visible ()
     "現在のウィンドウ内に表示されているシンボルのみをリネームする."
     (interactive)
@@ -482,6 +481,8 @@
         (goto-char start)
         (while (re-search-forward (regexp-quote symbol) end t)
           (replace-match new-name)))))
+
+  ;; 現在の関数・メソッド内のシンボルをリネーム
   (defun my-symbol-overlay-rename-in-function ()
     "現在の関数やメソッド内に表示されているシンボルのみをリネームする."
     (interactive)
