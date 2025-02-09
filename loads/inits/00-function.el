@@ -1,9 +1,10 @@
+;;; 指定した PACKAGE が `straight.el` で管理すべきかを判定する関数
 (defun my/should-use-straight (package)
   "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
  - `t` なら `straight t` を追加すべき
  - `nil` なら `straight t` は不要"
   (interactive
-   (list (intern (completing-read "Package name: " (mapcar #'symbol-name (apropos-internal "" 'featurep))))))
+   (list (intern (completing-read "Package name: " (mapcar #'symbol-name package-activated-list)))))
   (if (or (featurep package) (locate-library (symbol-name package)))
       (progn
         (message "Package '%s' is built-in. `straight t` is NOT needed." package)
@@ -65,26 +66,6 @@
     (goto-char end)
     (insert result)))  ; Insert the result into the buffer
 
-;;; 選択範囲を isearch
-(defadvice isearch-mode (around isearch-mode-default-string
-                                (forward &optional regexp op-fun recursive-edit word-p) activate)
-  "Isearch with default text if there is a selection."
-  (if (and transient-mark-mode mark-active (not (eq (mark) (point))))
-      (let ((search-text (buffer-substring-no-properties (mark) (point))))
-        (isearch-update-ring search-text)
-        (deactivate-mark)
-        ad-do-it
-        (if forward
-            (progn
-              (goto-char (mark))
-              (isearch-repeat-forward))
-          (isearch-repeat-backward)))
-    ad-do-it))
-
-
-;;; nlinum.el の遅延更新
-(defadvice linum-schedule (around my-linum-schedule () activate)
-  (run-with-idle-timer 0.2 nil #'linum-update-current))
 
 ;;; ウィンドウ関連操作
 ;; 垂直分割
@@ -118,25 +99,27 @@
 
 ;; ウィンドウリサイズ機能
 (defun window-resizer ()
-  "Control window size and position."
+  "Control window size and position.
+[f] → 増加, [b] ← 減少, [n] ↓ 増加, [p] ↑ 減少, 他のキーで終了。"
   (interactive)
-  (let ((window-obj (selected-window))
-        (current-width (window-width))
-        (current-height (window-height))
-        (dx (if (= (nth 0 (window-edges)) 0) 1 -1))
+  (let ((dx (if (= (nth 0 (window-edges)) 0) 1 -1))
         (dy (if (= (nth 1 (window-edges)) 0) 1 -1))
-        action c)
+        c)
     (catch 'end-flag
       (while t
-        (setq action (read-key-sequence-vector (format "size[%dx%d]" (window-width) (window-height))))
-        (setq c (aref action 0))
-        (cond ((= c ?f) (enlarge-window-horizontally dx))
-              ((= c ?b) (shrink-window-horizontally dx))
-              ((= c ?n) (enlarge-window dy))
-              ((= c ?p) (shrink-window dy))
-              ;; otherwise
-              (t
-               (let ((last-command-char (aref action 0)) (command (key-binding action)))
-                 (when command (call-interactively command)))
-               (message "Quit")
-               (throw 'end-flag t)))))))
+        (setq c (read-key "Resize: [f]→ [b]← [n]↓ [p]↑, any other key to exit"))
+        (cond
+         ;; ウィンドウが1つだけならリサイズしない
+         ((one-window-p)
+          (message "Cannot resize: only one window exists.")
+          (throw 'end-flag t))
+         ;; 横幅変更
+         ((= c ?f) (ignore-errors (enlarge-window-horizontally dx)))
+         ((= c ?b) (ignore-errors (shrink-window-horizontally dx)))
+         ;; 高さ変更
+         ((= c ?n) (ignore-errors (shrink-window dy)))
+         ((= c ?p) (ignore-errors (enlarge-window dy)))
+         ;; それ以外のキーなら終了
+         (t
+          (message "Quit")
+          (throw 'end-flag t)))))))

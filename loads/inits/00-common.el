@@ -67,12 +67,32 @@
 (setq kill-whole-line t)                ; 行の先頭でC-kを一回押すだけで行全体を消去する
 (setq require-final-newline nil)        ; 最終行に必ず一行挿入しない
 
+;; 選択範囲を isearch
+(advice-add 'isearch-mode :around
+            (lambda (orig-fn &rest args)
+              "Isearch with default text if there is a selection."
+              (if (and transient-mark-mode mark-active (not (eq (mark) (point))))
+                  (let ((search-text (buffer-substring-no-properties (mark) (point))))
+                    (isearch-update-ring search-text)
+                    (deactivate-mark)
+                    (apply orig-fn args)
+                    (if (car args)
+                        (isearch-repeat-forward)
+                      (isearch-repeat-backward)))
+                (apply orig-fn args))))
+
 ;;;;;; [Group] Line Number Settings - 行番号表示 ;;;;;;
 (if (version< emacs-version "29")
     (global-linum-mode t)               ; Emacs28 以前
   (global-display-line-numbers-mode t)) ; Emacs29 以降
 (setq linum-format "%4d "
       linum-delay t)
+
+;; nlinum.el の遅延更新
+(advice-add 'linum-schedule :around
+            (lambda (orig-fn &rest args)
+              (run-with-idle-timer 0.2 nil #'linum-update-current)
+              (apply orig-fn args)))
 
 ;;;;;; [Group] Completion - 補完設定 ;;;;;;
 (setq completion-ignore-case t

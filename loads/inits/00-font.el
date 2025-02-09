@@ -1,10 +1,15 @@
-(when window-system
+(when (display-graphic-p)
   ;;; Ricty Diminished Discord フォントの設定
-  ;; sudo apt install fonts-ricty-diminished
-  (let ((font-name "Ricty Diminished Discord"))
-    (set-face-attribute 'default nil :family font-name :height 150)
-    (set-fontset-font t 'japanese-jisx0208 (font-spec :family font-name))
-    (set-fontset-font t 'japanese-jisx0212 (font-spec :family font-name))
-    (set-fontset-font t 'katakana-jisx0201 (font-spec :family font-name))
-    )
+  ;; インストール: sudo apt install fonts-ricty-diminished
+  (let ((font-name "Ricty Diminished Discord")
+        (font-size 150)) ;; フォントサイズ
+    ;; 基本フォント
+    (set-face-attribute 'default nil :font (format "%s-%d" font-name (/ font-size 10)))
+
+    ;; 日本語フォントの設定（幅を統一）
+    (dolist (charset '(japanese-jisx0208
+                       japanese-jisx0212
+                       katakana-jisx0201
+                       unicode))
+      (set-fontset-font t charset (font-spec :family font-name))))
   )
