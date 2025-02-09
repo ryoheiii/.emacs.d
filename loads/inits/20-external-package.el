@@ -354,10 +354,10 @@
   :hook ((c-mode . irony-mode)
          (c++-mode . irony-mode)
          (irony-mode . irony-cdb-autosetup-compile-options))
-  :init
+  :custom
   ;; Irony モードのインストール場所とオプションファイルの設定
-  (setq irony-server-install-prefix    (expand-file-name "irony" my-history-dir))
-  (setq irony-server-options-directory (expand-file-name "irony" my-history-dir))
+  (irony-server-install-prefix    (my-set-history "irony"))
+  (irony-server-options-directory (my-set-history "irony"))
   )
 
 ;;; Yasnippet - コードスニペットの管理と挿入
@@ -367,9 +367,9 @@
   ;; スニペットディレクトリの動的設定
   (setq yas-snippet-dirs
         (seq-filter #'file-exists-p
-                    (list (expand-file-name "~/.emacs.d/my-data/snippets")
-                          (expand-file-name "~/.emacs.d/my-data/snippets/snippets") ;; シンボリックリンク用
-                          (expand-file-name "~/.emacs.d/loads/elisp/straight/build/yasnippet-snippets/snippets"))))
+                    (list (my-set-mydata "snippets")
+                          (my-set-mydata "snippets/snippets") ;; シンボリックリンク用
+                          (my-set-elisp "straight/build/yasnippet-snippets/snippets"))))
 
   (yas-global-mode 1)  ;; yasnippet のグローバルモードを有効化
   :config
@@ -606,7 +606,7 @@
 ;;;;; [Group] Markdown - Markdown 関係 ;;;;;
 ;;; 変数定義（コンフィギュレーション）
 ;; Markdown 用のカスタム CSS ファイルのパス
-(defvar my-markdown-css-file (expand-file-name "~/.emacs.d/my-data/css/markdown-style.css")
+(defvar my-markdown-css-file (my-set-mydata "css/markdown-style.css")
   "Path to custom markdown CSS file.")
 
 ;; Pandoc コマンドの設定
