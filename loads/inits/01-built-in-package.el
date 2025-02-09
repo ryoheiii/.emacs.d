@@ -17,6 +17,7 @@
   :hook (after-init . icomplete-mode)
   )
 
+
 ;;;;;; [Group] Visual Enhancements - 視覚的な補助 ;;;;;;
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren
@@ -91,6 +92,12 @@
 ;; Elec-pair - 括弧の自動補完設定。入力中の括弧を自動的にペアで補完
 (use-package elec-pair
   :hook (after-init . electric-pair-mode)
+  )
+
+;;; move-text - テキスト行の移動機能
+(use-package move-text
+  :bind (("C-M-p" . move-text-up)
+         ("C-M-n" . move-text-down))
   )
 
 ;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存

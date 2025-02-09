@@ -1,53 +1,69 @@
-;;;;; [Group] Library - ライブラリ関連 ;;;;;
+;;; 20-external-package.el --- 外部パッケージの設定 -*- lexical-binding: t; -*-
+;;; Commentary:
+;; Emacs の外部パッケージ設定
+
+;;; Code:
+
+;;;;;; [Group] Library - ライブラリ関連 ;;;;;;
 ;;; dash - Emacs 用のモダンなリスト操作ライブラリ
 (use-package dash
-  :straight t
-  )
+  :straight t)
 
-;;; S - 文字列操作のための追加機能
+;;; s - 文字列操作のための便利なユーティリティ
 (use-package s
-  :straight t
-  )
+  :straight t)
 
+;;; diminish - モードラインの表示を最適化
+(use-package diminish
+  :straight t)
 
+;;; 20-themes-and-visuals.el --- テーマとビジュアル関連の設定 -*- lexical-binding: t; -*-
+;;; Commentary:
+;; Emacs のテーマやビジュアル関連の設定を管理する
 
-;;;;; [Group] Themes-and-Visuals - テーマとビジュアル関連 ;;;;;
-;;; Color Theme Modern - モダンなカラーテーマの設定。選択可能なテーマの幅を広げる
+;;; Code:
+
+;;;;;; [Group] Themes - テーマ関連 ;;;;;;
+;;; color-theme-modern - モダンなカラーテーマの適用
 (use-package color-theme-modern
   :straight t
   :config
-  ;; テーマの適用
-  ;; https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
+  ;; 選択可能なテーマの幅を広げる
+  ;; 参考: https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
   (load-theme 'hober t t)
   (enable-theme 'hober)
   )
 
-;;; Smart Mode Line - モードラインの外観と情報表示をカスタマイズ
+;;; smart-mode-line - モードラインの外観と情報表示を最適化
 (use-package smart-mode-line
   :straight t
   :config
   (setq sml/no-confirm-load-theme t
         sml/theme 'dark
-        sml/shorten-directory -1)  ; ディレクトリパスはフル表示
+        sml/shorten-directory -1)  ;; ディレクトリパスはフル表示
   (sml/setup)
   )
 
-;;; Hide Mode Line - 特定のモードでモードラインを隠す
+;;; hide-mode-line - 特定のモードでモードラインを非表示
 (use-package hide-mode-line
   :straight t
   :hook ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
   )
 
+;;; mode-line-bell - モードラインを利用した通知システム
+(use-package mode-line-bell
+  :straight t
+  :hook (after-init . mode-line-bell-mode)
+  )
 
-
-;;; Beacon - カーソルの位置を明確にするために点滅エフェクトを追加
+;;; beacon - カーソルの位置を明確にするために点滅エフェクトを追加
 (use-package beacon
   :straight t
   :custom (beacon-color "yellow")
   :config (beacon-mode 1)
   )
 
-;;; Volatile Highlights - 一時的なハイライト（選択範囲など）の強調表示
+;;; volatile-highlights - 一時的なハイライト（選択範囲など）を強調表示
 (use-package volatile-highlights
   :straight t
   :hook (after-init . volatile-highlights-mode)
@@ -55,35 +71,33 @@
   (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
   )
 
-;;; Highlight Indent Guides - インデントレベルを視覚的に区別するためのガイド表示
+;;; highlight-indent-guides - インデントレベルを視覚的に区別するためのガイド
 (use-package highlight-indent-guides
   :straight t
-  :if (version< emacs-version "29") ; emacs29 で位置ズレが発生するようになるため無効化
+  :if (version< emacs-version "29")  ;; Emacs 29 以降は無効（位置ズレが発生するため）
   :hook (emacs-lisp-mode . highlight-indent-guides-mode)
   :custom
   (highlight-indent-guides-auto-enabled t)
   (highlight-indent-guides-responsive t)
-  (highlight-indent-guides-method 'character)
-  )
+  (highlight-indent-guides-method 'character))
 
-;;; Highlight Symbol - シンボルのハイライトとナビゲーション
+;;; highlight-symbol - シンボルのハイライトとナビゲーション
 (use-package highlight-symbol
   :straight t
   :bind (([f3] . highlight-symbol-at-point)
          ([f4] . highlight-symbol-remove-all))
   :config
-  (setq highlight-symbol-colors '("DeepSkyBlue1" "LimeGreen"  "HotPink1"      "Yellow"
-                                  "Cyan"         "OrangeRed1" "MediumOrchid1" "SkyBlue"))
+  (setq highlight-symbol-colors '("DeepSkyBlue1" "LimeGreen" "HotPink1" "Yellow"
+                                  "Cyan" "OrangeRed1" "MediumOrchid1" "SkyBlue"))
   )
 
-;;; Rainbow-delimiters - 括弧の色分け
-;; 括弧を色分けして対応関係を視覚的に表示する
+;;; rainbow-delimiters - 括弧の色分けで対応関係を視覚化
 (use-package rainbow-delimiters
   :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
-  :bind (("C-c l" . rainbow-delimiters-using-stronger-colors)) ; より強調した色に変更するコマンド
+  :bind (("C-c l" . rainbow-delimiters-using-stronger-colors))  ;; より強調した色に変更
   :config
-  ;; 括弧の色をより強調するための関数
+  ;; 強調した括弧の色を適用する関数
   (defun rainbow-delimiters-using-stronger-colors ()
     (interactive)
     (cl-loop for index from 1 to rainbow-delimiters-max-face-count
@@ -96,7 +110,7 @@
                       :strike-through t)
   )
 
-;;; all-the-icons - icon setting
+;;; all-the-icons - グラフィック環境向けのアイコン
 (use-package all-the-icons
   :straight t
   :if (display-graphic-p)
@@ -105,120 +119,105 @@
 
 
 ;;;;; [Group] Buffer-and-File-management - バッファとファイル管理関連 ;;;;;
-;;; Xclip - クリップボードとの共有を可能にする
+;;; xclip - クリップボードとの共有
 (use-package xclip
-  ;; :disabled t
+  :if (and (not (display-graphic-p)) ; GUIではない
+           (getenv "DISPLAY")        ; X11 の DISPLAY 変数がある
+           (executable-find "xclip")) ; `xclip` がシステムにインストールされている
   :straight t
-  :init (xclip-mode 1) ; クリップボード共有を有効化
+  :config
+  (xclip-mode 1)
   )
 
-;;; Dashboard - Emacs のスタートアップ画面をカスタマイズ
+;;; dashboard - Emacs のスタートアップ画面をカスタマイズ
 (use-package dashboard
   :straight t
   :hook (after-init . dashboard-setup-startup-hook)
   )
 
-;;; Total Lines - バッファ内の総行数をモードラインに表示
+;;; total-lines - バッファ内の総行数をモードラインに表示
 (use-package total-lines
   :straight t
-  :init (global-total-lines-mode t)
-  :config
-  (defun my-set-line-numbers ()
-    "モードラインに全行数を表示。"
-    (setq-default mode-line-front-space
-                  (append mode-line-front-space
-                          '((:eval (format " (%d)" (- total-lines 1))))))) ;; 「" (%d)"」の部分はお好みで
-  (add-hook 'after-init-hook 'my-set-line-numbers)
+  :hook (after-init . global-total-lines-mode)
+  :custom
+  (mode-line-front-space
+   (append mode-line-front-space
+           '((:eval (format " (%d)" (- total-lines 1)))))) ;; モードラインに総行数を表示
   )
 
-;;; Anzu - 検索や置換操作時にマッチ数や現在位置を表示
-;; https://qiita.com/syohex/items/56cf3b7f7d9943f7a7ba
-(use-package anzu
-  :straight t
-  :init
-  (global-anzu-mode 1)
-  :config
-  (setq anzu-mode-lighter ""
-        anzu-deactivate-region t
-        anzu-search-threshold 1000
-        anzu-replace-to-string-separator " => ")
-  )
-
-;;; Recentf - 最近使用したファイルの履歴管理
+;;; recentf - 最近使用したファイルの履歴管理
 (use-package recentf
   :straight t
-  :init
-  (recentf-mode 1)
+  :hook (after-init . recentf-mode)
+  :custom
+  (recentf-max-saved-items 2000)                                 ; 保存するファイルの数
+  (recentf-max-menu-items 15)                                    ; メニューに表示するアイテム数
+  (recentf-exclude '("recentf-" user-full-name))                 ; 除外するファイルパターン
+  (recentf-auto-cleanup 'never)                                  ; 自動整理の設定
+  (recentf-save-file (my-set-history "recentf-" user-full-name)) ; recentf の保存パス
   :config
-  ;; メッセージを一時的に抑制するマクロ
+  ;; メッセージを抑制するマクロ
   (defmacro with-suppressed-message (&rest body)
     "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
     (declare (indent 0))
-    (let ((message-log-max nil))
-      `(with-temp-message (or (current-message) "") ,@body)))
+    `(let ((message-log-max nil))
+       (with-temp-message (or (current-message) "") ,@body)))
 
-  ;; recentf の設定
-  (setq recentf-max-saved-items 2000                 ; 保存するファイルの数
-        recentf-max-menu-items 15                    ; メニューに表示するアイテムの数
-        recentf-exclude '("recentf-" user-full-name) ; 除外するファイルパターン（.recentf自体は含まない）
-        recentf-auto-cleanup 'never                  ; 自動整理の設定
-        ;; recentf の保存リストのパスをカスタマイズ (my-set-history@early-init.el)
-        recentf-save-file (my-set-history "recentf-" user-full-name)
-        ;; 30秒ごとに recentf リストを自動保存
-        recentf-auto-save-timer (run-with-idle-timer 30 t 'recentf-save-list))
+  ;; 30秒ごとに recentf リストを自動保存
+  (run-with-idle-timer 30 t 'recentf-save-list)
   )
 
-;;; Recentf-ext - Recentfの拡張機能
+;;; recentf-ext - recentf の拡張機能
 (use-package recentf-ext
   :straight t
   )
 
-;;; Move Text - テキスト行の移動機能
-(use-package move-text
-  :straight t
-  :bind (("C-M-p" . move-text-up)
-         ("C-M-n" . move-text-down))
-  )
-
-;;; Smooth-scroll - スムーズなスクロール操作（C-v など）
+;;; smooth-scroll - スムーズなスクロール
 (use-package smooth-scroll
   :straight t
-  :config
-  (smooth-scroll-mode t)                    ; smooth-scroll モードを有効化
-  (setq smooth-scroll/vscroll-step-size 8)  ; 垂直スクロールのステップサイズを設定
+  :hook (after-init . smooth-scroll-mode)
+  :custom
+  (smooth-scroll/vscroll-step-size 8) ; スクロールのステップサイズ
+  )
+
+;;; anzu - 検索・置換時にマッチ数や現在位置を表示
+(use-package anzu
+  :straight t
+  :hook (after-init . global-anzu-mode)
+  :custom
+  (anzu-mode-lighter "")                    ; モードラインの表示を非表示
+  (anzu-deactivate-region t)                ; 領域選択時も `anzu` を使う
+  (anzu-search-threshold 1000)              ; 最大検索数
+  (anzu-replace-to-string-separator " => ") ; 置換時の表示フォーマット
   )
 
 
 
 ;;;;; [Group] Code-editting-and-Completion - コード編集と補完関連 ;;;;;
-;;; Google C Style - Google の C スタイルガイドに準拠したコーディング
+;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style
   :straight t
-  :hook ((c-mode-common c++-mode-common) . (lambda ()
-                                             (google-set-c-style)
-                                             (google-make-newline-indent)))
+  :hook ((c-mode-common . google-set-c-style)
+         (c-mode-common . google-make-newline-indent))
   )
 
 ;;; Aggressive Indent - コード編集時の自動インデント調整
 (use-package aggressive-indent
   :straight t
-  :hook (emacs-lisp-mode . aggressive-indent-mode)
-  )
+  :hook (emacs-lisp-mode . aggressive-indent-mode))
 
 ;;; Smart Newline - 改行時の自動インデントと位置調整
-;; https://ainame.hateblo.jp/entry/2013/12/08/162032
+;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :straight t
   :hook ((c++-mode c-mode cc-mode emacs-lisp-mode lisp-mode) . smart-newline-mode)
   :bind (("C-m" . smart-newline))
   )
 
-;; Company - 自動補完機能の強化とカスタマイズ
+;;; company - 自動補完の基本設定
 (use-package company
   :straight t
-  :after company-statistics
-  :init
-  (global-company-mode 1)
+  :hook (after-init . global-company-mode)
   :bind (("C-M-i" . company-complete)
          :map company-mode-map
          ("TAB" . indent-for-tab-command)
@@ -230,120 +229,122 @@
          ("C-s" . company-filter-candidates)  ; C-s で絞り込む
          ("TAB" . company-complete-selection)
          :map company-search-map
-         ;; 検索候補の移動を C-n と C-p で移動
          ("C-n" . company-select-next)
          ("C-p" . company-select-previous))
+  :custom
+  (company-selection-wrap-around t)                            ; 最後の候補で次の候補にループ
+  (company-transformers '(company-sort-by-occurrence
+                          company-sort-by-backend-importance)) ; 頻度順ソート
+  (company-idle-delay 0)                                       ; デフォルトは 0.5
+  (company-show-numbers t)
+  (company-tooltip-limit 10)
+  (company-minimum-prefix-length 2)                            ; デフォルトは 4
+  (company-tooltip-align-annotations t)
+  (company-tooltip-flip-when-above t)
+  (company-dabbrev-around t)
+  (completion-ignore-case t)
+  (company-dabbrev-downcase nil)
+  (company-eclim-auto-save nil)
+  (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
+                       company-echo-metadata-frontend))
   :config
+  ;; ツールチップの色設定
   ;; 基本設定
-  (setq company-selection-wrap-around t
-        company-transformers '(company-sort-by-occurrence
-                               company-sort-by-backend-importance) ; 利用頻度が高いものを候補の上に表示
-        company-idle-delay 0                                       ; デフォルトは 0.5
-        company-show-numbers t
-        company-tooltip-limit 10
-        company-minimum-prefix-length 2                            ; デフォルトは 4
-        company-tooltip-align-annotations t
-        company-tooltip-flip-when-above t
-        company-dabbrev-around t
-        completion-ignore-case t
-        company-dabbrev-downcase nil
-        company-eclim-auto-save nil)
-  ;; color settings（ツールチップの基本設定）
   (set-face-attribute 'company-tooltip nil
                       :foreground "white" :background "midnight blue")
   (set-face-attribute 'company-tooltip-common nil
                       :foreground "white" :background "midnight blue")
-  ;; color settings（選択項目の設定）
+  ;; 選択項目の設定
   (set-face-attribute 'company-tooltip-common-selection nil
                       :foreground "white" :background "dark slate blue")
   (set-face-attribute 'company-tooltip-selection nil
                       :foreground "white" :background "dark slate blue")
-  ;; color settings（プレビューとスクロールバーの設定）
+  ;; プレビューとスクロールバーの設定
   (set-face-attribute 'company-preview-common nil
                       :background "dark slate blue" :foreground "white" :underline t)
   (set-face-attribute 'company-scrollbar-fg nil
                       :background "dark gray")
   (set-face-attribute 'company-scrollbar-bg nil
                       :background "dim gray")
-  ;; company-same-mode-buffers (プログラムの関数、変数のキーワード補完を強化) との統合
-  ;; e.g. ファイル内のキーワードから補完
-  (use-package company-same-mode-buffers
-    :straight '(company-same-mode-buffers
-                :type git
-                :host github
-                :repo "zk-phi/company-same-mode-buffers")
-    :after company
-    :straight t
-    :init
-    (require 'company-same-mode-buffers)
-    (company-same-mode-buffers-initialize)
-    )
-  ;; company-irony - Company と Irony の統合
-  (use-package company-irony
-    :straight t
-    :after (company irony)
-    :config
-    )
-  ;; Company-irony-c-headers - C ヘッダファイル用の Company バックエンド
-  (use-package company-irony-c-headers
-    :straight t
-    :after (company irony)
-    :config
-    )
-  ;; company-backends の設定 (yasnippet と company-same-mode-buffers は両立)
+
+  ;; company-backends の設定
   (setq company-backends
         '((company-capf :with company-same-mode-buffers company-yasnippet)
           (company-dabbrev-code :with company-same-mode-buffers company-yasnippet)
-          (company-irony-c-headers company-irony) ; Irony と Irony-C-Headers の組み合わせ
+          (company-irony-c-headers company-irony)   ; Irony と Irony-C-Headers の組み合わせ
           company-keywords
           company-files
           company-dabbrev))
+  (add-to-list 'company-backends 'company-files)    ; ファイル名補完
+  (add-to-list 'company-backends 'company-keywords) ; 言語のキーワード補完
   )
 
-;;; Company-statics - Company の表示順をスマートにする
+;;; Company-statistics - よく使う補完候補を優先表示
 (use-package company-statistics
   :straight t
-  :init
-  (setq company-statistics-file
-        (my-set-history "company-statistics-cache.el")) ; 履歴の保存場所 (@early-init.el)
+  :after company
+  :custom
+  (company-statistics-file (my-set-history "company-statistics-cache.el")) ; 履歴保存場所
+  :config
   (company-statistics-mode)
   )
 
-;;; Company-dwim - auto-complete に近い挙動で候補の絞り込みができる
+;;; company-same-mode-buffers - 同じモード内でのキーワード補完を強化
+(use-package company-same-mode-buffers
+  :straight '(company-same-mode-buffers
+              :type git
+              :host github
+              :repo "zk-phi/company-same-mode-buffers")
+  :after company
+  :config
+  (company-same-mode-buffers-initialize)
+  )
+
+;;; Company-irony - C/C++ 用の補完
+(use-package company-irony
+  :straight t
+  :after (company irony)
+  )
+
+;;; Company-irony-c-headers - C ヘッダファイル用の補完（Company バックエンド）
+(use-package company-irony-c-headers
+  :straight t
+  :after (company irony)
+  )
+
+;;; company-dwim - 候補の絞り込みをスマート化（補完フロントエンド）
 (use-package company-dwim
   :straight '(company-dwim
               :type git
               :host github
               :repo "zk-phi/company-dwim")
-  :straight t
-  :init
-  (define-key company-active-map (kbd "TAB") 'company-dwim)
-  (setq company-frontends
-        '(company-pseudo-tooltip-unless-just-one-frontend
-          company-dwim-frontend
-          company-echo-metadata-frontend))
+  :after company
+  :bind (:map company-active-map
+              ("TAB" . company-dwim))
+  :config
+  (add-to-list 'company-frontends 'company-dwim-frontend)
   )
 
-;;; Company-anywhere - カーソルの位置がどこであっても company を起動できる
+;;; company-anywhere - どこでも補完を可能にする
 (use-package company-anywhere
   :straight '(company-anywhere
               :type git
               :host github
               :repo "zk-phi/company-anywhere")
-  :straight t
+  :after company
   )
 
 ;;; Company-box - Company の補完候補をパネル表示 (GUI 限定)
 (use-package company-box
-  :disabled t
   :straight t
+  :if (display-graphic-p)
   :hook (company-mode . company-box-mode)
   )
 
-;;; Company-posframe - Company の補完候補をパネル表示 (GUI 限定)
+;;; company-posframe - GUI での補完候補パネル表示
 (use-package company-posframe
-  :disabled t
   :straight t
+  :if (display-graphic-p)
   :after company
   :config
   (company-posframe-mode 1)
@@ -1176,3 +1177,6 @@
   (initchart-record-execution-time-of load file)
   (initchart-record-execution-time-of require feature)
   )
+
+(provide '20-external-package)
+;;; 20-external-package.el ends here
