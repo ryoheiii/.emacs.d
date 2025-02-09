@@ -61,8 +61,8 @@
 
 ;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存
 (use-package savehist
-  :defer 20
-  :init (savehist-mode 1)
+  :hook (after-init . savehist-mode)
+  :custom (history-length 3000)
   :config
   (setq savehist-additional-variables '(search-ring regexp-search-ring)
         savehist-autosave-interval 60             ;; save every minute
@@ -170,4 +170,32 @@
 (use-package repeat
   :init
   (repeat-mode 1)
+  )
+
+;; ファイルの自動更新
+(use-package autorevert
+  :hook (after-init . global-auto-revert-mode)
+  :custom (magit-auto-revert-mode t)
+  )
+
+;;; 表示設定
+(use-package display-time
+  :hook (after-init . display-time-mode)
+  :custom
+  (display-time-day-and-date t)
+  (display-time-string-forms
+   '((format "%s/%s (%s) %s:%s"
+             month day dayname
+             24-hours minutes)))
+  )
+
+(use-package icomplete
+  :hook (after-init . icomplete-mode)
+  )
+
+;;; diff 設定
+(use-package ediff
+  :custom
+  (ediff-window-setup-function 'ediff-setup-windows-plain)  ;; コントロールバッファを同一フレームに
+  (ediff-split-window-function 'split-window-horizontally)  ;; diff のバッファを左右に配置
   )

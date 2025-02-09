@@ -1,3 +1,17 @@
+(defun my/should-use-straight (package)
+  "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
+ - `t` なら `straight t` を追加すべき
+ - `nil` なら `straight t` は不要"
+  (interactive
+   (list (intern (completing-read "Package name: " (mapcar #'symbol-name (apropos-internal "" 'featurep))))))
+  (if (or (featurep package) (locate-library (symbol-name package)))
+      (progn
+        (message "Package '%s' is built-in. `straight t` is NOT needed." package)
+        nil)
+    (progn
+      (message "Package '%s' is NOT built-in. `straight t` is recommended." package)
+      t)))
+
 ;;; ファイルパス/ファイル名をクリップボードに保存
 (defun my/copy-to-clipboard-and-message (text message)
   "Copy TEXT to the kill ring and display MESSAGE in the minibuffer."

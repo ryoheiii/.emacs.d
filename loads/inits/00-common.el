@@ -1,62 +1,28 @@
-;;; 文字コードの設定
-(set-language-environment   "Japanese")
+;;; 00-common.el --- 基本設定  -*- lexical-binding: t; -*-
+;;; Commentary:
+;; Emacs の共通設定
+
+;;; Code:
+
+;;;;;; [Group] Coding System - 文字コード設定 ;;;;;;
+(set-language-environment "Japanese")
 (prefer-coding-system       'utf-8)
 (set-default-coding-systems 'utf-8)
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
-;; Macで日本語のファイル名を扱う場合用
-(when (eq system-type 'darwin)
+(when (eq system-type 'darwin)  ;; macOS用
   (set-file-name-coding-system 'utf-8-hfs)
   (setq locale-coding-system 'utf-8-hfs))
 
-;;; 改行コードの表示
-(setq eol-mnemonic-dos  "(CRLF)")
-(setq eol-mnemonic-mac  "(CR)")
-(setq eol-mnemonic-unix "(LF)")
+;;;;;; [Group] File Settings - ファイル操作関連 ;;;;;;
+;; 自動保存・バックアップ設定
+(setq backup-inhibited t
+      delete-auto-save-files t
+      make-backup-files nil
+      auto-save-default nil
+      create-lockfiles nil)
 
-;;; ファイル保存時の設定
-;; 行末の空白を削除
-;; (add-hook 'before-save-hook 'delete-trailing-whitespace)
-(defun my-toggle-delete-trailing-whitespace ()
-  "Markdown-mode のときのみ `delete-trailing-whitespace` を無効にする."
-  (if (derived-mode-p 'markdown-mode)
-      (remove-hook 'before-save-hook 'delete-trailing-whitespace t)
-    (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
-(add-hook 'markdown-mode-hook 'my-toggle-delete-trailing-whitespace)
-(add-hook 'after-change-major-mode-hook 'my-toggle-delete-trailing-whitespace)
-
-;;; ファイルの自動更新設定。ファイルの変更を自動的に反映
-(global-auto-revert-mode 1)
-(setq magit-auto-revert-mode t)
-
-;;; 表示設定
-(global-font-lock-mode t) ;; ソースコードを色付け
-(transient-mark-mode t)
-;; 日時表示
-(setq display-time-day-and-date t)
-(setq display-time-string-forms
-      '((format "%s/%s (%s) %s:%s"
-                month day dayname
-                24-hours minutes
-                ))
-      )
-(display-time)
-
-;;; インターフェースの設定
-(menu-bar-mode -1)                    ;; メニューバーを消す
-(if window-system (tool-bar-mode -1)) ;; ツールバーを消す
-
-;;; カーソル設定
-(blink-cursor-mode 0) ;; カーソルの点滅を止める
-
-;;; 評価設定
-(setq eval-expression-print-length nil) ;; evalした結果を全部表示
-(column-number-mode t)  ;; カーソル位置の列番号表示
-(line-number-mode t)    ;; カーソル位置の行番号表示
-
-;;; システム設定
-(setq ring-bell-function 'ignore) ;; エラー音を鳴らさない
-;; save時にmode line を光らせる
+;; save時にmode-line を一瞬光らせる
 (add-hook 'after-save-hook
           (lambda ()
             (let ((orig-fg (face-background 'mode-line)))
@@ -65,85 +31,82 @@
                                    (lambda (fg) (set-face-background 'mode-line fg))
                                    orig-fg))))
 
-;;; 行設定
-(setq kill-whole-line t)         ;; 行の先頭でC-kを一回押すだけで行全体を消去する
-(setq require-final-newline nil) ;; 最終行に必ず一行挿入しない
-
-;;; バックアップ設定
-(setq backup-inhibited t)       ;; バックアップファイルを作らない
-(setq delete-auto-save-files t) ;; 終了時にオートセーブファイルを削除
-(setq make-backup-files nil)    ;; バックアップを作成しない
-(setq auto-save-default nil)    ;; オートセーブを無効にする
-(setq create-lockfiles nil)     ;; ロックファイルを作成しない
-
-;;; 補完設定
-(setq completion-ignore-case t) ;; 補完時に大文字小文字を区別しない
-(setq read-file-name-completion-ignore-case t)
-(icomplete-mode 1)              ;; 補完可能なものを随時表示
-
-;;; クリップボード設定
-(setq x-select-enable-clipboard t) ;; クリップボードをシステムと共有
-
-;;; 履歴設定
-(setq history-length 3000)          ;; 履歴数を大きくする
-(savehist-mode 1)                   ;; ミニバッファの履歴を保存する
-(setq recentf-max-menu-items 10)    ;; 最近使ったファイルの表示数
-(setq recentf-max-saved-items 3000) ;; 最近開いたファイルを保存する数を増やす
-
-;;; シェルスクリプト（shebangがあるファイル）の保存時に実行権を付与
+;; シェルスクリプト（shebangがあるファイル）の保存時に実行権を付与
 (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
 
-;;; リージョンの大文字小文字変換を有効か
-;; C-x C-u -> upcase
-;; C-x C-l -> downcase
-(put 'upcase-region 'disabled nil)
-(put 'downcase-region 'disabled nil)
+;; 行末の空白を削除
+(defun my-toggle-delete-trailing-whitespace ()
+  "Markdown-mode のときのみ `delete-trailing-whitespace` を無効にする."
+  (if (derived-mode-p 'markdown-mode)
+      (remove-hook 'before-save-hook 'delete-trailing-whitespace t)
+    (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
+(add-hook 'markdown-mode-hook 'my-toggle-delete-trailing-whitespace)
+(add-hook 'after-change-major-mode-hook 'my-toggle-delete-trailing-whitespace)
 
-;;; 現在の関数名をウィンドウ上部に表示
-(which-function-mode 1)
+;;;;;; [Group] UI Settings - インターフェース ;;;;;;
+(menu-bar-mode -1)                      ; メニューバーを消す
+(when window-system
+  (tool-bar-mode -1))                   ; ツールバーを消す
+(blink-cursor-mode 0)                   ; カーソルの点滅を止める
+(column-number-mode t)                  ; カーソル位置の列番号表示
+(line-number-mode t)                    ; カーソル位置の行番号表示
+(setq frame-title-format (format "%%f - Emacs@%s" (system-name))) ; タイトルバーにフルパス表示
+(fset 'yes-or-no-p 'y-or-n-p)           ; 確認ダイアログを簡略化 (yes/no → y/n)
+(setq eval-expression-print-length nil) ; evalした結果を全部表示
+(setq ring-bell-function 'ignore)       ; エラー音を鳴らさない
 
-;;; タイトルバーにフルパス表示
-(setq frame-title-format (format "%%f - Emacs@%s" (system-name)))
+;; タブ幅・インデント設定
+(setq-default tab-width 4
+              indent-tabs-mode nil)
 
-;;; narrowing を禁止
-(put 'narrow-to-region 'disabled nil)
+;; 表示設定
+(global-font-lock-mode t)               ; ソースコードを色付け
+(transient-mark-mode t)
 
-;;; 行番号表示
+;; 行設定
+(setq kill-whole-line t)                ; 行の先頭でC-kを一回押すだけで行全体を消去する
+(setq require-final-newline nil)        ; 最終行に必ず一行挿入しない
+
+;;;;;; [Group] Line Number Settings - 行番号表示 ;;;;;;
 (if (version< emacs-version "29")
     (global-linum-mode t)               ; Emacs28 以前
   (global-display-line-numbers-mode t)) ; Emacs29 以降
-(setq linum-format "%4d ") ;; 4 桁分の表示領域を確保する
-(setq linum-delay t)       ;; 軽くする処理
+(setq linum-format "%4d "
+      linum-delay t)
 
-;;; 確認ダイアログを簡略化 (yes no → y n)
-(fset 'yes-or-no-p 'y-or-n-p)
+;;;;;; [Group] Completion - 補完設定 ;;;;;;
+(setq completion-ignore-case t
+      read-file-name-completion-ignore-case t)
 
-;;; タブの設定
-(setq-default tab-width 4)
-(setq-default indent-tabs-mode nil)
-(setq tab-stop-list '(4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
-                        64 68 72 76 80 84 88 92 96 100 104 108 112 116 120))
+;;;;;; [Group] Clipboard - クリップボード設定 ;;;;;;
+(setq x-select-enable-clipboard t) ;; クリップボードをシステムと共有
 
-;;; diff 設定
-(setq ediff-window-setup-function 'ediff-setup-windows-plain) ;; コントロール用のバッファを同一フレーム内に表示
-(setq ediff-split-window-function 'split-window-horizontally) ;; diff のバッファを上下ではなく左右に並べる
+;;;;;; [Group] Functionality - 機能拡張 ;;;;;;
+;; narrowing 禁止
+(put 'narrow-to-region 'disabled nil)
+;; `upcase-region` / `downcase-region` を有効化
+(put 'upcase-region 'disabled nil)   ; C-x C-u -> upcase
+(put 'downcase-region 'disabled nil) ; C-x C-l -> downcase
+;; 現在の関数名をウィンドウ上部に表示
+(which-function-mode 1)
 
-;;; スクロール設定
-;; 1行ずつスクロール
+;;;;;; [Group] Scrolling - スクロール設定 ;;;;;;
 (setq scroll-conservatively 35
       scroll-margin 0
-      scroll-step 1)
-(setq comint-scroll-show-maximum-output t) ;; shell-mode
+      scroll-step 1
+      comint-scroll-show-maximum-output t)
 
-;;; ガベージコレクション設定
-(setq gc-cons-percentage 0.2
-      gc-cons-threshold (* 128 1024 1024))
+;;;;;; [Group] Garbage Collection - GC設定 ;;;;;;
+(setq gc-cons-threshold (* 128 1024 1024)
+      gc-cons-percentage 0.2
+      garbage-collection-messages t)
 (add-hook 'focus-out-hook #'garbage-collect)
-(setq garbage-collection-messages t) ;; ガベージコレクションのメッセージを表示
 
-;;; その他の設定
-(setq vc-follow-symlinks t)      ;; bzrやsvn管理下のファイルをシンボリックリンク経由で開くとき確認をとらない
-(setq inhibit-startup-message t) ;; 起動時のメッセージを表示しない
-(setq flyspell-use-meta-tab nil) ;; M-TABのキーバインドを変更しない
-(global-auto-revert-mode 1)      ;; バッファ自動再読み込み
-(setq native-comp-async-report-warnings-errors 'silent) ;; native-comp の警告を抑止
+;;;;;; [Group] Misc - その他 ;;;;;;
+(setq vc-follow-symlinks t
+      inhibit-startup-message t
+      flyspell-use-meta-tab nil
+      native-comp-async-report-warnings-errors 'silent)
+
+(provide '00-common)
+;;; 00-common.el ends here
