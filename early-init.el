@@ -10,21 +10,21 @@
 ;;;;; [Group] Auto Files Place ;;;;;
 ;;; Emacs の各種ディレクトリとファイルパスの設定
 (defvar my-emacs-dir   (expand-file-name user-emacs-directory))         ;; /path/to/userhome/.emacs.d/
+(defvar my-elisp-dir   (expand-file-name "loads/elisp/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
+(defvar my-custom-dir  (expand-file-name "custom/" my-emacs-dir))       ;; /path/to/userhome/.emacs.d/custom
 (defvar my-history-dir (expand-file-name "tmp/hist/" my-emacs-dir))     ;; /path/to/userhome/.emacs.d/tmp/hist/
 (defvar my-backup-dir  (expand-file-name "tmp/backup/" my-emacs-dir))   ;; /path/to/userhome/.emacs.d/tmp/backup/
 (defvar my-package-dir (expand-file-name "tmp/package/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/tmp/package/
 (defvar my-db-dir      (expand-file-name "tmp/database/" my-emacs-dir)) ;; /path/to/userhome/.emacs.d/tmp/database/
-(defvar my-elisp-dir   (expand-file-name "loads/elisp/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
-(defvar my-custom-dir  (expand-file-name "custom/" my-emacs-dir))       ;; /path/to/userhome/.emacs.d/custom
 
 ;;; パス設定ヘルパ関数
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))
+(defun my-set-elisp (&rest args) (expand-file-name (apply 'concat args) my-elisp-dir))
+(defun my-set-custom (&rest args) (expand-file-name (apply 'concat args) my-custom-dir))
 (defun my-set-history (&rest args) (expand-file-name (apply 'concat args) my-history-dir))
 (defun my-set-backup (&rest args) (expand-file-name (apply 'concat args) my-backup-dir))
 (defun my-set-package (&rest args) (expand-file-name (apply 'concat args) my-package-dir))
 (defun my-set-db (&rest args) (expand-file-name (apply 'concat args) my-db-dir))
-(defun my-set-elisp (&rest args) (expand-file-name (apply 'concat args) my-elisp-dir))
-(defun my-set-custom (&rest args) (expand-file-name (apply 'concat args) my-custom-dir))
 
 ;;; システムのゴミ箱ディレクトリ
 (setq trash-directory (my-set-history "trash/"))
