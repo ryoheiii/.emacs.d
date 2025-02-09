@@ -417,9 +417,9 @@
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :straight t
+  :custom
+  (mc/list-file (my-set-history "mc-lists.el"))
   :config
-  (setq mc/list-file (my-set-history "mc-lists.el"))  ;; my-set-history@early-init.el 関数を使った設定
-
   ;; `repeat-mode` 用の `repeat-map` を作成
   (defvar-keymap my/mc-repeat-map
     :doc "Keymap for repeating multiple-cursors commands"
@@ -448,10 +448,9 @@
     "o"  'mc/sort-regions
     "C-o" 'mc/sort-regions
     "O"  'mc/reverse-regions)
-  (global-set-key (kbd "C-q") my/mc-repeat-map) ;; `C-q` をプレフィックスキーとして設定
-  (repeat-mode 1) ;; `repeat-mode` を有効化
+  (global-set-key (kbd "C-q") my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
+  (repeat-mode 1) ; `repeat-mode` を有効化
   )
-
 
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
