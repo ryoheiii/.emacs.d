@@ -14,10 +14,10 @@
 (defvar my-emacs-dir   (expand-file-name user-emacs-directory))         ;; /path/to/userhome/.emacs.d/
 (defvar my-elisp-dir   (expand-file-name "loads/elisp/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
 (defvar my-custom-dir  (expand-file-name "custom/" my-emacs-dir))       ;; /path/to/userhome/.emacs.d/custom
-(defvar my-history-dir (expand-file-name "tmp/hist/" my-emacs-dir))     ;; /path/to/userhome/.emacs.d/tmp/hist/
-(defvar my-backup-dir  (expand-file-name "tmp/backup/" my-emacs-dir))   ;; /path/to/userhome/.emacs.d/tmp/backup/
-(defvar my-package-dir (expand-file-name "tmp/package/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/tmp/package/
-(defvar my-db-dir      (expand-file-name "tmp/database/" my-emacs-dir)) ;; /path/to/userhome/.emacs.d/tmp/database/
+(defvar my-history-dir (expand-file-name "var/hist/" my-emacs-dir))     ;; /path/to/userhome/.emacs.d/var/hist/
+(defvar my-backup-dir  (expand-file-name "var/backup/" my-emacs-dir))   ;; /path/to/userhome/.emacs.d/var/backup/
+(defvar my-package-dir (expand-file-name "var/package/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/var/package/
+(defvar my-db-dir      (expand-file-name "var/database/" my-emacs-dir)) ;; /path/to/userhome/.emacs.d/var/database/
 
 ;;; パス設定ヘルパ関数
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))

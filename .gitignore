@@ -4,7 +4,7 @@
 *.dat
 elpa/
 eln-cache/
-tmp/*
+var/*
 loads/elisp/*
 loads/site-elisp/*
 custom/snippets/*
