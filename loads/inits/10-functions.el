@@ -8,16 +8,25 @@
 ;;; 指定した PACKAGE が `straight.el` で管理すべきかを判定する関数
 (defun my/should-use-straight (package)
   "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
-`t` なら `straight t` を追加すべき、`nil` なら不要。"
+`t` なら `straight t`、`nil` なら `straight nil` を追加すべき。"
   (interactive
-   (list (intern (completing-read "Package name: " (mapcar #'symbol-name package-activated-list)))))
-  (if (or (featurep package) (locate-library (symbol-name package)))
+   (list (intern (completing-read "Package name: "
+                                  (mapcar #'symbol-name
+                                          (seq-filter #'symbolp (all-completions "" obarray 'boundp)))))))
+  (let* ((lib (locate-library (symbol-name package)))
+         (is-built-in
+          (or (and (fboundp 'package-built-in-p) (package-built-in-p package)) ;; Emacs 28+ の組み込み判定
+              (and lib
+                   (string-match-p
+                    (regexp-quote (file-truename (concat data-directory "lisp/"))) ;; 環境非依存の built-in パス
+                    (file-truename lib))))))
+    (if is-built-in
+        (progn
+          (message "Package '%s' is built-in. `straight nil` is recommended." package)
+          nil)
       (progn
-        (message "Package '%s' is built-in. `straight t` is NOT needed." package)
-        nil)
-    (progn
-      (message "Package '%s' is NOT built-in. `straight t` is recommended." package)
-      t)))
+        (message "Package '%s' is NOT built-in. `straight t` is recommended." package)
+        t))))
 
 ;;;;;; [Group] File Operations - ファイル関連 ;;;;;;
 ;;; ファイルパス/ファイル名をクリップボードに保存
@@ -73,7 +82,6 @@
         (forward-line 1)))  ; Move to the next line
     (goto-char end)
     (insert result)))  ; Insert the result into the buffer
-
 
 ;;;;;; [Group] Window Management - ウィンドウ管理 ;;;;;;
 ;;; ウィンドウ関連操作

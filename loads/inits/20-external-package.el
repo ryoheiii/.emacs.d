@@ -572,15 +572,15 @@
 ;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
 (use-package org-modern
   :disabled t
-  :straight nil
-  :after org
+  :straight t
+  :after (org)
   :hook (org-mode . org-modern-mode)
   )
 
 ;;; org-download - 画像のクリップボード貼り付け
 (use-package org-download
   :straight t
-  :after org
+  :after (org)
   :bind (:map org-mode-map
               ("C-c i" . org-download-clipboard))
   :custom
@@ -595,7 +595,7 @@
 ;;; org-roam - ノート管理
 (use-package org-roam
   :straight t
-  :after org
+  :after (org)
   :custom
   (org-roam-directory "~/org/roam")
   (org-roam-database-connector 'sqlite)
@@ -614,7 +614,7 @@
 ;;; org-agenda - スケジュール管理
 (use-package org-agenda
   :straight nil
-  :after org
+  :after (org)
   :bind ("C-c a" . org-agenda)
   :custom
   (org-agenda-files (directory-files-recursively "~/org/agenda/" "\\.org$"))
