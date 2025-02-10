@@ -40,38 +40,50 @@ setup_env() {
     echo "Setting up Emacs environment..."
     sudo apt-get update
 
-    ## Emacs インストールに必要なパッケージのインストール
+    ##### Emacs インストールに必要なパッケージのインストール
+    ### 両方の環境 (GUI & TUI) で必要なもの
     GCC_VERSION=$(gcc -dumpversion | cut -d. -f1)
     echo "Detected GCC version: $GCC_VERSION"
+    ## 必須
     sudo apt-get install -y build-essential autoconf automake texinfo
+    ## 推奨
     sudo apt-get install -y libgccjit-${GCC_VERSION}-dev # ネイティブコンパイル用 (Emacs29以降)
-    sudo apt-get install -y libgnutls28-dev              # gnutls サポート
-    sudo apt-get install -y libjansson-dev               # JSON サポート
+    sudo apt-get install -y libsqlite3-dev               # SQLite バックエンド (Org-roam など)
+    sudo apt-get install -y libtree-sitter-dev           # Tree-sitter (シンタックスハイライト)
+    sudo apt-get install -y libxml2-dev                  # XML パース (shr.el, EWW)
+    sudo apt-get install -y zlib1g-dev                   # 圧縮ライブラリ (gzip など)
+
+    ### GUI (X11/GTK) で必要なもの
+    ## 必須
+    sudo apt-get install -y libgtk-3-dev                 # GTK3 ベースの GUI サポート
+    sudo apt-get install -y libgnutls28-dev              # TLS (HTTPS/SSL) サポート
+    sudo apt-get install -y libfreetype6-dev             # フォントサポート
+    # X11 では必須、GTK3 を使う場合は不要
+    sudo apt-get install -y libxft-dev                   # フォント描画サポート
+    # sudo apt-get install -y libxkbcommon-dev             # キーボード入力処理
+    # sudo apt-get install -y libxrandr-dev                # 画面サイズ変更のサポート
+    sudo apt-get install -y libxt-dev                    # X Toolkit サポート
+    ## 推奨
     sudo apt-get install -y libjpeg-dev                  # JPEG 画像のサポート
     sudo apt-get install -y libgif-dev                   # GIF 画像のサポート
     sudo apt-get install -y libpng-dev                   # PNG 画像のサポート
-    sudo apt-get install -y libtiff-dev                  # TIFF 画像のサポート
+    # sudo apt-get install -y libtiff-dev                  # TIFF 画像のサポート
     sudo apt-get install -y librsvg2-dev                 # SVG 画像のサポート
-    sudo apt-get install -y libxpm-dev                   # XPM 画像のサポート
-    sudo apt-get install -y libncurses-dev               # 端末 UI 用 (TUI)
-    sudo apt-get install -y libgtk-3-dev                 # GTK3 GUI サポート
-    sudo apt-get install -y libxaw7-dev                  # Xaw3d 用 (GUI の一部)
-    sudo apt-get install -y libxft-dev                   # フォント描画サポート
-    sudo apt-get install -y libxkbcommon-dev             # キーボード入力処理
-    sudo apt-get install -y libxrandr-dev                # 画面サイズ変更のサポート
-    sudo apt-get install -y libxt-dev                    # X Toolkit サポート
-    sudo apt-get install -y libharfbuzz-dev              # テキストレンダリング用
-    sudo apt-get install -y libfreetype6-dev             # フォントサポート
-    sudo apt-get install -y libsystemd-dev               # systemd の統合
-    sudo apt-get install -y libsqlite3-dev               # SQLite バックエンド (Org-roam など)
-    sudo apt-get install -y libtree-sitter-dev           # Tree-sitter (シンタックスハイライト)
-    sudo apt-get install -y libxml2-dev                  # XML パース用
-    sudo apt-get install -y zlib1g-dev                   # 圧縮機能
-    sudo apt-get install -y liblcms2-dev                 # カラーマネジメント
-    sudo apt-get install -y libwebp-dev                  # WebP 画像サポート
-    sudo apt-get install -y libgpm-dev                   # 端末でのマウスサポート
+    # sudo apt-get install -y libxpm-dev                   # XPM 画像のサポート
+    # sudo apt-get install -y libxaw7-dev                  # Xaw3d 用 (GUI の一部)
+    sudo apt-get install -y libharfbuzz-dev              # 高品質なフォントレンダリング (ligature.el など使う場合に必須)
+    # sudo apt-get install -y libsystemd-dev               # systemd の統合
+    # sudo apt-get install -y liblcms2-dev                 # カラーマネジメント
+    # sudo apt-get install -y libwebp-dev                  # WebP 画像サポート
 
-    ## Emacs 利用に必要なパッケージのインストール
+    ### ターミナル (TUI) で必要なもの
+    ## 必須
+    sudo apt-get install -y libncurses-dev               # 端末 UI 用 (TUI)
+    sudo apt-get install -y libgpm-dev                   # 端末でのマウスサポート
+    ## 推奨
+    # sudo apt-get install -y libjansson-dev               # JSON パース (LSP・eglot 用)
+
+    ##### Emacs 利用に必要なパッケージのインストール
     sudo apt-get install -y clang libclang-dev           # Clang 用
     sudo apt-get install -y elpa-color-theme-modern      # カラーテーマ用
     sudo apt-get install -y fonts-ricty-diminished       # フォント用
