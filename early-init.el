@@ -75,6 +75,17 @@
                 (delete-directory default-snippets t)
                 (message "Deleted unwanted default snippets at %s" default-snippets)))))
 
+;;; emacs 起動後に ~/.emacs.d/auto-save-list が生成される課題への対策（正常系では発生しない）
+;; ディレクトリが存在する場合に削除
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (let ((default-auto-save-list (my-set-emacs "auto-save-list/")))
+              (when (file-exists-p default-auto-save-list)
+                (delete-directory default-auto-save-list t)
+                (message "Deleted unwanted default auto-save-list at %s" default-auto-save-list)))))
+
+
+
 
 
 ;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;

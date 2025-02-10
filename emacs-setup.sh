@@ -19,6 +19,7 @@ Usage: $0 {setup|install|uninstall|clean} [OPTIONS]
 
 Options:
   -s, --setup               Install dependent packages (Install dependencies).
+  -l, --list                Show available Emacs versions for installation.
   -i <ver>, --install <ver> Download, build, and install Emacs <ver>. e.g. <ver>=29.4
   -u, --uninstall           Uninstall the locally installed Emacs.
   -c, --clean               Remove Emacs temporary files.
@@ -76,6 +77,11 @@ setup_env() {
     echo "Emacs setup-env complete."
 }
 
+##### インストール可能な Emacs バージョンを取得 #####
+list_emacs_versions() {
+    echo "Fetching available Emacs versions..."
+    curl -s http://ftp.gnu.org/gnu/emacs/ | grep -oP 'emacs-\d+\.\d+(?:\.\d+)?' | sed 's/emacs-//' | sort -V | uniq
+}
 
 ##### Emacs インストール #####
 # 参考: https://myemacs.readthedocs.io/ja/latest/build.html
@@ -132,6 +138,7 @@ clean() {
 ACTION="$1"; shift
 case "$ACTION" in
     --setup-env|-s) setup_env ;;
+    --list|-l) list_emacs_versions ;;
     --install-emacs|-i) install_emacs "$1" ;;
     --uninstall-emacs|-u) uninstall_emacs ;;
     --clean|-c) clean ;;
