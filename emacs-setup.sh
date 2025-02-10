@@ -43,7 +43,7 @@ setup_env() {
 
     sudo apt-get update
 
-    ##### Emacs インストールに必要なパッケージのインストール
+    ##### Emacs インストール時に必要なパッケージのインストール
     ### 両方の環境 (GUI & TUI) で必要なもの
     GCC_VERSION=$(gcc -dumpversion | cut -d. -f1)
     echo "Detected GCC version: $GCC_VERSION"
@@ -86,7 +86,7 @@ setup_env() {
     ## 推奨
     # sudo apt-get install -y libjansson-dev               # JSON パース (LSP・eglot 用)
 
-    ##### Emacs 利用に必要なパッケージのインストール
+    ##### Emacs 利用時に必要なパッケージのインストール
     sudo apt-get install -y clang libclang-dev           # Clang 用
     sudo apt-get install -y elpa-color-theme-modern      # カラーテーマ用
     sudo apt-get install -y fonts-ricty-diminished       # フォント用
