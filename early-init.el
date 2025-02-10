@@ -11,18 +11,29 @@
 
 ;;;;; [Group] Auto Files Place - 自動生成ファイル関連制御 ;;;;;
 ;;; Emacs の各種ディレクトリとファイルパスの設定
-(defvar my-emacs-dir   (expand-file-name user-emacs-directory))         ;; /path/to/userhome/.emacs.d/
-(defvar my-elisp-dir   (expand-file-name "loads/elisp/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
-(defvar my-custom-dir  (expand-file-name "custom/" my-emacs-dir))       ;; /path/to/userhome/.emacs.d/custom
-(defvar my-history-dir (expand-file-name "var/hist/" my-emacs-dir))     ;; /path/to/userhome/.emacs.d/var/hist/
-(defvar my-backup-dir  (expand-file-name "var/backup/" my-emacs-dir))   ;; /path/to/userhome/.emacs.d/var/backup/
-(defvar my-package-dir (expand-file-name "var/package/" my-emacs-dir))  ;; /path/to/userhome/.emacs.d/var/package/
-(defvar my-db-dir      (expand-file-name "var/database/" my-emacs-dir)) ;; /path/to/userhome/.emacs.d/var/database/
+(defvar my-emacs-dir    (expand-file-name user-emacs-directory))      ;; /path/to/userhome/.emacs.d/
+
+(defvar my-loads-dir    (expand-file-name "loads/"    my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads
+(defvar my-elisp-dir    (expand-file-name "elisp/"    my-loads-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
+(defvar my-straight-dir (expand-file-name "straight/" my-loads-dir))  ;; /path/to/userhome/.emacs.d/loads/straight
+
+(defvar my-custom-dir   (expand-file-name "custom/"   my-emacs-dir))  ;; /path/to/userhome/.emacs.d/custom
+
+(defvar my-var-dir      (expand-file-name "var/"      my-emacs-dir))  ;; /path/to/userhome/.emacs.d/var
+(defvar my-history-dir  (expand-file-name "hist/"     my-var-dir))    ;; /path/to/userhome/.emacs.d/var/hist/
+(defvar my-backup-dir   (expand-file-name "backup/"   my-var-dir))    ;; /path/to/userhome/.emacs.d/var/backup/
+(defvar my-package-dir  (expand-file-name "package/"  my-var-dir))    ;; /path/to/userhome/.emacs.d/var/package/
+(defvar my-db-dir       (expand-file-name "database/" my-var-dir))    ;; /path/to/userhome/.emacs.d/var/database/
 
 ;;; パス設定ヘルパ関数
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))
+
+(defun my-set-loads (&rest args) (expand-file-name (apply 'concat args) my-loads-dir))
 (defun my-set-elisp (&rest args) (expand-file-name (apply 'concat args) my-elisp-dir))
+(defun my-set-straight (&rest args) (expand-file-name (apply 'concat args) my-straight-dir))
+
 (defun my-set-custom (&rest args) (expand-file-name (apply 'concat args) my-custom-dir))
+
 (defun my-set-history (&rest args) (expand-file-name (apply 'concat args) my-history-dir))
 (defun my-set-backup (&rest args) (expand-file-name (apply 'concat args) my-backup-dir))
 (defun my-set-package (&rest args) (expand-file-name (apply 'concat args) my-package-dir))
@@ -97,16 +108,15 @@
 
 
 ;;;;; [Group] Package Management - パッケージ管理 ;;;;;
-;;; **straight.el の設定**
-(setq straight-base-dir (my-set-elisp "")) ;; .last-package-update-day など
-
-;; package.el を無効化
+;;; 'straight.el' の設定
+;; ベースディレクトリの指定
+(setq straight-base-dir (my-set-loads ""))
+;; 'package.el' を無効化
 (setq package-enable-at-startup nil)
-
-;;; **straight.el のインストール**
+;; 'straight.el' のインストール
 (defvar bootstrap-version)
 (let ((bootstrap-file
-       (my-set-elisp "straight/repos/straight.el/bootstrap.el"))
+       (my-set-straight "repos/straight.el/bootstrap.el"))
       (bootstrap-version 7))
   (unless (file-exists-p bootstrap-file)
     (with-current-buffer

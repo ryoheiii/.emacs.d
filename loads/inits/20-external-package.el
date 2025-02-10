@@ -543,7 +543,9 @@
 ;;;;; [Group] Org - Org 関係 ;;;;;
 ;;; Org - org 設定
 (use-package org
+  :straight nil
   :hook ((org-mode . visual-line-mode))  ; 自動改行の有効化
+  :defer t
   :custom
   (org-hide-leading-stars t)             ; 見出しの*を非表示
   (org-startup-indented t)               ; インデント表示をデフォルトで有効化
@@ -563,12 +565,14 @@
 
 ;;; org-indent - インデントを自動調整
 (use-package org-indent
+  :straight nil
   :hook (org-mode . org-indent-mode)
   )
 
 ;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
 (use-package org-modern
   :disabled t
+  :straight nil
   :after org
   :hook (org-mode . org-modern-mode)
   )
@@ -609,6 +613,7 @@
 
 ;;; org-agenda - スケジュール管理
 (use-package org-agenda
+  :straight nil
   :after org
   :bind ("C-c a" . org-agenda)
   :custom
@@ -1013,6 +1018,7 @@
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
 ;;; Mozc - 日本語入力の設定
 (use-package mozc
+  :straight nil
   :config
   (set-language-environment "Japanese")
   (prefer-coding-system 'utf-8)
@@ -1020,6 +1026,7 @@
 
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
+  :straight nil
   :custom
   (ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
   (ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
@@ -1036,6 +1043,7 @@
 
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
+  :straight nil
   :hook ((prog-mode . (lambda ()
                         (unless (derived-mode-p 'emacs-lisp-mode)                    ; Emacs Lisp を除外
                           (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ; 日本語無視

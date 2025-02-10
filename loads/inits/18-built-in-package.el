@@ -6,6 +6,7 @@
 
 ;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
 (use-package ediff
+  :straight nil
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain) ;; コントロールバッファを同一フレームに表示
   (ediff-split-window-function 'split-window-horizontally) ;; diff のバッファを左右に配置
@@ -14,12 +15,14 @@
 ;;;;;; [Group] Completion - 補完 ;;;;;;
 ;;; Icomplete - 補完可能なものを随時表示
 (use-package icomplete
+  :straight nil
   :hook (after-init . icomplete-mode)
   )
 
 ;;;;;; [Group] Visual Enhancements - 視覚的な補助 ;;;;;;
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren
+  :straight nil
   :hook (after-init . show-paren-mode)
   :custom
   (show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる
@@ -27,6 +30,7 @@
 
 ;;; Whitespace - 空白文字の視覚化。スペース、タブ、行末の空白などを明確に表示
 (use-package whitespace
+  :straight nil
   :hook (after-init . global-whitespace-mode)
   :custom
   (whitespace-style '(face
@@ -49,6 +53,7 @@
 
 ;;; Display-fill-column-indicator - テキストの折り返し位置を視覚的に示す
 (use-package display-fill-column-indicator
+  :straight nil
   :hook ((prog-mode . display-fill-column-indicator-mode)
          (markdown-mode . display-fill-column-indicator-mode))
   :custom
@@ -58,6 +63,7 @@
 
 ;;; 表示設定
 (use-package display-time
+  :straight nil
   :hook (after-init . display-time-mode)
   :custom
   (display-time-day-and-date t)
@@ -68,6 +74,7 @@
 ;;;;;; [Group] Search - 検索 ;;;;;;
 ;;; Grep - ファイル内検索機能の設定。特定のパターンに基づいてファイルを検索
 (use-package grep
+  :straight nil
   :bind ("C-c g" . grep)
   :config
   (setq grep-command-before-query "grep -nr -e ")
@@ -90,17 +97,20 @@
 ;;;;;; [Group] Editing - 編集補助 ;;;;;;
 ;; Elec-pair - 括弧の自動補完設定。入力中の括弧を自動的にペアで補完
 (use-package elec-pair
+  :straight nil
   :hook (after-init . electric-pair-mode)
   )
 
 ;;; move-text - テキスト行の移動機能
 (use-package move-text
+  :straight nil
   :bind (("C-M-p" . move-text-up)
          ("C-M-n" . move-text-down))
   )
 
 ;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存
 (use-package savehist
+  :straight nil
   :hook (after-init . savehist-mode)
   :custom
   (history-length 3000)
@@ -111,6 +121,7 @@
 
 ;;; Saveplace - カーソル位置の保存。ファイルを再度開いた時に前回のカーソル位置を保持
 (use-package saveplace
+  :straight nil
   :hook (after-init . save-place-mode)
   :custom
   (save-place-file (my-set-history "places")) ;; my-set-history @early-init.el
@@ -118,12 +129,14 @@
 
 ;;; 他プロセスの編集をバッファに反映
 (use-package autorevert
+  :straight nil
   :hook (after-init . global-auto-revert-mode)
   :custom (magit-auto-revert-mode t)
   )
 
 ;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存
 (use-package files
+  :straight nil
   :custom (auto-save-visited-interval 30)
   :config
   (auto-save-visited-mode +1)
@@ -132,12 +145,14 @@
 ;;;;;; [Group] Window & Buffer Management - ウィンドウ・バッファ管理 ;;;;;;
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove
+  :straight nil
   :config
   (windmove-default-keybindings) ;; Shift + 矢印キーでウィンドウ間を移動
   )
 
 ;;; Uniquify - バッファ名のユニーク化。同名ファイルを開いた際にディレクトリ名で区別
 (use-package uniquify
+  :straight nil
   :custom
   (uniquify-buffer-name-style 'forward)
   (uniquify-separator "/")
@@ -147,6 +162,7 @@
 
 ;;; Tab-bar - Emacsのタブ機能をカスタマイズ
 (use-package tab-bar
+  :straight nil
   :hook (after-init . tab-bar-mode)
   :custom
   (tab-bar-new-tab-choice "*scratch*")
@@ -174,11 +190,13 @@
 ;;;;;; [Group] Performance Optimization - パフォーマンス最適化 ;;;;;;
 ;;; So-long - 長い行を含むファイルを最適化
 (use-package so-long
+  :straight nil
   :hook (after-init . global-so-long-mode)
   )
 
 ;;; repeat - キーのリピート (multiple-cursors などで利用)
 (use-package repeat
+  :straight nil
   :hook (after-init . repeat-mode)
   )
 

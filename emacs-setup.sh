@@ -11,6 +11,7 @@ EMACS_INSTALL_PREFIX="$HOME/.local"
 # clean
 VAR_DIR="$EMACS_DIR/var"
 ELISP_DIR="$EMACS_DIR/loads/elisp"
+STRAIGHT_DIR="$EMACS_DIR/loads/straight"
 
 ##### ヘルプ #####
 usage() {
@@ -152,6 +153,7 @@ clean() {
     echo "Cleaning Emacs auto created files..."
     [ -d "$VAR_DIR" ] && echo "Removing $VAR_DIR ..." && rm -rf "$VAR_DIR"
     [ -d "$ELISP_DIR" ] && echo "Removing contents of $ELISP_DIR ..." && rm -rf "$ELISP_DIR"/*
+    [ -d "$STRAIGHT_DIR" ] && echo "Removing $STRAIGHT_DIR ..." && rm -rf "$STRAIGHT_DIR"
     echo "Emacs clean complete."
 }
 

@@ -6,6 +6,7 @@
 
 ;;;;;; [Group] Code Folding - コード折りたたみ ;;;;;;
 (use-package hideshow
+  :straight nil
   :bind (("C-\\" . hs-toggle-hiding)
          ("<f5>" . hs-toggle-hiding))
   :hook ((c-mode          . hs-minor-mode)
@@ -17,6 +18,7 @@
 ;;;;;; [Group] Programming Modes - プログラミングモード ;;;;;;
 ;;; Elisp-mode - elisp-mode の設定
 (use-package elisp-mode
+  :straight nil
   :mode ("\\.el\\'" . emacs-lisp-mode)
   :hook (emacs-lisp-mode . my/emacs-lisp-mode-setup)
   :config
@@ -31,6 +33,7 @@
 
 ;;; Cc-mode - cc-mode の設定
 (use-package cc-mode
+  :straight nil
   :mode (("\\.C\\'"    . c-mode)
          ;; ("\\.cc\\'"   . cc-mode)
          ("\\.cc\\'"   . c-mode)  ; cc-mode ではなく c-mode に統一
@@ -61,6 +64,7 @@
 
 ;;;;;; [Group] Text Editing - テキスト編集 ;;;;;;
 (use-package text-mode
+  :straight nil
   :mode (("\\.txt\\'" . text-mode)
          ("\\.tmp\\'" . text-mode))
   :hook (text-mode . my/text-mode-setup)
