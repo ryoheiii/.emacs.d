@@ -15,15 +15,22 @@ ELISP_DIR="$EMACS_DIR/loads/elisp"
 ##### ヘルプ #####
 usage() {
     cat << EOF
-Usage: $0 {setup|install|uninstall|clean} [OPTIONS]
+Usage: $0 [OPTION]...
 
 Options:
-  -s, --setup               Install dependent packages (Install dependencies).
-  -l, --list                Show available Emacs versions for installation.
-  -i <ver>, --install <ver> Download, build, and install Emacs <ver>. e.g. <ver>=29.4
+  -s, --setup               Install required dependencies for Emacs.
+  -l, --list                List available Emacs versions for installation.
+  -i <ver>, --install <ver> Install Emacs <ver> (e.g., 29.4).
   -u, --uninstall           Uninstall the locally installed Emacs.
   -c, --clean               Remove Emacs temporary files.
-  -h, --help                Show this help message.
+  -h, --help                Show this help message and exit.
+
+Examples:
+  $0 --setup         Install dependencies.
+  $0 --list          Show available Emacs versions.
+  $0 --install 29.4  Install Emacs version 29.4.
+  $0 --uninstall     Remove the installed Emacs.
+  $0 --clean         Delete Emacs temporary files.
 EOF
     exit 1
 }
