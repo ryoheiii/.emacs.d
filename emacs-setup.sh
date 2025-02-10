@@ -15,7 +15,7 @@ ELISP_DIR="$EMACS_DIR/loads/elisp"
 ##### ヘルプ #####
 usage() {
     cat << EOF
-Usage: $0 [OPTION]...
+Usage: $0 [options]...
 
 Options:
   -s, --setup               Install required dependencies for Emacs.
@@ -23,7 +23,7 @@ Options:
   -i <ver>, --install <ver> Install Emacs <ver> (e.g., 29.4).
   -u, --uninstall           Uninstall the locally installed Emacs.
   -c, --clean               Remove Emacs temporary files.
-  -h, --help                Show this help message and exit.
+  -h, --help                Show this help message.
 
 Examples:
   $0 --setup         Install dependencies.
@@ -38,6 +38,9 @@ EOF
 ##### 関連パッケージインストール #####
 setup_env() {
     echo "Setting up Emacs environment..."
+
+    export DEBIAN_FRONTEND=noninteractive # Set non-interactive mode for apt-get
+
     sudo apt-get update
 
     ##### Emacs インストールに必要なパッケージのインストール
@@ -156,11 +159,11 @@ clean() {
 [ $# -eq 0 ] && { echo "Error: No action specified."; usage; }
 ACTION="$1"; shift
 case "$ACTION" in
-    --setup-env|-s) setup_env ;;
-    --list|-l) list_emacs_versions ;;
-    --install-emacs|-i) install_emacs "$1" ;;
-    --uninstall-emacs|-u) uninstall_emacs ;;
-    --clean|-c) clean ;;
-    --help|-h) usage ;;
+    -s|--setup)     setup_env ;;
+    -l|--list)      list_emacs_versions ;;
+    -i|--install)   install_emacs "$1" ;;
+    -u|--uninstall) uninstall_emacs ;;
+    -c|--clean)     clean ;;
+    -h|--help)      usage ;;
     *) echo "Error: Invalid argument '$ACTION'"; usage ;;
 esac
