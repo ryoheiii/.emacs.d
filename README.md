@@ -49,16 +49,15 @@ Emacs 起動後のキャッシュや一時ファイルを削除するには、�
 以下のパスを設定してください。
 
 ### 設定する項目
-- **Yasnippets**: ローカルスニペットのパスを `loads/inits/20-external-package.el` で設定
 - **Migemo**: 辞書のインストール場所を `loads/inits/20-external-package.el` で設定
 
 ---
 
 ## 3. 初回起動後の追加設定
-Emacs の初回起動後に、以下のコマンドを実行してください。
+Emacs の初回起動後、C/C++ ソースコードを開いて以下のコマンドを実行してください。
 
 ### 設定項目
-- **Irony サーバーの構築**: Emacs 起動後、以下のコマンドを実行  
+- **Irony サーバーの構築**: Emacs 起動後、C/C++ ソースコードを開いて以下のコマンドを実行
 ``` sh
  `M-x irony-install-server
 ```
