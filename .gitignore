@@ -16,3 +16,4 @@ custom/snippets/*
 custom/custom.el
 99-private.el
 README.html
+package.tar.gz
