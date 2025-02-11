@@ -4,14 +4,19 @@ set -e
 
 ##### 設定 #####
 EMACS_DIR="$HOME/.emacs.d"
+LOADS_DIR="$EMACS_DIR/loads"
+PACKAGE_DIR="straight"
 # install-emacs
 DL_DIR="$HOME/.local/downloads"
 EMACS_SRC_DIR="$DL_DIR/emacs"
 EMACS_INSTALL_PREFIX="$HOME/.local"
 # clean
 VAR_DIR="$EMACS_DIR/var"
-ELISP_DIR="$EMACS_DIR/loads/elisp"
-STRAIGHT_DIR="$EMACS_DIR/loads/straight"
+# packing/extract_package
+PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"
+PACKAGE_TARGET=("repos" "versions/default.el")
+PACKAGE_BUILD_CMD="emacs --batch --eval \"(setq user-emacs-directory \\\"$EMACS_DIR\\\")\" -l \"$EMACS_DIR/early-init.el\" -l \"$EMACS_DIR/init.el\" -f straight-rebuild-all"
+
 
 ##### ヘルプ #####
 usage() {
@@ -23,15 +28,21 @@ Options:
   -l, --list                List available Emacs versions for installation.
   -i <ver>, --install <ver> Install Emacs <ver> (e.g., 29.4).
   -u, --uninstall           Uninstall the locally installed Emacs.
-  -c, --clean               Remove Emacs temporary files.
+  -c, --clean               Remove Emacs auto generated files (excluding packages).
+  -C, --clean-all           Remove all Emacs auto genarated files (including packages).
+  -p, --packing-package     Archive the package directory ($PACKAGE_DIR).
+  -x, --extract-package     Extract the package archive to .emacs.d/loads/$PACKAGE_DIR.
   -h, --help                Show this help message.
 
 Examples:
-  $0 --setup         Install dependencies.
-  $0 --list          Show available Emacs versions.
+  $0 --setup
+  $0 --list
   $0 --install 29.4  Install Emacs version 29.4.
-  $0 --uninstall     Remove the installed Emacs.
-  $0 --clean         Delete Emacs temporary files.
+  $0 --uninstall
+  $0 --clean
+  $0 --clean-all
+  $0 --packing-package
+  $0 --extract-straight
 EOF
     exit 1
 }
@@ -51,21 +62,27 @@ setup_env() {
     ## 必須
     sudo apt-get install -y build-essential autoconf automake texinfo
     ## 推奨
+    sudo apt-get install -y pkg-config                   # C/C++ プロジェクトのライブラリ依存管理ツール
     sudo apt-get install -y libgccjit-${GCC_VERSION}-dev # ネイティブコンパイル用 (Emacs29以降)
     sudo apt-get install -y libsqlite3-dev               # SQLite バックエンド (Org-roam など)
     sudo apt-get install -y libtree-sitter-dev           # Tree-sitter (シンタックスハイライト)
     sudo apt-get install -y libxml2-dev                  # XML パース (shr.el, EWW)
-    sudo apt-get install -y zlib1g-dev                   # 圧縮ライブラリ (gzip など)
+    # sudo apt-get install -y libm17n-dev                  # 多言語テキスト処理
+    sudo apt-get install -y zlib1g zlib1g-dev            # 圧縮ライブラリ (gzip など)
+    # sudo apt-get install -y libacl1-dev                  # POSIX ACL（アクセス制御リスト)サポート
+    # sudo apt-get install -y libsystemd-dev               # systemd の統合
 
     ### GUI (X11/GTK) で必要なもの
     ## 必須
     sudo apt-get install -y libgtk-3-dev                 # GTK3 ベースの GUI サポート
     sudo apt-get install -y libgnutls28-dev              # TLS (HTTPS/SSL) サポート
     sudo apt-get install -y libfreetype6-dev             # フォントサポート
-    # X11 では必須、GTK3 を使う場合は不要
+    # sudo apt-get install -y libotf-dev                   # Opentype フォント処理のサポート
+    # X11 関連。GTK3 を使う場合は不要なものもあり
+    sudo apt-get install -y xorg-dev                     # X11 開発パッケージ
     sudo apt-get install -y libxft-dev                   # フォント描画サポート
-    # sudo apt-get install -y libxkbcommon-dev             # キーボード入力処理
-    # sudo apt-get install -y libxrandr-dev                # 画面サイズ変更のサポート
+    sudo apt-get install -y libxkbcommon-dev             # キーボード入力処理
+    sudo apt-get install -y libxrandr-dev                # 画面サイズ変更のサポート
     sudo apt-get install -y libxt-dev                    # X Toolkit サポート
     ## 推奨
     sudo apt-get install -y libjpeg-dev                  # JPEG 画像のサポート
@@ -76,14 +93,14 @@ setup_env() {
     # sudo apt-get install -y libxpm-dev                   # XPM 画像のサポート
     # sudo apt-get install -y libxaw7-dev                  # Xaw3d 用 (GUI の一部)
     sudo apt-get install -y libharfbuzz-dev              # 高品質なフォントレンダリング (ligature.el など使う場合に必須)
-    # sudo apt-get install -y libsystemd-dev               # systemd の統合
+    # sudo apt-get install -y libcairo-5c-dev              # 2Dグラフィックス
     # sudo apt-get install -y liblcms2-dev                 # カラーマネジメント
     # sudo apt-get install -y libwebp-dev                  # WebP 画像サポート
 
     ### ターミナル (TUI) で必要なもの
     ## 必須
-    sudo apt-get install -y libncurses-dev               # 端末 UI 用 (TUI)
-    sudo apt-get install -y libgpm-dev                   # 端末でのマウスサポート
+    sudo apt-get install -y libncurses-dev               # ターミナルでのテキスト UI 提供ライブラリ
+    sudo apt-get install -y libgpm-dev                   # General Purpose Mouse による端末でのマウスサポート
     ## 推奨
     # sudo apt-get install -y libjansson-dev               # JSON パース (LSP・eglot 用)
 
@@ -125,7 +142,7 @@ install_emacs() {
     # ビルドとインストール
     cd emacs
     ./autogen.sh
-    ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-tree-sitter
+    ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation
     make -j$(nproc)
     make install
 
@@ -148,24 +165,86 @@ uninstall_emacs() {
     echo "Emacs uninstallation complete."
 }
 
-##### Emacs クリーンアップ #####
+##### Emacs クリーンアップ（パッケージを除外） #####
 clean() {
-    echo "Cleaning Emacs auto created files..."
+    echo "Cleaning Emacs auto created files (excluding packages)..."
     [ -d "$VAR_DIR" ] && echo "Removing $VAR_DIR ..." && rm -rf "$VAR_DIR"
-    [ -d "$ELISP_DIR" ] && echo "Removing contents of $ELISP_DIR ..." && rm -rf "$ELISP_DIR"/*
-    [ -d "$STRAIGHT_DIR" ] && echo "Removing $STRAIGHT_DIR ..." && rm -rf "$STRAIGHT_DIR"
     echo "Emacs clean complete."
+}
+
+##### Emacs 完全クリーンアップ（パッケージ含む） #####
+clean_all() {
+    echo "Cleaning all Emacs-related files, including packages..."
+    clean
+    [ -d "$LOADS_DIR/$PACKAGE_DIR" ] && echo "Removing $LOADS_DIR/$PACKAGE_DIR ..." && rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+    echo "Emacs full clean complete."
+}
+
+##### パッケージディレクトリの圧縮 #####
+packing_package() {
+    if [ -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
+        echo "Archiving package directory..."
+
+        # 一時リストファイルの作成
+        TMP_LIST=$(mktemp)
+
+        # `PACKAGE_TARGET` の各項目をリストに追加
+        for target in "${PACKAGE_TARGET[@]}"; do
+            if [ -e "$LOADS_DIR/$PACKAGE_DIR/$target" ]; then
+                echo "$PACKAGE_DIR/$target" >> "$TMP_LIST"
+            fi
+        done
+
+        # 圧縮
+        if [ -s "$TMP_LIST" ]; then
+            tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$TMP_LIST"
+            echo "Package directory archived as $PACKAGE_ARCHIVE"
+        else
+            echo "Error: No valid files/directories to archive."
+            exit 1
+        fi
+
+        # 一時リストファイルの削除
+        rm -f "$TMP_LIST"
+    else
+        echo "Error: Package directory does not exist. Skipping archive."
+        exit 1
+    fi
+}
+
+##### パッケージディレクトリの展開 #####
+extract_package() {
+    if [ -f "$PACKAGE_ARCHIVE" ]; then
+        # 展開
+        echo "Extracting package directory..."
+        [ -d "$LOADS_DIR/$PACKAGE_DIR" ] && echo "Removing existing $LOADS_DIR/$PACKAGE_DIR..." && rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+        tar -xzf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR"
+        echo "Package directory extracted to $LOADS_DIR/$PACKAGE_DIR"
+        clean
+
+        # ビルド
+        if [ -n "$PACKAGE_BUILD_CMD" ]; then
+            echo "Running package build command: $PACKAGE_BUILD_CMD"
+            eval "$PACKAGE_BUILD_CMD"
+        fi
+    else
+        echo "Error: Archive file $PACKAGE_ARCHIVE not found."
+        exit 1
+    fi
 }
 
 ##### メイン処理 #####
 [ $# -eq 0 ] && { echo "Error: No action specified."; usage; }
 ACTION="$1"; shift
 case "$ACTION" in
-    -s|--setup)     setup_env ;;
-    -l|--list)      list_emacs_versions ;;
-    -i|--install)   install_emacs "$1" ;;
-    -u|--uninstall) uninstall_emacs ;;
-    -c|--clean)     clean ;;
-    -h|--help)      usage ;;
+    -s|--setup)           setup_env ;;
+    -l|--list)            list_emacs_versions ;;
+    -i|--install)         install_emacs "$1" ;;
+    -u|--uninstall)       uninstall_emacs ;;
+    -c|--clean)           clean ;;
+    -C|--clean-all)       clean_all ;;
+    -p|--packing-package) packing_package ;;
+    -x|--extract-package) extract_package ;;
+    -h|--help)            usage ;;
     *) echo "Error: Invalid argument '$ACTION'"; usage ;;
 esac
