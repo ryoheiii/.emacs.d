@@ -64,6 +64,7 @@
 ;;; 表示設定
 (use-package display-time
   :straight nil
+  :if window-system
   :hook (after-init . display-time-mode)
   :custom
   (display-time-day-and-date t)

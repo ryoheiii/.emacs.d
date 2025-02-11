@@ -982,7 +982,6 @@
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :straight t
-  :after projectile
   :bind ([f8] . neotree-toggle)
   :custom
   (neo-theme 'ascii)              ;; アイコンを ASCII にする
@@ -1019,6 +1018,7 @@
 ;;; Mozc - 日本語入力の設定
 (use-package mozc
   :straight nil
+  :if window-system
   :config
   (set-language-environment "Japanese")
   (prefer-coding-system 'utf-8)
