@@ -1088,6 +1088,8 @@
 (use-package git-gutter
   :straight t
   :after with-editor
+  :init
+  (global-git-gutter-mode t)
   :custom
   (git-gutter:modified-sign "~")  ;; 変更
   (git-gutter:added-sign    "+")  ;; 追加
@@ -1096,9 +1098,9 @@
   ;; (git-gutter:modified ((t (:background "#f1fa8c"))))
   ;; (git-gutter:added    ((t (:background "#50fa7b"))))
   ;; (git-gutter:deleted  ((t (:background "#ff79c6"))))
-  :config
-  (global-git-gutter-mode t)
   )
+;; :init/:config (global-git-gutter-mode t) が効かないので暫定対応
+(add-hook 'emacs-startup-hook #'global-git-gutter-mode)
 
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn
