@@ -8,8 +8,8 @@
 (defun add-to-load-path (&rest paths)
   "指定した PATHS を `load-path` に追加。"
   (dolist (path paths)
-    (let ((full-path (my-set-loads path)))
-      (add-to-list 'load-path full-path)
+    (let ((default-directory (my-set-loads path)))
+      (add-to-list 'load-path default-directory)
       (when (fboundp 'normal-top-level-add-subdirs-to-load-path)
         (normal-top-level-add-subdirs-to-load-path)))))
 (add-to-load-path "site-elisp/") ; my-loads-dir 内のディレクトリを指定

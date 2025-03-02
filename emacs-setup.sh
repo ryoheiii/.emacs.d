@@ -26,7 +26,7 @@ Usage: $0 [options]...
 Options:
   -s, --setup               Install required dependencies for Emacs.
   -l, --list                List available Emacs versions for installation.
-  -i <ver>, --install <ver> Install Emacs <ver> (e.g., 29.4).
+  -i <ver>, --install <ver> Install Emacs <ver> (e.g., 30.1).
   -u, --uninstall           Uninstall the locally installed Emacs.
   -c, --clean               Remove Emacs auto generated files (excluding packages).
   -C, --clean-all           Remove all Emacs auto genarated files (including packages).
@@ -37,7 +37,7 @@ Options:
 Examples:
   $0 --setup
   $0 --list
-  $0 --install 29.4  Install Emacs version 29.4.
+  $0 --install 30.1  Install Emacs version 30.1.
   $0 --uninstall
   $0 --clean
   $0 --clean-all
