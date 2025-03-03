@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-;;;;;; [Group] Library - ライブラリ関連 ;;;;;;
+;;;; [Group] Library - ライブラリ関連 ;;;;;;
 ;;; dash - Emacs 用のモダンなリスト操作ライブラリ
 (use-package dash
   :straight t)
@@ -19,7 +19,7 @@
 
 
 
-;;;;;; [Group] Themes - テーマ関連 ;;;;;;
+;;;; [Group] Themes - テーマ関連 ;;;;;;
 ;;; color-theme-modern - モダンなカラーテーマの適用
 (use-package color-theme-modern
   :straight t
@@ -111,6 +111,187 @@
 (use-package all-the-icons
   :straight t
   :if (display-graphic-p)
+  )
+
+
+
+;;;;; [Group] Org - Org 関係 ;;;;;
+;;; Org - org 設定
+(use-package org
+  :straight nil
+  :hook ((org-mode . visual-line-mode))  ; 自動改行の有効化
+  :defer t
+  :custom
+  (org-hide-leading-stars t)             ; 見出しの*を非表示
+  (org-startup-indented t)               ; インデント表示をデフォルトで有効化
+  (org-src-fontify-natively t)           ; ソースコードをシンタックスハイライト
+  (org-src-tab-acts-natively t)          ; org-babelでタブキーを言語モードに連動
+  (org-edit-src-content-indentation 2)   ; org-babelのソースコードインデント
+  (org-startup-folded 'content)          ; 初期表示で折りたたむ
+  (org-log-done 'time)                   ; タスク完了時に時間を記録
+  (org-log-into-drawer t)                ; ログを :LOGBOOK: に格納
+  (org-adapt-indentation nil)            ; インデントの自動調整をオフにする
+  (org-cycle-separator-lines 2)          ; 見出しの間隔
+  (org-ellipsis " ▼")                   ; 折りたたみ表示の記号変更
+  (org-agenda-files '("~/org/agenda/"))  ; アジェンダファイルのディレクトリ
+  (org-todo-keywords
+   '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
+  )
+
+;;; org-indent - インデントを自動調整
+(use-package org-indent
+  :straight nil
+  :hook (org-mode . org-indent-mode)
+  )
+
+;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
+(use-package org-modern
+  :disabled t
+  :straight t
+  :after (org)
+  :hook (org-mode . org-modern-mode)
+  )
+
+;;; org-download - 画像のクリップボード貼り付け
+(use-package org-download
+  :straight t
+  :after (org)
+  :bind (:map org-mode-map
+              ("C-c i" . org-download-clipboard))
+  :custom
+  (org-download-method 'directory)
+  (org-download-image-dir "~/org/images/")
+  (org-download-heading-lvl nil)
+  (org-download-timestamp "_%Y%m%d-%H%M%S")
+  :config
+  (add-hook 'dired-mode-hook 'org-download-enable)
+  )
+
+;;; org-roam - ノート管理
+(use-package org-roam
+  :straight t
+  :after (org)
+  :custom
+  (org-roam-directory "~/org/roam")
+  (org-roam-database-connector 'sqlite)
+  (org-roam-db-location (expand-file-name "org-roam.db") my-db-dir) ;; my-db-dir @early-init.el
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n g" . org-roam-graph)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n c" . org-roam-capture)
+         ;; Dailies
+         ("C-c n j" . org-roam-dailies-capture-today))
+  :config
+  (org-roam-db-autosync-mode)
+  )
+
+;;; org-agenda - スケジュール管理
+(use-package org-agenda
+  :straight nil
+  :after (org)
+  :bind ("C-c a" . org-agenda)
+  :custom
+  (org-agenda-files (directory-files-recursively "~/org/agenda/" "\\.org$"))
+  (org-agenda-start-on-weekday nil)
+  (org-agenda-span 'week)
+  (org-agenda-use-time-grid t)
+  (org-agenda-time-grid '((daily today)
+                          (800 1000 1200 1400 1600 1800 2000)
+                          "......" "----------------"))
+  )
+
+
+
+;;;;; [Group] Markdown - Markdown 関係 ;;;;;
+;;; 変数定義（コンフィギュレーション）
+;; Markdown 用のカスタム CSS ファイルのパス
+(defvar my-markdown-css-file
+  (my-set-custom "css/markdown-style.css")
+  "Path to custom markdown CSS file.")
+
+;; CSS を遅延ロードしつつ HTML に埋め込む関数
+(defun my-markdown-load-css ()
+  "Load the content of the markdown CSS file."
+  (when (file-exists-p my-markdown-css-file)
+    (with-temp-buffer
+      (insert-file-contents my-markdown-css-file)
+      (buffer-string))))
+
+;; Pandoc コマンドの設定
+;; その他 option: "--toc --toc-depth=2", "--highlight-style=tango"
+(defvar my-markdown-pandoc-command
+  (concat "pandoc -s --number-sections --self-contained -f markdown -t html5"
+          " --css " my-markdown-css-file)
+  "Pandoc command for Markdown export.")
+
+;;; markdown-mode - markdown mode の設定
+(use-package markdown-mode
+  :straight t
+  :mode ("\\.md\\'" . markdown-mode)
+  :hook ((markdown-mode . flyspell-mode)                              ; スペルチェック
+         (markdown-mode . visual-line-mode)                           ; 行の折り返し
+         (markdown-mode . (lambda ()                                  ; markdown-indent-on-enter
+                            (setq markdown-indent-on-enter t)))
+         (markdown-mode . display-line-numbers-mode)                  ; 行番号表示
+         (markdown-mode . outline-minor-mode)                         ; 見出しの折りたたみ
+         (markdown-mode . (lambda ()
+                            (setq markdown-enable-math t)             ; 数式を有効化
+                            markdown-fontify-code-blocks-natively t)) ; コードブロックの色付け
+         (markdown-mode . electric-pair-mode))                        ; 括弧の自動補完
+  :custom
+  (markdown-indent-level 2)
+  (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
+  (markdown-header-scaling t)                            ; 見出しサイズの自動調整
+  ;; markdown コマンドを pandoc に置き換え
+  (markdown-command my-markdown-pandoc-command)          ; Pandoc で Markdown をエクスポート
+  (markdown-export-command my-markdown-pandoc-command)
+  (markdown-xhtml-header-content
+   (format "<meta charset='utf-8'>\n
+         <meta name='viewport' content='width=device-width, initial-scale=1'>\n
+         <title>Markdown Export</title>\n
+         <style>\n%s\n</style>\n
+         <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
+         <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
+           (my-markdown-load-css)))
+  ;; コードブロックのシンタックスハイライト
+  (markdown-code-lang-modes
+   '(("bash"   . shell-script)
+     ("elisp"  . emacs-lisp)
+     ("python" . python)))
+  ;; 画像を表示する設定
+  (markdown-image-use-cache t) ; キャッシュして表示
+  :bind (("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
+         ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
+         ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
+         ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
+  :config
+  ;; 折りたたみ HTML タグを挿入する関数
+  (defun markdown-insert-details ()
+    "Insert <details> HTML tag with a <summary>."
+    (interactive)
+    (insert "<details><summary>text</summary><div>\n\n</div></details>"))
+  )
+
+;;; markdown-toc - 目次生成
+(use-package markdown-toc
+  :straight t
+  :after markdown-mode
+  :hook ((markdown-mode . markdown-toc-mode)          ; テーブルの自動整形
+         ;; (markdown-mode . markdown-toc-insert-toc) ; 保存時に目次を自動挿入
+         ;; (before-save . markdown-toc-update-toc)   ; 保存前に目次を更新
+         )
+  :bind (("C-c C-v t" . markdown-toc-generate-toc))   ; 目次を手動で生成
+  :custom
+  (markdown-toc-without-markdown-toc t)               ; コメントを含めない
+  (markdown-toc-headline-style 'atx)                  ; 見出しのスタイル
+  )
+
+;;; pandoc-mode - Markdown を他の形式に変換
+(use-package pandoc-mode
+  :straight t
+  :commands (pandoc-mode)
+  :hook (markdown-mode . pandoc-mode)
   )
 
 
@@ -210,6 +391,13 @@
   :straight t
   :hook ((c++-mode c-mode cc-mode emacs-lisp-mode lisp-mode) . smart-newline-mode)
   :bind (("C-m" . smart-newline))
+  )
+
+;;; move-text - テキスト行の移動機能
+(use-package move-text
+  :straight t
+  :bind (("C-M-p" . move-text-up)
+         ("C-M-n" . move-text-down))
   )
 
 ;;; company - 自動補完の基本設定
@@ -536,187 +724,6 @@
         (goto-char start)
         (while (re-search-forward (regexp-quote symbol) end t)
           (replace-match new-name)))))
-  )
-
-
-
-;;;;; [Group] Org - Org 関係 ;;;;;
-;;; Org - org 設定
-(use-package org
-  :straight nil
-  :hook ((org-mode . visual-line-mode))  ; 自動改行の有効化
-  :defer t
-  :custom
-  (org-hide-leading-stars t)             ; 見出しの*を非表示
-  (org-startup-indented t)               ; インデント表示をデフォルトで有効化
-  (org-src-fontify-natively t)           ; ソースコードをシンタックスハイライト
-  (org-src-tab-acts-natively t)          ; org-babelでタブキーを言語モードに連動
-  (org-edit-src-content-indentation 2)   ; org-babelのソースコードインデント
-  (org-startup-folded 'content)          ; 初期表示で折りたたむ
-  (org-log-done 'time)                   ; タスク完了時に時間を記録
-  (org-log-into-drawer t)                ; ログを :LOGBOOK: に格納
-  (org-adapt-indentation nil)            ; インデントの自動調整をオフにする
-  (org-cycle-separator-lines 2)          ; 見出しの間隔
-  (org-ellipsis " ▼")                   ; 折りたたみ表示の記号変更
-  (org-agenda-files '("~/org/agenda/"))  ; アジェンダファイルのディレクトリ
-  (org-todo-keywords
-   '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
-  )
-
-;;; org-indent - インデントを自動調整
-(use-package org-indent
-  :straight nil
-  :hook (org-mode . org-indent-mode)
-  )
-
-;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
-(use-package org-modern
-  :disabled t
-  :straight t
-  :after (org)
-  :hook (org-mode . org-modern-mode)
-  )
-
-;;; org-download - 画像のクリップボード貼り付け
-(use-package org-download
-  :straight t
-  :after (org)
-  :bind (:map org-mode-map
-              ("C-c i" . org-download-clipboard))
-  :custom
-  (org-download-method 'directory)
-  (org-download-image-dir "~/org/images/")
-  (org-download-heading-lvl nil)
-  (org-download-timestamp "_%Y%m%d-%H%M%S")
-  :config
-  (add-hook 'dired-mode-hook 'org-download-enable)
-  )
-
-;;; org-roam - ノート管理
-(use-package org-roam
-  :straight t
-  :after (org)
-  :custom
-  (org-roam-directory "~/org/roam")
-  (org-roam-database-connector 'sqlite)
-  (org-roam-db-location (expand-file-name "org-roam.db") my-db-dir) ;; my-db-dir @early-init.el
-  :bind (("C-c n l" . org-roam-buffer-toggle)
-         ("C-c n f" . org-roam-node-find)
-         ("C-c n g" . org-roam-graph)
-         ("C-c n i" . org-roam-node-insert)
-         ("C-c n c" . org-roam-capture)
-         ;; Dailies
-         ("C-c n j" . org-roam-dailies-capture-today))
-  :config
-  (org-roam-db-autosync-mode)
-  )
-
-;;; org-agenda - スケジュール管理
-(use-package org-agenda
-  :straight nil
-  :after (org)
-  :bind ("C-c a" . org-agenda)
-  :custom
-  (org-agenda-files (directory-files-recursively "~/org/agenda/" "\\.org$"))
-  (org-agenda-start-on-weekday nil)
-  (org-agenda-span 'week)
-  (org-agenda-use-time-grid t)
-  (org-agenda-time-grid '((daily today)
-                          (800 1000 1200 1400 1600 1800 2000)
-                          "......" "----------------"))
-  )
-
-
-
-;;;;; [Group] Markdown - Markdown 関係 ;;;;;
-;;; 変数定義（コンフィギュレーション）
-;; Markdown 用のカスタム CSS ファイルのパス
-(defvar my-markdown-css-file
-  (my-set-custom "css/markdown-style.css")
-  "Path to custom markdown CSS file.")
-
-;; CSS を遅延ロードしつつ HTML に埋め込む関数
-(defun my-markdown-load-css ()
-  "Load the content of the markdown CSS file."
-  (when (file-exists-p my-markdown-css-file)
-    (with-temp-buffer
-      (insert-file-contents my-markdown-css-file)
-      (buffer-string))))
-
-;; Pandoc コマンドの設定
-;; その他 option: "--toc --toc-depth=2", "--highlight-style=tango"
-(defvar my-markdown-pandoc-command
-  (concat "pandoc -s --number-sections --self-contained -f markdown -t html5"
-          " --css " my-markdown-css-file)
-  "Pandoc command for Markdown export.")
-
-;;; markdown-mode - markdown mode の設定
-(use-package markdown-mode
-  :straight t
-  :mode ("\\.md\\'" . markdown-mode)
-  :hook ((markdown-mode . flyspell-mode)                              ; スペルチェック
-         (markdown-mode . visual-line-mode)                           ; 行の折り返し
-         (markdown-mode . (lambda ()                                  ; markdown-indent-on-enter
-                            (setq markdown-indent-on-enter t)))
-         (markdown-mode . display-line-numbers-mode)                  ; 行番号表示
-         (markdown-mode . outline-minor-mode)                         ; 見出しの折りたたみ
-         (markdown-mode . (lambda ()
-                            (setq markdown-enable-math t)             ; 数式を有効化
-                            markdown-fontify-code-blocks-natively t)) ; コードブロックの色付け
-         (markdown-mode . electric-pair-mode))                        ; 括弧の自動補完
-  :custom
-  (markdown-indent-level 2)
-  (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
-  (markdown-header-scaling t)                            ; 見出しサイズの自動調整
-  ;; markdown コマンドを pandoc に置き換え
-  (markdown-command my-markdown-pandoc-command)          ; Pandoc で Markdown をエクスポート
-  (markdown-export-command my-markdown-pandoc-command)
-  (markdown-xhtml-header-content
-   (format "<meta charset='utf-8'>\n
-         <meta name='viewport' content='width=device-width, initial-scale=1'>\n
-         <title>Markdown Export</title>\n
-         <style>\n%s\n</style>\n
-         <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
-         <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
-           (my-markdown-load-css)))
-  ;; コードブロックのシンタックスハイライト
-  (markdown-code-lang-modes
-   '(("bash"   . shell-script)
-     ("elisp"  . emacs-lisp)
-     ("python" . python)))
-  ;; 画像を表示する設定
-  (markdown-image-use-cache t) ; キャッシュして表示
-  :bind (("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
-         ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
-         ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
-         ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
-  :config
-  ;; 折りたたみ HTML タグを挿入する関数
-  (defun markdown-insert-details ()
-    "Insert <details> HTML tag with a <summary>."
-    (interactive)
-    (insert "<details><summary>text</summary><div>\n\n</div></details>"))
-  )
-
-;;; markdown-toc - 目次生成
-(use-package markdown-toc
-  :straight t
-  :after markdown-mode
-  :hook ((markdown-mode . markdown-toc-mode)          ; テーブルの自動整形
-         ;; (markdown-mode . markdown-toc-insert-toc) ; 保存時に目次を自動挿入
-         ;; (before-save . markdown-toc-update-toc)   ; 保存前に目次を更新
-         )
-  :bind (("C-c C-v t" . markdown-toc-generate-toc))   ; 目次を手動で生成
-  :custom
-  (markdown-toc-without-markdown-toc t)               ; コメントを含めない
-  (markdown-toc-headline-style 'atx)                  ; 見出しのスタイル
-  )
-
-;;; pandoc-mode - Markdown を他の形式に変換
-(use-package pandoc-mode
-  :straight t
-  :commands (pandoc-mode)
-  :hook (markdown-mode . pandoc-mode)
   )
 
 

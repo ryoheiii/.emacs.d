@@ -102,13 +102,6 @@
   :hook (after-init . electric-pair-mode)
   )
 
-;;; move-text - テキスト行の移動機能
-(use-package move-text
-  :straight nil
-  :bind (("C-M-p" . move-text-up)
-         ("C-M-n" . move-text-down))
-  )
-
 ;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存
 (use-package savehist
   :straight nil
