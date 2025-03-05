@@ -218,12 +218,27 @@
       (insert-file-contents my-markdown-css-file)
       (buffer-string))))
 
+;; C-c TAB の制御を変更する関数
+(defun my-markdown-insert-tab ()
+  "C-c TAB を押したときに 4 スペースを挿入する"
+  (interactive)
+  (insert "    "))
+
 ;; Pandoc コマンドの設定
 ;; その他 option: "--toc --toc-depth=2", "--highlight-style=tango"
-(defvar my-markdown-pandoc-command
-  (concat "pandoc -s --number-sections --self-contained -f markdown -t html5"
-          " --css " my-markdown-css-file)
-  "Pandoc command for Markdown export.")
+(defun my-get-pandoc-version ()
+  "Pandoc のバージョン番号を取得し、数値で返す。"
+  (let* ((version-str (shell-command-to-string "pandoc --version | head -n 1 | awk '{print $2}'"))
+         (version-num (when (string-match "\\([0-9]+\\)\\.\\([0-9]+\\)" version-str)
+                        (string-to-number (match-string 1 version-str)))))
+    version-num))
+
+(setq my-markdown-pandoc-command
+      (if (and (my-get-pandoc-version) (>= (my-get-pandoc-version) 3))
+          (concat "pandoc -s --number-sections --toc --toc-depth=4 --embed-resources --standalone -f markdown -t html5"
+                  " --css " my-markdown-css-file)
+        (concat "pandoc -s --number-sections --toc --toc-depth=4 --self-contained -f markdown -t html5"
+                " --css " my-markdown-css-file)))
 
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
@@ -238,9 +253,12 @@
          (markdown-mode . (lambda ()
                             (setq markdown-enable-math t)             ; 数式を有効化
                             markdown-fontify-code-blocks-natively t)) ; コードブロックの色付け
-         (markdown-mode . electric-pair-mode))                        ; 括弧の自動補完
+         (markdown-mode . electric-pair-mode)                         ; 括弧の自動補完
+         (markdown-mode . (lambda ()
+                            (local-set-key (kbd "C-c TAB") #'my-markdown-insert-tab))) ; 4 スペースを挿入
+         )
   :custom
-  (markdown-indent-level 2)
+  (markdown-indent-level 4)
   (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
   (markdown-header-scaling t)                            ; 見出しサイズの自動調整
   ;; markdown コマンドを pandoc に置き換え

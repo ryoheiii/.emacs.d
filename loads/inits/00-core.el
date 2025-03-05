@@ -66,10 +66,11 @@
       comint-scroll-show-maximum-output t)
 
 ;;;;;; [Group] Garbage Collection - GC設定 ;;;;;;
-(setq gc-cons-threshold (* 128 1024 1024)
+(setq gc-cons-threshold (* 512 1024 1024)
       gc-cons-percentage 0.2
       garbage-collection-messages t)
 (add-hook 'focus-out-hook #'garbage-collect)
+(add-to-list 'warning-suppress-types '(undo discard-info))
 
 ;;;;;; [Group] Misc - その他 ;;;;;;
 (setq vc-follow-symlinks t
