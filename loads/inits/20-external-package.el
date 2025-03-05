@@ -962,12 +962,24 @@
   (migemo-init)
   )
 
-;; まだ helm から置き換える程でない (helm-swoop の代替手段が存在しない等)
+;;; Consult - コマンドの提供、候補リストの作成
+;; consult-goto-line が便利なのでこれだけ利用
+(use-package consult
+  :straight t
+  :bind (;; ("C-x b" . consult-buffer)      ; 文字化けするので helm を利用
+         ("C-." . consult-goto-line))
+  :hook (completion-list-mode . consult-preview-at-point-mode)
+  :custom
+  (consult-project-root-function #'projectile-project-root)
+  )
+
 ;; ;;; Vertico - ミニバッファを用いたファジーファインダー UI (Consult, Orderless, Marginalia と併用)
 ;; (use-package vertico
 ;;   :straight t
 ;;   :init
 ;;   (vertico-mode)
+;;   :custom
+;;   (vertico-cycle t)
 ;;   )
 
 ;; ;;; Extensions/Vertico-directory - Vertico 拡張
@@ -980,29 +992,77 @@
 ;;               ("\d" . vertico-directory-delete-char))
 ;;   )
 
-;; ;;; Orderless - マッチ方法を変更し、スペース区切りで入力をマッチ
-;; (use-package orderless
-;;   :straight t
-;;   :custom (completion-styles '(orderless))
-;;   )
-
-;; ;;; Marginalia - ミニバッファの補完に傍注（追加情報）を付与
+;; ;;; Marginalia - ミニバッファ補完の詳細情報を表示
 ;; (use-package marginalia
 ;;   :straight t
+;;   :after vertico
 ;;   :init
 ;;   (marginalia-mode)
 ;;   )
 
-;;; Consult - コマンドの提供、候補リストの作成
-;; consult-goto-line が便利なのでこれだけ利用
-(use-package consult
-  :straight t
-  :bind (;; ("C-x b" . consult-buffer)      ; 文字化けするので helm を利用
-         ("C-." . consult-goto-line))
-  :hook (completion-list-mode . consult-preview-at-point-mode)
-  :custom
-  (consult-project-root-function #'projectile-project-root)
-  )
+;; ;;; Orderless - 柔軟な補完スタイル
+;; (use-package orderless
+;;   :straight t
+;;   :custom
+;;   (completion-styles '(orderless basic))
+;;   (completion-category-defaults nil)
+;;   (completion-category-overrides '((file (styles partial-completion))))
+;;   )
+
+;; ;;; Consult - 便利な補完コマンド
+;; (use-package consult
+;;   :straight t
+;;   :bind (("M-x" . consult-M-x)
+;;          ("C-x b" . consult-buffer)
+;;          ("C-x C-f" . consult-find)
+;;          ("C-x C-r" . consult-recent-file)
+;;          ("C-x i" . consult-imenu)
+;;          ("C-x g" . consult-grep)
+;;          ("C-x y" . consult-yank-pop)
+;;          ("C-." . consult-goto-line)
+;;          ("C-x s" . consult-line)   ; helm-swoop の代替
+;;          ("C-x S" . consult-line-multi)) ; helm-multi-swoop の代替
+;;   :custom
+;;   (consult-preview-key '(:debounce 0.3 any))
+;;   )
+
+;; ;;; Embark - アクション選択
+;; (use-package embark
+;;   :straight t
+;;   :bind (("C-;" . embark-act)
+;;          ("C-h B" . embark-bindings))
+;;   )
+
+;; ;;; Corfu - 補完フレーム
+;; (use-package corfu
+;;   :straight t
+;;   :init
+;;   (global-corfu-mode)
+;;   :custom
+;;   (corfu-cycle t)
+;;   (corfu-auto t)
+;;   (corfu-preview-current t)
+;;   :bind (:map corfu-map
+;;               ("C-n" . corfu-next)
+;;               ("C-p" . corfu-previous)
+;;               ("TAB" . corfu-insert))
+;;   )
+
+;; ;;; Cape - 補完の強化
+;; (use-package cape
+;;   :straight t
+;;   :init
+;;   (add-to-list 'completion-at-point-functions #'cape-file)
+;;   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+;;   (add-to-list 'completion-at-point-functions #'cape-keyword)
+;;   )
+
+;; ;;; Affe - 高速検索
+;; (use-package affe
+;;   :straight t
+;;   :bind (("C-x C-g" . affe-find)
+;;          ("C-x C-G" . affe-grep))
+;;   )
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
