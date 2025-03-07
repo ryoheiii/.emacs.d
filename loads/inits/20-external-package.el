@@ -235,9 +235,9 @@
 
 (setq my-markdown-pandoc-command
       (if (and (my-get-pandoc-version) (>= (my-get-pandoc-version) 3))
-          (concat "pandoc -s --number-sections --toc --toc-depth=4 --embed-resources --standalone -f markdown -t html5"
+          (concat "pandoc -s --number-sections --toc --toc-depth=3 --embed-resources --standalone -f markdown -t html5"
                   " --css " my-markdown-css-file)
-        (concat "pandoc -s --number-sections --toc --toc-depth=4 --self-contained -f markdown -t html5"
+        (concat "pandoc -s --number-sections --toc --toc-depth=3 --self-contained -f markdown -t html5"
                 " --css " my-markdown-css-file)))
 
 ;;; markdown-mode - markdown mode の設定
