@@ -204,449 +204,6 @@
 
 
 
-;;;;; [Group] Completion UI - 補完 UI 関連
-;;; company - 自動補完の基本設定
-(use-package company
-  :straight t
-  :hook (after-init . global-company-mode)
-  :bind (("C-M-i" . company-complete)
-         :map company-mode-map
-         ("TAB" . indent-for-tab-command)
-         :map company-active-map
-         ("M-n" . nil)                        ; M-n で次の候補への移動をキャンセル
-         ("M-p" . nil)                        ; M-p で前の候補への移動をキャンセル
-         ("C-n" . company-select-next)        ; 次の補完候補を選択
-         ("C-p" . company-select-previous)    ; 前の補完候補を選択
-         ("C-s" . company-filter-candidates)  ; C-s で絞り込む
-         ("TAB" . company-complete-selection)
-         :map company-search-map
-         ("C-n" . company-select-next)
-         ("C-p" . company-select-previous))
-  :custom
-  (company-selection-wrap-around t)                            ; 最後の候補で次の候補にループ
-  (company-transformers '(company-sort-by-occurrence
-                          company-sort-by-backend-importance)) ; 頻度順ソート
-  (company-idle-delay 0)                                       ; デフォルトは 0.5
-  (company-show-numbers t)
-  (company-tooltip-limit 10)
-  (company-minimum-prefix-length 2)                            ; デフォルトは 4
-  (company-tooltip-align-annotations t)
-  (company-tooltip-flip-when-above t)
-  (company-dabbrev-around t)
-  (completion-ignore-case t)
-  (company-dabbrev-downcase nil)
-  (company-eclim-auto-save nil)
-  (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
-                       company-echo-metadata-frontend))
-  :config
-  ;; ツールチップの色設定
-  ;; 基本設定
-  (set-face-attribute 'company-tooltip nil
-                      :foreground "white" :background "midnight blue")
-  (set-face-attribute 'company-tooltip-common nil
-                      :foreground "white" :background "midnight blue")
-  ;; 選択項目の設定
-  (set-face-attribute 'company-tooltip-common-selection nil
-                      :foreground "white" :background "dark slate blue")
-  (set-face-attribute 'company-tooltip-selection nil
-                      :foreground "white" :background "dark slate blue")
-  ;; プレビューとスクロールバーの設定
-  (set-face-attribute 'company-preview-common nil
-                      :background "dark slate blue" :foreground "white" :underline t)
-  (set-face-attribute 'company-scrollbar-fg nil
-                      :background "dark gray")
-  (set-face-attribute 'company-scrollbar-bg nil
-                      :background "dim gray")
-
-  ;; company-backends の設定
-  (setq company-backends
-        '((company-capf :with company-same-mode-buffers company-yasnippet)
-          (company-dabbrev-code :with company-same-mode-buffers company-yasnippet)
-          (company-irony-c-headers company-irony)   ; Irony と Irony-C-Headers の組み合わせ
-          company-keywords
-          company-files
-          company-dabbrev))
-  (add-to-list 'company-backends 'company-files)    ; ファイル名補完
-  (add-to-list 'company-backends 'company-keywords) ; 言語のキーワード補完
-  )
-
-;;; Company-statistics - よく使う補完候補を優先表示
-(use-package company-statistics
-  :straight t
-  :after company
-  :custom
-  (company-statistics-file (my-set-history "company-statistics-cache.el")) ; 履歴保存場所
-  :config
-  (company-statistics-mode)
-  )
-
-;;; company-same-mode-buffers - 同じモード内でのキーワード補完を強化
-(use-package company-same-mode-buffers
-  :straight '(company-same-mode-buffers
-              :type git
-              :host github
-              :repo "zk-phi/company-same-mode-buffers")
-  :after company
-  :config
-  (company-same-mode-buffers-initialize)
-  )
-
-;;; Company-irony - C/C++ 用の補完
-(use-package company-irony
-  :straight t
-  :after (company irony)
-  )
-
-;;; Company-irony-c-headers - C ヘッダファイル用の補完（Company バックエンド）
-(use-package company-irony-c-headers
-  :straight t
-  :after (company irony)
-  )
-
-;;; company-dwim - 候補の絞り込みをスマート化（補完フロントエンド）
-(use-package company-dwim
-  :straight '(company-dwim
-              :type git
-              :host github
-              :repo "zk-phi/company-dwim")
-  :after company
-  :bind (:map company-active-map
-              ("TAB" . company-dwim))
-  :config
-  (add-to-list 'company-frontends 'company-dwim-frontend)
-  )
-
-;;; company-anywhere - どこでも補完を可能にする
-(use-package company-anywhere
-  :straight '(company-anywhere
-              :type git
-              :host github
-              :repo "zk-phi/company-anywhere")
-  :after company
-  )
-
-;;; Company-box - Company の補完候補をパネル表示 (GUI 限定)
-(use-package company-box
-  :straight t
-  :if (display-graphic-p)
-  :hook (company-mode . company-box-mode)
-  )
-
-;;; company-posframe - GUI での補完候補パネル表示
-(use-package company-posframe
-  :straight t
-  :if (display-graphic-p)
-  :after company
-  :config
-  (company-posframe-mode 1)
-  )
-
-;;; Helm - 効率的なバッファやコマンドの検索
-(use-package helm
-  :straight t
-  :after migemo
-  :init
-  (helm-mode 1)
-  (helm-migemo-mode 1)
-  :bind (("M-x"     . helm-M-x)
-         ("C-x C-f" . helm-find-files)
-         ("C-x C-r" . helm-recentf)
-         ("C-x C-y" . helm-show-kill-ring)
-         ("C-x g"   . helm-do-grep-ag)
-         ;; ("C-x b"   . helm-buffers-list)
-         ("C-x b"   . helm-mini)
-         ("C-x i"   . helm-imenu)
-         :map helm-map
-         ("C-h" . delete-backward-char)
-         :map helm-find-files-map
-         ("C-h" . delete-backward-char)
-         ("TAB" . helm-execute-persistent-action)
-         :map helm-read-file-map
-         ("TAB" . helm-execute-persistent-action))
-  :custom
-  (helm-display-function #'display-buffer)       ; 'display-buffer' を使用
-  (helm-echo-input-in-header-line t)             ; 入力をヘッダーラインに表示
-  (helm-input-idle-delay 0.2)                    ; 入力から画面更新までの遅延時間 (デフォルトは 0.01 秒)
-  (helm-split-window-inside-p t)                 ; Helm のウィンドウを現在のウィンドウ内に分割して表示
-  (helm-move-to-line-cycle-in-source t)          ; バッファ内で候補の最後に到達したら先頭に戻る
-  (helm-ff-file-name-history-use-recentf t)      ; 'recentf' をファイル名の履歴として使用
-  (helm-ff-search-library-in-sexp t)             ; SEXP 内でライブラリ検索
-  (helm-ff-fuzzy-matching nil)                   ; ファジーマッチを無効化
-  (helm-buffer-details-flag nil)                 ; バッファの詳細を非表示
-  (helm-delete-minibuffer-contents-from-point t) ; ミニバッファの内容を削除
-  :config
-  ;; Emacsのコマンドと履歴の Helm ソース定義
-  (defvar helm-source-emacs-commands
-    (helm-build-sync-source "Emacs commands"
-      :candidates (lambda ()
-                    (let ((cmds))
-                      (mapatoms (lambda (elt) (when (commandp elt) (push elt cmds))))
-                      cmds))
-      :coerce #'intern-soft
-      :action #'command-execute)
-    "A Helm source for Emacs commands.")
-
-  (defvar helm-source-emacs-commands-history
-    (helm-build-sync-source "Emacs commands history"
-      :candidates (lambda ()
-                    (let ((cmds))
-                      (dolist (elem extended-command-history)
-                        (push (intern elem) cmds))
-                      cmds))
-      :coerce #'intern-soft
-      :action #'command-execute)
-    "Emacs commands history.")
-
-  ;; 検索パターンの変換
-  (defun helm-buffers-list-pattern-transformer (pattern)
-    "Helm のバッファ検索時のパターン変換."
-    (if (equal pattern "")
-        pattern
-      (let* ((first-char (substring pattern 0 1))
-             (pattern (cond ((equal first-char "*") (concat " " pattern))
-                            ((equal first-char "=") (concat "*" (substring pattern 1)))
-                            (t pattern))))
-        (setq pattern (replace-regexp-in-string "\\." "\\\\." pattern))
-        (setq pattern (replace-regexp-in-string "\\*" "\\\\*" pattern))
-        pattern)))
-
-  ;; 'kill-line' のエミュレーション
-  (advice-add 'helm-delete-minibuffer-contents
-              :before
-              (lambda ()
-                "Emulate `kill-line` in Helm minibuffer."
-                (kill-new (buffer-substring (point) (field-end)))))
-
-  ;; 'helm-ff-kill-or-find-buffer-fname' をファイルが存在する場合のみ実行
-  (advice-add 'helm-ff-kill-or-find-buffer-fname
-              :around
-              (lambda (orig-fun &rest args)
-                "Execute command only if CANDIDATE exists."
-                (when (file-exists-p (car args))
-                  (apply orig-fun args))))
-
-  ;; 'helm-ff--transform-pattern-for-completion' のカスタマイズ
-  (advice-add 'helm-ff--transform-pattern-for-completion
-              :around
-              (lambda (orig-fun pattern)
-                "Transform the pattern to reflect intention."
-                (let* ((input-pattern (file-name-nondirectory pattern))
-                       (dirname (file-name-directory pattern)))
-                  (setq input-pattern (replace-regexp-in-string "\\." "\\\\." input-pattern))
-                  (concat dirname (if (string-match "^\\^" input-pattern)
-                                      ;; '^' is a pattern for basename
-                                      ;; and not required because the directory name is prepended
-                                      (substring input-pattern 1)
-                                    (concat ".*" input-pattern))))))
-
-
-  ;; helm-migemo fix
-  ;; http://emacs.rubikitch.com/helm-migemo/
-  (with-eval-after-load "helm-migemo"
-    (defun helm-compile-source--candidates-in-buffer (source)
-      (helm-aif (assoc 'candidates-in-buffer source)
-          (append source
-                  `((candidates
-                     . ,(or (cdr it)
-                            (lambda ()
-                              (helm-candidates-in-buffer (helm-get-current-source)))))
-                    (volatile) (match identity)))
-        source))
-    (defalias 'helm-mp-3-get-patterns 'helm-mm-3-get-patterns)
-    (defalias 'helm-mp-3-search-base 'helm-mm-3-search-base))
-  )
-
-;;; Helm-c-yasnippet - Helm 経由のスニペット選択
-(use-package helm-c-yasnippet
-  :straight t
-  :bind (("C-c y" . helm-yas-complete))
-  :custom
-  (helm-yas-space-match-any-greedy t) ; Helm のスペースマッチングを有効化
-  )
-
-;;; Helm-gtags - ソースコード内のシンボル検索とナビゲーション
-(use-package helm-gtags
-  :straight t
-  :hook ((c-mode   . helm-gtags-mode)
-         (c++-mode . helm-gtags-mode))
-  :bind (:map helm-gtags-mode-map
-              ("C-t d"   . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)
-              ("C-t C-d" . helm-gtags-find-tag)
-              ("C-t u"   . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)
-              ("C-t C-u" . helm-gtags-find-rtag)
-              ("C-t v"   . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (variable)
-              ("C-t C-v" . helm-gtags-find-symbol)
-              ("C-t f"   . helm-gtags-find-files)       ; ファイルの検索 (find)
-              ("C-t C-f" . helm-gtags-find-files)
-              ("C-t p"   . helm-gtags-previous-history) ; 前の履歴へ移動 (previous)
-              ("C-t C-p" . helm-gtags-previous-history)
-              ("C-t n"   . helm-gtags-next-history)     ; 次の履歴へ移動 (next)
-              ("C-t C-n" . helm-gtags-next-history))
-  :custom
-  (helm-gtags-path-style 'root)  ; プロジェクトルート基準でタグを検索
-  ;; (helm-gtags-ignore-case t)     ; 大文字小文字を区別しない検索
-  ;; (helm-gtags-auto-update t)     ; ファイル変更時に自動でタグを更新
-  :config
-  ;; 'global -uv' を用いた GTAGS の自動更新
-  (defun update-gtags ()
-    "Update GTAGS database."
-    (interactive)
-    (when (and (buffer-file-name) (executable-find "global"))
-      (start-process "gtags-update" nil "global" "-uv")))
-  )
-
-;;; Helm-ag - ファイルの内容を高速検索
-(use-package helm-ag
-  :straight t
-  )
-
-;;; Helm-swoop - インクリメンタルサーチ機能の強化
-(use-package helm-swoop
-  :straight t
-  :bind (("C-x s" . helm-swoop))
-  :custom-face
-  ;; 検索行のハイライト色を設定（例：明るい青の背景と白のテキスト）
-  (helm-swoop-target-line-face ((t (:background "#0077ff" :foreground "white"))))
-  ;; 検索語のハイライト色を設定（例：明るい緑の背景と黒のテキスト）
-  (helm-swoop-target-word-face ((t (:background "#00ff00" :foreground "black"))))
-  )
-
-;;; Ivy - 効率的なバッファやファイルの検索 (swiper の強化)
-(use-package ivy
-  :straight t
-  :after ivy-migemo
-  :init
-  (ivy-mode 1)
-  :custom
-  (ivy-use-virtual-buffers t)
-  (enable-recursive-minibuffers t)
-  (ivy-height 30)
-  (ivy-extra-directories nil)
-  ;; swiper と連携
-  ;; https://github.com/ROCKTAKEY/ivy-migemo
-  (ivy-re-builders-alist '((t . ivy--regex-plus)
-                           (swiper . ivy-migemo--regex-plus)
-                           ;; (t . ivy--regex-fuzzy)             ; fuzzy バージョン
-                           ;; (swiper . ivy-migemo--regex-fuzzy) ; fuzzy バージョン
-                           ))
-  )
-
-;;; Ivy-migemo - Ivy で Migemo を利用 (Swiper/Ivy の強化)
-(use-package ivy-migemo
-  :straight t
-  )
-
-;;; Swiper - インクリメンタルサーチ機能の強化
-(use-package swiper
-  :straight t
-  :bind (("C-s" . swiper))
-  )
-
-;;; Consult - コマンドの提供、候補リストの作成
-;; consult-goto-line が便利なのでこれだけ利用
-(use-package consult
-  :straight t
-  :bind (;; ("C-x b" . consult-buffer)      ; 文字化けするので helm を利用
-         ("C-." . consult-goto-line))
-  :hook (completion-list-mode . consult-preview-at-point-mode)
-  :custom
-  (consult-project-root-function #'projectile-project-root)
-  )
-
-;; ;;; Vertico - ミニバッファを用いたファジーファインダー UI (Consult, Orderless, Marginalia と併用)
-;; (use-package vertico
-;;   :straight t
-;;   :init
-;;   (vertico-mode)
-;;   :custom
-;;   (vertico-cycle t)
-;;   )
-
-;; ;;; Extensions/Vertico-directory - Vertico 拡張
-;; (use-package extensions/vertico-directory
-;;   :straight (:type built-in)
-;;   :after vertico
-;;   :ensure nil
-;;   :bind (:map vertico-map
-;;               ("C-l" . vertico-directory-up)
-;;               ("\d" . vertico-directory-delete-char))
-;;   )
-
-;; ;;; Marginalia - ミニバッファ補完の詳細情報を表示
-;; (use-package marginalia
-;;   :straight t
-;;   :after vertico
-;;   :init
-;;   (marginalia-mode)
-;;   )
-
-;; ;;; Orderless - 柔軟な補完スタイル
-;; (use-package orderless
-;;   :straight t
-;;   :custom
-;;   (completion-styles '(orderless basic))
-;;   (completion-category-defaults nil)
-;;   (completion-category-overrides '((file (styles partial-completion))))
-;;   )
-
-;; ;;; Consult - 便利な補完コマンド
-;; (use-package consult
-;;   :straight t
-;;   :bind (("M-x" . consult-M-x)
-;;          ("C-x b" . consult-buffer)
-;;          ("C-x C-f" . consult-find)
-;;          ("C-x C-r" . consult-recent-file)
-;;          ("C-x i" . consult-imenu)
-;;          ("C-x g" . consult-grep)
-;;          ("C-x y" . consult-yank-pop)
-;;          ("C-." . consult-goto-line)
-;;          ("C-x s" . consult-line)   ; helm-swoop の代替
-;;          ("C-x S" . consult-line-multi)) ; helm-multi-swoop の代替
-;;   :custom
-;;   (consult-preview-key '(:debounce 0.3 any))
-;;   )
-
-;; ;;; Embark - アクション選択
-;; (use-package embark
-;;   :straight t
-;;   :bind (("C-;" . embark-act)
-;;          ("C-h B" . embark-bindings))
-;;   )
-
-;; ;;; Corfu - 補完フレーム
-;; (use-package corfu
-;;   :straight t
-;;   :init
-;;   (global-corfu-mode)
-;;   :custom
-;;   (corfu-cycle t)
-;;   (corfu-auto t)
-;;   (corfu-preview-current t)
-;;   :bind (:map corfu-map
-;;               ("C-n" . corfu-next)
-;;               ("C-p" . corfu-previous)
-;;               ("TAB" . corfu-insert))
-;;   )
-
-;; ;;; Cape - 補完の強化
-;; (use-package cape
-;;   :straight t
-;;   :init
-;;   (add-to-list 'completion-at-point-functions #'cape-file)
-;;   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
-;;   (add-to-list 'completion-at-point-functions #'cape-keyword)
-;;   )
-
-;; ;;; Affe - 高速検索
-;; (use-package affe
-;;   :straight t
-;;   :bind (("C-x C-g" . affe-find)
-;;          ("C-x C-G" . affe-grep))
-;;   )
-
-
-
-
 
 ;;;;; [Group] Markdown - Markdown 関連 ;;;;;
 ;;; 変数定義（コンフィギュレーション）
@@ -711,12 +268,12 @@
   (markdown-export-command my-markdown-pandoc-command)
   (markdown-xhtml-header-content
    (format "<meta charset='utf-8'>\n
-         <meta name='viewport' content='width=device-width, initial-scale=1'>\n
-         <title>Markdown Export</title>\n
-         <style>\n%s\n</style>\n
-         <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
-         <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
-           (my-markdown-load-css)))
+   <meta name='viewport' content='width=device-width, initial-scale=1'>\n
+   <title>Markdown Export</title>\n
+   <style>\n%s\n</style>\n
+   <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
+   <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
+   (my-markdown-load-css)))
   ;; コードブロックのシンタックスハイライト
   (markdown-code-lang-modes
    '(("bash"   . shell-script)
@@ -755,6 +312,361 @@
   :straight t
   :commands (pandoc-mode)
   :hook (markdown-mode . pandoc-mode)
+  )
+
+
+
+;;;;; [Group] Completion UI - 補完 UI 関連
+;;; Vertico - ミニバッファ補完 UI
+(use-package vertico
+  :straight t
+  :init (vertico-mode)
+  :custom
+  (vertico-cycle t)
+  (vertico-count 30)
+  (vertico-resize nil)
+  (enable-recursive-minibuffers t)
+  )
+
+;;; Vertico-repeat - 直前の補完を再実施
+(use-package vertico-repeat
+  :straight nil
+  :after vertico
+  :hook (minibuffer-setup . vertico-repeat-save)
+  :init
+  (with-eval-after-load 'meow
+    (meow-leader-define-key '("z" . vertico-repeat)))
+  )
+
+;;; Vertico-directory - ディレクトリ補完
+(use-package vertico-directory
+  :straight nil
+  :after vertico
+  :bind (:map vertico-map
+              ("C-l" . vertico-directory-delete-char))
+  )
+
+;;; Marginalia - 詳細な補完情報の表示
+(use-package marginalia
+  :straight t
+  :after vertico
+  :init (marginalia-mode)
+  )
+
+;;; Consult - 多機能ミニバッファ補完
+(use-package consult
+  :straight t
+  :after vertico
+  :bind
+  (("C-x C-f" . find-file)
+   ("C-x f"   . consult-find)
+   ("C-x C-r" . consult-recent-file)
+   ("C-x C-y" . consult-yank-pop)
+   ("C-x b"   . consult-buffer)
+   ("C-x i"   . consult-imenu)
+   ("C-s"     . consult-line)
+   ("C-S"     . consult-line-multi)
+   ("C-."     . consult-goto-line)
+   ;; ("C-x g"   . consult-grep)
+   ("C-x g"   . affe-grep)
+   )
+  :custom
+  (xref-show-xrefs-function #'consult-xref)
+  (xref-show-definitions-function #'consult-xref)
+  )
+
+;;; Consult-yasnippet - Yasnippet の `consult` インテグレーション
+(use-package consult-yasnippet
+  :straight t
+  :bind ("C-c y" . consult-yasnippet)
+  )
+
+;;; Embark - ミニバッファアクション
+(use-package embark
+  :straight t
+  :bind
+  (("M-a" . embark-act))
+  )
+
+;;; Embark-consult - `embark` と `consult` の連携
+(use-package embark-consult
+  :straight t
+  :hook (embark-collect-mode . consult-preview-at-point-mode)
+  )
+
+;;; Helm-gtags - ソースコード内のシンボル検索とナビゲーション (Xref で置き換えたい)
+(use-package helm-gtags
+  :straight t
+  :hook ((c-mode   . helm-gtags-mode)
+         (c++-mode . helm-gtags-mode))
+  :bind (:map helm-gtags-mode-map
+              ("C-t d"   . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)
+              ("C-t C-d" . helm-gtags-find-tag)
+              ("C-t u"   . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)
+              ("C-t C-u" . helm-gtags-find-rtag)
+              ("C-t v"   . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (variable)
+              ("C-t C-v" . helm-gtags-find-symbol)
+              ("C-t f"   . helm-gtags-find-files)       ; ファイルの検索 (find)
+              ("C-t C-f" . helm-gtags-find-files)
+              ("C-t p"   . helm-gtags-previous-history) ; 前の履歴へ移動 (previous)
+              ("C-t C-p" . helm-gtags-previous-history)
+              ("C-t n"   . helm-gtags-next-history)     ; 次の履歴へ移動 (next)
+              ("C-t C-n" . helm-gtags-next-history))
+  :custom
+  (helm-gtags-path-style 'root)  ; プロジェクトルート基準でタグを検索
+  ;; (helm-gtags-ignore-case t)     ; 大文字小文字を区別しない検索
+  ;; (helm-gtags-auto-update t)     ; ファイル変更時に自動でタグを更新
+  :config
+  ;; 'global -uv' を用いた GTAGS の自動更新
+  (defun update-gtags ()
+    "Update GTAGS database."
+    (interactive)
+    (when (and (buffer-file-name) (executable-find "global"))
+      (start-process "gtags-update" nil "global" "-uv")))
+  )
+
+;;; Project - プロジェクト管理
+(use-package project
+  :bind (("C-x p f" . project-find-file))
+  )
+
+;;; Affe - 高速検索（grep 代替）
+(use-package affe
+  :straight t
+  :bind (("C-x g" . affe-grep))
+  :config
+  (setq affe-regexp-function #'orderless-pattern-compiler)
+  (setq affe-highlight-function #'orderless-highlight-matches)
+  )
+
+;;; Orderless - 高度な補完フィルタ
+(use-package orderless
+  :straight t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-defaults nil)
+  (completion-category-overrides '((file (styles partial-completion))))
+  :config
+  ;; migemo を利用したローマ字検索
+  (with-eval-after-load 'migemo
+    (defun orderless-migemo (component)
+      (let ((pattern (downcase (migemo-get-pattern component))))
+        (condition-case nil
+            (progn (string-match-p pattern "") pattern)
+          (invalid-regexp nil))))
+    (add-to-list 'orderless-matching-styles 'orderless-migemo))
+
+  ;; corfuはorderless-flexで絞り込む
+  (with-eval-after-load 'corfu
+    (defun orderless-fast-dispatch (word index total)
+      (and (= index 0) (= total 1) (length< word 4)
+           'orderless-literal-prefix))
+
+    (orderless-define-completion-style orderless-fast
+      (orderless-style-dispatchers '(orderless-fast-dispatch))
+      (orderless-matching-styles '(orderless-flex)))
+
+    (defun my/setup-corfu-for-orderless ()
+      (setq-local corfu-auto-delay 0
+                  corfu-auto-prefix 1
+                  completion-styles '(orderless-fast)))
+
+    (add-hook 'corfu-mode-hook #'my/setup-corfu-for-orderless))
+  )
+
+;;; Corfu - 補完 UI
+(use-package corfu
+  :straight t
+  :init (global-corfu-mode)
+  :bind
+  (("C-M-i" . completion-at-point)
+   :map corfu-map
+   ("TAB"   . corfu-insert)
+   ("<tab>" . corfu-insert)
+   ("C-n"   . corfu-next)
+   ("C-p"   . corfu-previous)
+   ("C-s"   . corfu-scroll-down)
+   ("M-n"   . nil)
+   ("M-p"   . nil)
+   )
+  :custom
+  (corfu-auto t)                              ; 自動補完
+  (corfu-auto-delay 0)                        ; 入力後すぐに補完を表示
+  (corfu-auto-prefix 1)                       ; プレフィックス長
+  (corfu-cycle t)                             ; 候補リストのループ
+  (corfu-on-exact-match nil)
+  (corfu-preview-current nil)                 ; 現在の候補をプレビューしない
+  (corfu-preselect 'prompt)                   ; 最初の候補を選択
+  (corfu-scroll-margin 2)                     ; スクロールマージン
+  (corfu-separator ?\s)                       ; orderless 用のセパレータ
+  (completion-ignore-case t)                  ; 大文字小文字を区別しない
+  (tab-always-indent 'complete)
+  :config
+  (when (display-graphic-p)                   ; GUI-mode なら ツールチップ情報を表示
+    (corfu-popupinfo-mode 1))
+
+  ;; c-mode などの一部のモードではタブに `c-indent-line-or-region` が割り当てられているので、
+  ;; 補完が出るように `indent-for-tab-command` に置き換える
+  (defun my/corfu-remap-tab-command ()
+    (global-set-key [remap c-indent-line-or-region] #'indent-for-tab-command))
+  (add-hook 'c-mode-hook #'my/corfu-remap-tab-command)
+  (add-hook 'c++-mode-hook #'my/corfu-remap-tab-command)
+  (add-hook 'java-mode-hook #'my/corfu-remap-tab-command)
+
+  ;; ミニバッファー上でverticoによる補完が行われない場合、corfu の補完が出るように
+  ;; https://github.com/minad/corfu#completing-in-the-minibuffer
+  (defun corfu-enable-always-in-minibuffer ()
+    "Enable Corfu in the minibuffer if Vertico/Mct are not active."
+    (unless (or (bound-and-true-p mct--active)
+                (bound-and-true-p vertico--input))
+      ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
+      (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
+                  corfu-popupinfo-delay nil)
+      (corfu-mode 1)))
+  (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
+
+  (with-eval-after-load 'meow
+    (define-key corfu-map (kbd "<escape>")
+                (lambda ()
+                  (interactive)
+                  (corfu-quit)
+                  (meow-normal-mode))))
+
+  ;; lsp-modeでcorfuが起動するように設定する
+  (with-eval-after-load 'lsp-mode
+    (setq lsp-completion-provider :none))
+
+  (with-eval-after-load 'orderless
+    (defun my/orderless-for-corfu ()
+      (setq-local orderless-matching-styles '(orderless-flex)))
+
+    (add-hook 'corfu-mode-hook #'my/orderless-for-corfu))
+  )
+
+;;; Corfu-terminal - 端末 (`-nw`) で `corfu` を有効化
+(use-package corfu-terminal
+  :straight (corfu-terminal :type git :host github :repo "galeo/corfu-terminal")
+  :after corfu
+  :if (not (display-graphic-p))
+  :config
+  (corfu-terminal-mode 1)
+  )
+
+;;; Cape - `corfu` の補完バックエンド
+(use-package cape
+  :straight t
+  :hook (((prog-mode text-mode conf-mode lsp-completion-mode) . my/set-super-capf)
+         (emacs-lisp-mode . my/set-elisp-capf))
+  :config
+  ;; 一般的な補完関数
+  (defun my/set-super-capf ()
+    "Set up `completion-at-point-functions` with `cape`."
+    (setq-local completion-at-point-functions
+                (list (cape-capf-super
+                       #'cape-yasnippet
+                       #'cape-dabbrev
+                       #'cape-file
+                       #'cape-keyword
+                       #'cape-tex))))
+
+  ;; Emacs Lisp の補完
+  (defun my/set-elisp-capf ()
+    "Set up `completion-at-point-functions` for `elisp-mode`."
+    (setq-local completion-at-point-functions
+                (list (cape-capf-super
+                       #'cape-elisp-symbol
+                       #'cape-dabbrev
+                       #'cape-keyword
+                       #'cape-file))))
+
+  ;; `M-x eval-expression` (`C-x C-e` など) でも補完可能に
+  (add-hook 'eval-expression-minibuffer-setup-hook #'cape-elisp-symbol)
+
+  ;; `yasnippet` 有効時に `cape-yasnippet` を補完候補に統合
+  (add-hook 'yas-minor-mode-hook
+            (lambda ()
+              (add-to-list 'completion-at-point-functions #'cape-yasnippet t)))
+  )
+
+;;; Flx - 柔軟なスコアリング
+(use-package flx
+  :straight t
+  :config
+  (with-eval-after-load 'prescient
+    ;; 入力文字を抽出
+    (defvar-local my/input-query nil)
+    (defun my/store-input-query (string &rest _args)
+      "Store the current completion query in `my/input-query'."
+      (setq my/input-query (replace-regexp-in-string " " "" string)))
+    (advice-add 'completion-all-completions :before #'my/store-input-query)
+
+    ;; ローカル変数を使用できるように再定義
+    (defvar vertico--total nil)
+    (defvar corfu--total nil)
+
+    ;; スコアのキャッシュ
+    (defvar my/flx-cache (make-hash-table :test 'equal :size 1000))
+
+    (defun my/get-flx-score (str query)
+      (or (gethash (cons str query) my/flx-cache)
+          (let ((score (condition-case nil
+                           (car (flx-score str query flx-file-cache))
+                         (error nil))))
+            (puthash (cons str query) score my/flx-cache)
+            score)))
+
+    (defun my/flx-tiebreaker (c1 c2)
+      (let ((total (or vertico--total corfu--total 0))
+            (query-length (length my/input-query)))
+        (if (and (< total 3000)
+                 (> query-length 2)
+                 (< (length c1) 100)
+                 (< (length c2) 100))
+            (let ((score1 (my/get-flx-score c1 my/input-query))
+                  (score2 (my/get-flx-score c2 my/input-query)))
+              (cond ((and (integerp score1) (integerp score2))
+                     (cond ((> score1 score2) -1)
+                           ((< score1 score2) 1)
+                           (t (- (length c1) (length c2)))))
+                    (t 0)))
+          (- (length c1) (length c2)))))
+
+    (setq prescient-tiebreaker #'my/flx-tiebreaker)
+
+    (defun my/clear-flx-cache ()
+      (clrhash my/flx-cache))
+
+    ;; キャッシュを1時間ごとにクリア
+    (defvar my/flx-cache-timer nil)
+    (setq my/flx-cache-timer
+          (run-with-timer 3600 3600 #'my/clear-flx-cache)))
+  )
+
+;;; Prescient - 補完履歴とスコアリング
+(use-package prescient
+  :straight t
+  :config
+  (setq prescient-aggressive-file-save t)
+  (prescient-persist-mode +1)
+  )
+
+;;; Vertico-prescient - `vertico` 用のスコアリング
+(use-package vertico-prescient
+  :straight t
+  :after vertico
+  :config
+  (setq vertico-prescient-enable-filtering nil)
+  (vertico-prescient-mode +1)
+  )
+
+;;; Corfu-prescient - `corfu` 用のスコアリング
+(use-package corfu-prescient
+  :straight t
+  :after corfu
+  :config
+  (with-eval-after-load 'orderless
+    (setq corfu-prescient-enable-filtering nil))
+  (corfu-prescient-mode +1)
   )
 
 
@@ -1060,13 +972,15 @@
 ;;; Migemo - 日本語を含む検索時の挙動改善
 (use-package migemo
   :straight t
+  :if (executable-find "cmigemo")
+  :custom
+  (migemo-command "cmigemo")
+  (igemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict")
+  (migemo-options '("-q" "--emacs"))
+  (migemo-user-dictionary nil)
+  (migemo-regex-dictionary nil)
+  (migemo-coding-system 'utf-8-unix)
   :config
-  (setq migemo-command "cmigemo"
-        migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict"
-        migemo-options '("-q" "--emacs")
-        migemo-user-dictionary nil
-        migemo-regex-dictionary nil
-        migemo-coding-system 'utf-8-unix)
   (migemo-init)
   )
 
@@ -1171,27 +1085,52 @@
 
 
 ;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
+;;; Magit
+(use-package magit
+  :straight t
+  :ensure t
+  :bind (("C-x G" . magit-status)
+         ("C-x M-g" . magit-dispatch-popup))
+  :config
+  (defun mu-magit-kill-buffers ()
+    "Restore window configuration and kill all Magit buffers."
+    (interactive)
+    (let ((buffers (magit-mode-get-buffers)))
+      (magit-restore-window-configuration)
+      (mapc #'kill-buffer buffers)))
+  (bind-key "q" #'mu-magit-kill-buffers magit-status-mode-map)
+  )
+
+;;; Diff-hl - 変更点を表示 (git-gutter の置き換え)
+(use-package diff-hl
+  :straight t
+  :hook ((magit-pre-refresh . diff-hl-magit-pre-refresh)
+         (magit-post-refresh . diff-hl-magit-post-refresh)
+         (dired-mode . diff-hl-dired-mode))
+  :init
+  (global-diff-hl-mode +1)
+  (global-diff-hl-show-hunk-mouse-mode +1)
+  (diff-hl-margin-mode +1)
+  )
+
+;;; Difftastic
+(use-package difftastic
+  :straight t
+  :demand t
+  :bind (:map magit-blame-read-only-mode-map
+              ("D" . difftastic-magit-show)
+              ("S" . difftastic-magit-show))
+  :config
+  (eval-after-load 'magit-diff
+    '(transient-append-suffix 'magit-diff '(-1 -1)
+       [("D" "Difftastic diff (dwim)" difftastic-magit-diff)
+        ("S" "Difftastic show" difftastic-magit-show)]))
+  )
+
 ;;; with-editor - Emacs から Git コミットメッセージを編集
 (use-package with-editor
   :straight t
   :defer t)
-;;; Git Gutter - ファイル内の変更点（追加・変更・削除）をサイドバーに表示
-(use-package git-gutter
-  :straight t
-  :after with-editor
-  :init
-  (global-git-gutter-mode t)
-  :custom
-  (git-gutter:modified-sign "~")  ;; 変更
-  (git-gutter:added-sign    "+")  ;; 追加
-  (git-gutter:deleted-sign  "-")  ;; 削除
-  :custom-face
-  ;; (git-gutter:modified ((t (:background "#f1fa8c"))))
-  ;; (git-gutter:added    ((t (:background "#50fa7b"))))
-  ;; (git-gutter:deleted  ((t (:background "#ff79c6"))))
-  )
-;; :init/:config (global-git-gutter-mode t) が効かないので暫定対応
-(add-hook 'emacs-startup-hook #'global-git-gutter-mode)
 
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn
