@@ -1,1 +1,0 @@
-;;; settings of Mac
