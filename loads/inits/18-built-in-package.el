@@ -136,6 +136,13 @@
   (auto-save-visited-mode +1)
   )
 
+;;; Delsel - 選択している状態で入力したときに、region を削除して挿入
+(use-package delsel
+  :straight nil
+  :config
+  (delete-selection-mode +1)
+  )
+
 ;;;;;; [Group] Window & Buffer Management - ウィンドウ・バッファ管理 ;;;;;;
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove
@@ -186,6 +193,12 @@
 (use-package so-long
   :straight nil
   :hook (after-init . global-so-long-mode)
+  )
+
+;;; tramp - defer で遅延読み込み
+(use-package tramp
+  :straight nil
+  :defer t
   )
 
 ;;; repeat - キーのリピート (multiple-cursors などで利用)

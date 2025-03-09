@@ -19,15 +19,68 @@
 
 
 
+;;;;;; [Group] IME - 日本語入力の設定 ;;;;;
+;;; Tr-ime - windows 用設定
+(use-package tr-ime
+  :straight t
+  :if IS-WINDOWS
+  :config
+  (setq default-input-method "W32-IME")
+  (tr-ime-standard-install)
+  (w32-ime-initialize)
+  )
+
+;;; Mozc - mozc 設定
+(use-package mozc
+  :straight t
+  :if (display-graphic-p)
+  :unless IS-WINDOWS
+  :init
+  (setq default-input-method "japanese-mozc")
+  )
+
+
+
 ;;;; [Group] Themes - テーマ関連 ;;;;;;
 ;;; color-theme-modern - モダンなカラーテーマの適用
-(use-package color-theme-modern
+;; (use-package color-theme-modern
+;;   :straight t
+;;   :config
+;;   ;; 選択可能なテーマの幅を広げる
+;;   ;; 参考: https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
+;;   (load-theme 'hober t t)
+;;   (enable-theme 'hober)
+;;   )
+
+;;; doom-themes - テーマ設定
+(use-package doom-themes
   :straight t
+  :custom
+  (doom-themes-enable-italic t)
+  (doom-themes-enable-bold t)
+  :custom-face
+  (doom-modeline-bar ((t (:background "#6272a4"))))
+  (font-lock-comment-face ((t (:foreground "#b0b0b0" :slant italic))))     ;; 薄めのグレー
   :config
-  ;; 選択可能なテーマの幅を広げる
-  ;; 参考: https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
-  (load-theme 'hober t t)
-  (enable-theme 'hober)
+  (load-theme 'doom-dracula t)
+  (doom-themes-neotree-config)
+  (doom-themes-org-config)
+  )
+
+;;; doom-modeline - モードラインのテーマ設定
+(use-package doom-modeline
+  :straight t
+  :if (display-graphic-p)
+  :custom
+  (doom-modeline-buffer-file-name-style 'truncate-with-project)
+  (doom-modeline-icon t)
+  ;; (doom-modeline-major-mode-icon nil)
+  ;; (doom-modeline-minor-modes nil)
+  :hook
+  (after-init . doom-modeline-mode)
+  :config
+  ;; (line-number-mode 0)
+  ;; (column-number-mode 0)
   )
 
 ;;; smart-mode-line - モードラインの外観と情報表示を最適化
@@ -53,11 +106,49 @@
   :hook (after-init . mode-line-bell-mode)
   )
 
-;;; beacon - カーソルの位置を明確にするために点滅エフェクトを追加
-(use-package beacon
+;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
+(use-package pulsar
   :straight t
-  :custom (beacon-color "yellow")
-  :config (beacon-mode 1)
+  :if (display-graphic-p)
+  :config
+  (pulsar-global-mode +1)
+  )
+
+;;; goggles - 編集箇所をハイライト
+(use-package goggles
+  :straight t
+  :hook ((prog-mode text-mode) . goggles-mode)
+  :config
+  (setq-default goggles-pulse t)
+  )
+
+;;; spacious-padding - 画面に余白を付ける
+(use-package spacious-padding
+  :straight t
+  :if (display-graphic-p)
+  :config
+  (setq spacious-padding-widths
+        '( :internal-border-width 15
+           :header-line-width 4
+           :mode-line-width 6
+           :tab-width 4
+           :right-divider-width 30
+           :scroll-bar-width 8))
+
+  ;; Read the doc string of `spacious-padding-subtle-mode-line' as it
+  ;; is very flexible and provides several examples.
+  (setq spacious-padding-subtle-mode-line
+        `( :mode-line-active 'default
+           :mode-line-inactive vertical-border))
+
+  (spacious-padding-mode +1))
+
+;;; perfect-margin - バッファが一つの時に中央寄せ
+(use-package perfect-margin
+  :straight t
+  :config
+  (setq perfect-margin-ignore-filters nil)
+  (perfect-margin-mode +1)
   )
 
 ;;; volatile-highlights - 一時的なハイライト（選択範囲など）を強調表示
@@ -88,7 +179,7 @@
                                   "Cyan" "OrangeRed1" "MediumOrchid1" "SkyBlue"))
   )
 
-;;; rainbow-delimiters - 括弧の色分けで対応関係を視覚化
+;;; Rainbow-delimiters - 括弧の色分けで対応関係を視覚化
 (use-package rainbow-delimiters
   :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
@@ -107,10 +198,60 @@
                       :strike-through t)
   )
 
-;;; all-the-icons - グラフィック環境向けのアイコン
-(use-package all-the-icons
+;;; Nerd-icons - グラフィック環境向けのアイコン
+(use-package nerd-icons
   :straight t
   :if (display-graphic-p)
+  )
+
+;;; Nerd-icons-completion - vertico 等の補完パッケージでアイコンを表示
+(use-package nerd-icons-completion
+  :straight t
+  :if (display-graphic-p)
+  :hook (after-init . nerd-icons-completion-mode)
+  )
+
+;;; Nerd-icons-dired - dired でアイコンを表示
+(use-package nerd-icons-dired
+  :straight t
+  :if (display-graphic-p)
+  :hook (dired-mode . nerd-icons-dired-mode)
+  )
+
+;;; Nyan-mode バッファ上での位置をニャンキャットが教えてくれる
+(use-package nyan-mode
+  :straight t
+  :if (display-graphic-p)
+  :init
+  (setq nyan-bar-length 24)
+  (nyan-mode +1)
+  )
+
+;;; Minions - マイナーモードをハンバーガーメニューで表示
+(use-package minions
+  :straight t
+  :if (display-graphic-p)
+  :init
+  (minions-mode +1)
+  )
+
+;;; page-break-lines ^Lの改ページ文字の表示を良くする
+(use-package page-break-lines
+  :straight t
+  :config
+  (page-break-lines-mode +1)
+  )
+
+;;; highlight-defined - 既知のシンボルに色を付ける
+(use-package highlight-defined
+  :straight t
+  :hook (emacs-lisp-mode . highlight-defined-mode)
+  )
+
+;;; highlight-quoted - 引用符と引用記号に色を付ける
+(use-package highlight-quoted
+  :straight t
+  :hook (emacs-lisp-mode . highlight-quoted-mode)
   )
 
 
@@ -122,6 +263,7 @@
   :hook ((org-mode . visual-line-mode))  ; 自動改行の有効化
   :defer t
   :custom
+  (org-return-follows-link t)            ; Returnキーでリンク先を開く
   (org-hide-leading-stars t)             ; 見出しの*を非表示
   (org-startup-indented t)               ; インデント表示をデフォルトで有効化
   (org-src-fontify-natively t)           ; ソースコードをシンタックスハイライト
@@ -150,6 +292,34 @@
   :straight t
   :after (org)
   :hook (org-mode . org-modern-mode)
+  :config
+  (setopt
+   ;; Edit settings
+   org-auto-align-tags nil
+   org-tags-column 0
+   org-catch-invisible-edits 'show-and-error
+   org-special-ctrl-a/e t
+   org-insert-heading-respect-content t
+
+   ;; Org styling, hide markup etc.
+   org-hide-emphasis-markers t
+   org-pretty-entities t
+
+   ;; Agenda styling
+   org-agenda-tags-column 0
+   org-agenda-block-separator ?─
+   org-agenda-time-grid
+   '((daily today require-timed)
+     (800 1000 1200 1400 1600 1800 2000)
+     " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+   org-agenda-current-time-string
+   "◀── now ─────────────────────────────────────────────────")
+
+  ;; Ellipsis styling
+  (setopt org-ellipsis "…")
+  (set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
+
+  (global-org-modern-mode)
   )
 
 ;;; org-download - 画像のクリップボード貼り付け
@@ -346,6 +516,16 @@
               ("C-l" . vertico-directory-delete-char))
   )
 
+;;; Vertico-truncate - vertico の補完候補を横方向に切り詰める
+(use-package vertico-truncate
+  :straight (:host github :repo "jdtsmith/vertico-truncate")
+  :config
+  (vertico-truncate-mode +1)
+  (setq vertico-truncate-length 50)   ;; 最大表示幅 (デフォルト: 40)
+  (setq vertico-truncate-suffix "…") ;; 省略記号 (デフォルト: "…")
+  )
+
+
 ;;; Marginalia - 詳細な補完情報の表示
 (use-package marginalia
   :straight t
@@ -397,6 +577,7 @@
 ;;; Helm-gtags - ソースコード内のシンボル検索とナビゲーション (Xref で置き換えたい)
 (use-package helm-gtags
   :straight t
+  :defer t
   :hook ((c-mode   . helm-gtags-mode)
          (c++-mode . helm-gtags-mode))
   :bind (:map helm-gtags-mode-map
@@ -492,7 +673,7 @@
   :custom
   (corfu-auto t)                              ; 自動補完
   (corfu-auto-delay 0)                        ; 入力後すぐに補完を表示
-  (corfu-auto-prefix 1)                       ; プレフィックス長
+  (corfu-auto-prefix 2)                       ; プレフィックス長
   (corfu-cycle t)                             ; 候補リストのループ
   (corfu-on-exact-match nil)
   (corfu-preview-current nil)                 ; 現在の候補をプレビューしない
@@ -502,9 +683,6 @@
   (completion-ignore-case t)                  ; 大文字小文字を区別しない
   (tab-always-indent 'complete)
   :config
-  (when (display-graphic-p)                   ; GUI-mode なら ツールチップ情報を表示
-    (corfu-popupinfo-mode 1))
-
   ;; c-mode などの一部のモードではタブに `c-indent-line-or-region` が割り当てられているので、
   ;; 補完が出るように `indent-for-tab-command` に置き換える
   (defun my/corfu-remap-tab-command ()
@@ -547,27 +725,45 @@
 (use-package corfu-terminal
   :straight (corfu-terminal :type git :host github :repo "galeo/corfu-terminal")
   :after corfu
-  :if (not (display-graphic-p))
+  :unless (display-graphic-p)
   :config
   (corfu-terminal-mode 1)
+  )
+
+;;; corfu-popupinfo - 補完候補の横に説明用のポップアップを表示
+(use-package corfu-popupinfo
+  :straight nil
+  :after corfu
+  :if (display-graphic-p)
+  :hook (corfu-mode . corfu-popupinfo-mode)
   )
 
 ;;; Cape - `corfu` の補完バックエンド
 (use-package cape
   :straight t
-  :hook (((prog-mode text-mode conf-mode lsp-completion-mode) . my/set-super-capf)
-         (emacs-lisp-mode . my/set-elisp-capf))
+  :hook (;; ((prog-mode text-mode conf-mode lsp-completion-mode) . my/set-super-capf)
+         (emacs-lisp-mode . my/set-elisp-capf)
+         (after-init . my/global-capf))
   :config
-  ;; 一般的な補完関数
-  (defun my/set-super-capf ()
-    "Set up `completion-at-point-functions` with `cape`."
-    (setq-local completion-at-point-functions
-                (list (cape-capf-super
-                       #'cape-yasnippet
-                       #'cape-dabbrev
-                       #'cape-file
-                       #'cape-keyword
-                       #'cape-tex))))
+  ;; 全モード共通の補完関数
+  (defun my/global-capf ()
+    "Set up global `completion-at-point-functions` for all modes."
+    (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
+    (advice-add 'eglot-completion-at-point :around #'cape-wrap-nonexclusive)
+    (advice-add 'lsp-completion-at-point :around #'cape-wrap-buster)
+    (advice-add 'lsp-completion-at-point :around #'cape-wrap-nonexclusive)
+    (advice-add 'lsp-completion-at-point :around #'cape-wrap-noninterruptible)
+    (add-hook 'completion-at-point-functions #'cape-dabbrev)
+    (add-hook 'completion-at-point-functions #'cape-keyword)
+    (add-hook 'completion-at-point-functions #'cape-file)
+    )
+
+  ;; ;; プログラミング系モードの補完
+  ;; (defun my/set-super-capf ()
+  ;;   "Set up `completion-at-point-functions` with `cape`."
+  ;;   (setq-local completion-at-point-functions
+  ;;               (list (cape-capf-super
+  ;;                      )))) ;; 現状何もなし
 
   ;; Emacs Lisp の補完
   (defun my/set-elisp-capf ()
@@ -575,17 +771,19 @@
     (setq-local completion-at-point-functions
                 (list (cape-capf-super
                        #'cape-elisp-symbol
-                       #'cape-dabbrev
-                       #'cape-keyword
-                       #'cape-file))))
+                       #'cape-elisp-block))))
 
   ;; `M-x eval-expression` (`C-x C-e` など) でも補完可能に
   (add-hook 'eval-expression-minibuffer-setup-hook #'cape-elisp-symbol)
 
-  ;; `yasnippet` 有効時に `cape-yasnippet` を補完候補に統合
+  ;; `yas-minor-mode` 有効時のみ cape-yasnippet を補完関数に追加
   (add-hook 'yas-minor-mode-hook
             (lambda ()
               (add-to-list 'completion-at-point-functions #'cape-yasnippet t)))
+
+  ;; dabbrevのサイズを制限
+  (setq dabbrev-friend-buffer-function (lambda (other-buffer)
+                                         (< (buffer-size other-buffer) (* 1024 1024))))
   )
 
 ;;; Flx - 柔軟なスコアリング
@@ -645,8 +843,10 @@
 ;;; Prescient - 補完履歴とスコアリング
 (use-package prescient
   :straight t
+  :custom
+  (prescient-aggressive-file-save t)
+  (prescient-save-file (my-set-history "prescient-save.el"))
   :config
-  (setq prescient-aggressive-file-save t)
   (prescient-persist-mode +1)
   )
 
@@ -758,7 +958,8 @@
 ;;; Aggressive Indent - コード編集時の自動インデント調整
 (use-package aggressive-indent
   :straight t
-  :hook (emacs-lisp-mode . aggressive-indent-mode))
+  :hook (emacs-lisp-mode . aggressive-indent-mode)
+  )
 
 ;;; Smart Newline - 改行時の自動インデントと位置調整
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
@@ -957,8 +1158,6 @@
           (replace-match new-name)))))
   )
 
-
-
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
@@ -1016,8 +1215,6 @@
   (imenu-list-focus-after-activation t) ; 開いたら自動でフォーカスを移動
   ;; (imenu-list-auto-resize t)            ; サイズを自動調整
   )
-
-
 
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
 ;;; Mozc - 日本語入力の設定

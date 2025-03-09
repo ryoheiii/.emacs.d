@@ -11,9 +11,14 @@
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
 (set-buffer-file-coding-system 'utf-8)
-(when (eq system-type 'darwin)  ;; macOS用
+(cond
+ (IS-MAC
   (set-file-name-coding-system 'utf-8-hfs)
   (setq locale-coding-system 'utf-8-hfs))
+ (IS-WINDOWS
+  (setq-default default-process-coding-system '(utf-8-unix . japanese-cp932-dos))))
+
+
 
 ;;;;;; [Group] File Settings - ファイル操作関連 ;;;;;;
 ;; 自動保存・バックアップ設定
@@ -44,6 +49,12 @@
 (add-hook 'markdown-mode-hook 'my-toggle-delete-trailing-whitespace)
 (add-hook 'after-change-major-mode-hook 'my-toggle-delete-trailing-whitespace)
 
+;;; フォーカスアウト時に全バッファを保存
+(defun my/save-all-buffers ()
+  (save-some-buffers "!"))
+
+(add-hook 'focus-out-hook #'my/save-all-buffers)
+
 ;;;;;; [Group] Completion - 補完設定 ;;;;;;
 (setq completion-ignore-case t
       read-file-name-completion-ignore-case t)
@@ -67,8 +78,8 @@
       comint-scroll-show-maximum-output t)
 
 ;;;;;; [Group] Garbage Collection - GC設定 ;;;;;;
-(setq gc-cons-threshold (* 512 1024 1024)
-      gc-cons-percentage 0.2
+(setq gc-cons-percentage 0.2
+      gc-cons-threshold (* 512 1024 1024)
       garbage-collection-messages t)
 (add-hook 'focus-out-hook #'garbage-collect)
 (add-to-list 'warning-suppress-types '(undo discard-info))
@@ -78,6 +89,41 @@
       inhibit-startup-message t
       flyspell-use-meta-tab nil
       native-comp-async-report-warnings-errors 'silent)
+
+;;; パフォーマンス向上
+;;; https://ayatakesi.github.io/lispref/25.2/html/Output-from-Processes.html
+(setq process-adaptive-read-buffering t)
+;;; protesilaos - https://protesilaos.com/emacs/dotemacs
+(setq blink-matching-paren nil)         ; 閉じ括弧を入力しても点滅させない
+;;; doomemacs - https://github.com/doomemacs/doomemacs/blob/master/lisp/doom-start.el
+;; ファイル検索を2回行わないようにする
+(setq auto-mode-case-fold nil)
+;; 双方向の並び替えを抑制する
+(setq-default bidi-display-reordering 'left-to-right)
+;; 長い行の双方向スキャン
+(setq bidi-inhibit-bpa t)
+;; フォーカスされていないウィンドウのカーソルを削除
+(setq-default cursor-in-non-selected-windows nil)
+(setq highlight-nonselected-windows nil)
+;; 高速なスクロール
+(setq fast-but-imprecise-scrolling t)
+;; ドメインにpingを送信しない
+(setq ffap-machine-p-known 'reject)
+
+;; UIの更新頻度を下げる
+(setq idle-update-delay 1.0)
+;; 不要なフォント表示化を抑制
+(setq redisplay-skip-fontification-on-input t)
+;; Windowsの最適化
+(when IS-WINDOWS
+  (setq w32-get-true-file-attributes nil
+        w32-pipe-read-delay 0
+        w32-pipe-buffer-size (* 64 1024)))
+;;; Centaur Emacs - https://github.com/seagle0128/.emacs.d
+(when IS-WINDOWS
+  (setq w32-use-native-image-API t))
+(unless IS-MAC
+  (setq command-line-ns-option-alist nil))
 
 (provide '00-core)
 ;;; 00-core.el ends here

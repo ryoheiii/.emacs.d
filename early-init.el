@@ -9,6 +9,14 @@
 
 
 
+;;;;; [Group] Define - 定数
+;;; OS判定用定数
+(defconst IS-MAC (eq system-type 'darwin))
+(defconst IS-LINUX (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
+(defconst IS-WINDOWS (memq system-type '(cygwin windows-nt ms-dos)))
+
+
+
 ;;;;; [Group] Auto Files Place - 自動生成ファイル関連制御 ;;;;;
 ;;; Emacs の各種ディレクトリとファイルパスの設定
 (defvar my-emacs-dir    (expand-file-name user-emacs-directory))      ;; /path/to/userhome/.emacs.d/
@@ -97,13 +105,15 @@
 
 
 
-
-
 ;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;
-(menu-bar-mode -1)    ; メニューバーを消す
+(setq use-file-dialog nil)           ;ファイル選択ウィンドウを使用しない
+(setq inhibit-startup-buffer-menu t) ; バッファメニューの使用を抑制
 (when window-system
-  (tool-bar-mode -1)) ; ツールバーを消す
-(blink-cursor-mode 0) ; カーソルの点滅を止める
+  (scroll-bar-mode -1))              ; スクロール非表示
+(menu-bar-mode -1)                   ; メニューバーを消す
+(when window-system
+  (tool-bar-mode -1))                ; ツールバーを消す
+(blink-cursor-mode 0)                ; カーソルの点滅を止める
 
 
 

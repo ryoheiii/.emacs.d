@@ -8,7 +8,7 @@
 (column-number-mode t)                  ; カーソル位置の列番号表示
 (line-number-mode t)                    ; カーソル位置の行番号表示
 (setq frame-title-format (format "%%f - Emacs@%s" (system-name))) ; タイトルバーにフルパス表示
-(fset 'yes-or-no-p 'y-or-n-p)           ; 確認ダイアログを簡略化 (yes/no → y/n)
+(setq use-short-answers t)              ; 確認ダイアログを簡略化 (yes/no → y/n)
 (setq eval-expression-print-length nil) ; evalした結果を全部表示
 (setq ring-bell-function 'ignore)       ; エラー音を鳴らさない
 
