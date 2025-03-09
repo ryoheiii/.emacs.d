@@ -56,16 +56,35 @@
 (use-package doom-themes
   :straight t
   :custom
-  (doom-themes-enable-italic t)
-  (doom-themes-enable-bold t)
+  (doom-themes-enable-bold t)   ;; 強調された文字を有効化
+  (doom-themes-enable-italic t) ;; イタリックを有効化
   :custom-face
   (doom-modeline-bar ((t (:background "#6272a4"))))
   (font-lock-comment-face ((t (:foreground "#b0b0b0" :slant italic))))     ;; 薄めのグレー
   :config
+  ;;; ロードテーマ
+  ;; (load-theme 'doom-one t)
   (load-theme 'doom-dracula t)
+  ;; (load-theme 'doom-gruvbox t)
+
+  ;; 各種設定
+  (doom-themes-visual-bell-config)
   (doom-themes-neotree-config)
   (doom-themes-org-config)
+  ;; Treemacs に Doom のスタイルを適用（GUI環境のみ）
+  (when (and (display-graphic-p) (fboundp 'treemacs))
+    (doom-themes-treemacs-config))
   )
+
+(global-set-key (kbd "<f6>") #'my/toggle-doom-theme)
+(defun my/toggle-doom-theme ()
+  "Doomテーマを light/dark で切り替える."
+  (interactive)
+  (if (eq (car custom-enabled-themes) 'doom-one)
+      (progn (disable-theme 'doom-one) (load-theme 'doom-nord-light t))
+    (disable-theme 'doom-nord-light)
+    (load-theme 'doom-one t)))
+
 
 ;;; doom-modeline - モードラインのテーマ設定
 (use-package doom-modeline
@@ -723,11 +742,11 @@
 
 ;;; Corfu-terminal - 端末 (`-nw`) で `corfu` を有効化
 (use-package corfu-terminal
-  :straight (corfu-terminal :type git :host github :repo "galeo/corfu-terminal")
+  :straight (:type git :repo "https://codeberg.org/akib/emacs-corfu-terminal.git")
   :after corfu
   :unless (display-graphic-p)
   :config
-  (corfu-terminal-mode 1)
+  (corfu-terminal-mode +1)
   )
 
 ;;; corfu-popupinfo - 補完候補の横に説明用のポップアップを表示
