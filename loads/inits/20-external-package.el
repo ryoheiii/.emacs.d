@@ -410,8 +410,6 @@
 
 
 
-
-
 ;;;;; [Group] Markdown - Markdown 関連 ;;;;;
 ;;; 変数定義（コンフィギュレーション）
 ;; Markdown 用のカスタム CSS ファイルのパス
@@ -1190,6 +1188,8 @@
           (replace-match new-name)))))
   )
 
+
+
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
@@ -1247,6 +1247,8 @@
   (imenu-list-focus-after-activation t) ; 開いたら自動でフォーカスを移動
   ;; (imenu-list-auto-resize t)            ; サイズを自動調整
   )
+
+
 
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
 ;;; Mozc - 日本語入力の設定
