@@ -643,11 +643,6 @@
       (start-process "gtags-update" nil "global" "-uv")))
   )
 
-;;; Project - プロジェクト管理
-(use-package project
-  :bind (("C-x p f" . project-find-file))
-  )
-
 ;;; Affe - 高速検索（grep 代替）
 (use-package affe
   :straight t
