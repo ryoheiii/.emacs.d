@@ -544,19 +544,23 @@
   :straight t
   :init
   (vertico-mode)
+  (vertico-multiform-mode)
   :custom
   (vertico-cycle t)
   (vertico-count 30)
   (vertico-resize nil)
   (enable-recursive-minibuffers t)
   :config
-  ;; ディレクトリを先に表示するカスタムソート関数
+  ;; ディレクトリを先に表示し、ファイルはアルファベット順にソート
   (defun my-vertico-sort-directories-first (files)
     "ディレクトリを先にソートし、それ以外をアルファベット順にする."
     (let ((dirs (seq-filter #'file-directory-p files))
           (nondirs (seq-remove #'file-directory-p files)))
       (append (sort dirs #'string<) (sort nondirs #'string<))))
-  (setq vertico-sort-override-function #'my-vertico-sort-directories-first)
+
+  ;; `file` カテゴリに限定してソート適用
+  (add-to-list 'vertico-multiform-categories
+               '(file (vertico-sort-override-function . my-vertico-sort-directories-first)))
   )
 
 ;;; Vertico-repeat - 直前の補完を再実施
