@@ -25,7 +25,10 @@
   :straight nil
   :hook (after-init . show-paren-mode)
   :custom
+  (show-paren-delay 0)      ;; 遅延なしで即時ハイライト
   (show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる
+  :custom-face
+  (show-paren-match ((t (:background "#6b93b7" :foreground "#2e3440" :weight bold)))) ;; 薄めの青系
   )
 
 ;;; Whitespace - 空白文字の視覚化。スペース、タブ、行末の空白などを明確に表示

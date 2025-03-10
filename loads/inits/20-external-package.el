@@ -79,7 +79,9 @@
   (doom-themes-enable-italic t) ;; イタリックを有効化
   :custom-face
   (doom-modeline-bar ((t (:background "#6272a4"))))
-  (font-lock-comment-face ((t (:foreground "#b0b0b0" :slant italic))))     ;; 薄めのグレー
+  (font-lock-comment-face ((t (:foreground "#b0b0b0" :slant italic)))) ;; 薄めのグレー
+  (font-lock-doc-face ((t (:foreground "#b0b0b0"))))                   ;; 薄めのグレー
+  (region ((t (:background "#44475a"))))
   :config
   ;;; ロードテーマ
   ;; (load-theme 'doom-one t)
@@ -220,6 +222,20 @@
 (use-package rainbow-delimiters
   :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
+  :custom-face
+  (rainbow-delimiters-depth-1-face ((t (:foreground "#c0c5ce"))))  ;; 青みがかったグレー
+  (rainbow-delimiters-depth-2-face ((t (:foreground "#a3be8c"))))  ;; 淡い緑
+  (rainbow-delimiters-depth-3-face ((t (:foreground "#b48ead"))))  ;; 薄い紫
+  (rainbow-delimiters-depth-4-face ((t (:foreground "#96b5b4"))))  ;; 水色
+  (rainbow-delimiters-depth-5-face ((t (:foreground "#ab7967"))))  ;; 落ち着いたオレンジ
+  (rainbow-delimiters-depth-6-face ((t (:foreground "#ebcb8b"))))  ;; 柔らかい黄色
+  (rainbow-delimiters-depth-7-face ((t (:foreground "#d08770"))))  ;; くすんだ赤
+  (rainbow-delimiters-depth-8-face ((t (:foreground "#bf616a"))))  ;; 深めの赤
+  (rainbow-delimiters-depth-9-face ((t (:foreground "#a3be8c"))))  ;; 緑リピート
+
+  ;; **括弧の過不足 (エラー) を目立たせる**
+  (rainbow-delimiters-mismatched-face ((t (:foreground "#ff6c6b" :background "#5f0000" :weight bold :underline t))))
+  (rainbow-delimiters-unmatched-face ((t (:foreground "#ffffff" :background "#af0000" :weight bold :underline t))))
   :bind (("C-c l" . rainbow-delimiters-using-stronger-colors))  ;; より強調した色に変更
   :config
   ;; 強調した括弧の色を適用する関数
@@ -312,7 +328,7 @@
   (org-adapt-indentation nil)            ; インデントの自動調整をオフにする
   (org-cycle-separator-lines 2)          ; 見出しの間隔
   (org-ellipsis " ▼")                   ; 折りたたみ表示の記号変更
-  (org-agenda-files '("~/org/agenda/"))  ; アジェンダファイルのディレクトリ
+  ;; (org-agenda-files '("~/org/agenda/"))  ; アジェンダファイルのディレクトリ
   (org-todo-keywords
    '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
   )
@@ -361,6 +377,7 @@
 
 ;;; org-download - 画像のクリップボード貼り付け
 (use-package org-download
+  :disabled t
   :straight t
   :after (org)
   :bind (:map org-mode-map
@@ -376,6 +393,7 @@
 
 ;;; org-roam - ノート管理
 (use-package org-roam
+  :disabled t
   :straight t
   :after (org)
   :custom
@@ -395,6 +413,7 @@
 
 ;;; org-agenda - スケジュール管理
 (use-package org-agenda
+  :disabled t
   :straight nil
   :after (org)
   :bind ("C-c a" . org-agenda)
@@ -519,18 +538,25 @@
   :hook (markdown-mode . pandoc-mode)
   )
 
-
-
 ;;;;; [Group] Completion UI - 補完 UI 関連
 ;;; Vertico - ミニバッファ補完 UI
 (use-package vertico
   :straight t
-  :init (vertico-mode)
+  :init
+  (vertico-mode)
   :custom
   (vertico-cycle t)
   (vertico-count 30)
   (vertico-resize nil)
   (enable-recursive-minibuffers t)
+  :config
+  ;; ディレクトリを先に表示するカスタムソート関数
+  (defun my-vertico-sort-directories-first (files)
+    "ディレクトリを先にソートし、それ以外をアルファベット順にする."
+    (let ((dirs (seq-filter #'file-directory-p files))
+          (nondirs (seq-remove #'file-directory-p files)))
+      (append (sort dirs #'string<) (sort nondirs #'string<))))
+  (setq vertico-sort-override-function #'my-vertico-sort-directories-first)
   )
 
 ;;; Vertico-repeat - 直前の補完を再実施
@@ -560,7 +586,6 @@
   (setq vertico-truncate-suffix "…") ;; 省略記号 (デフォルト: "…")
   )
 
-
 ;;; Marginalia - 詳細な補完情報の表示
 (use-package marginalia
   :straight t
@@ -582,8 +607,8 @@
    ("C-s"     . consult-line)
    ("C-S"     . consult-line-multi)
    ("C-."     . consult-goto-line)
-   ;; ("C-x g"   . consult-grep)
-   ("C-x g"   . affe-grep)
+   ("C-x g"   . consult-grep)
+   ;; ("C-x g"   . affe-grep)
    )
   :custom
   (xref-show-xrefs-function #'consult-xref)
@@ -644,7 +669,6 @@
 ;;; Affe - 高速検索（grep 代替）
 (use-package affe
   :straight t
-  :bind (("C-x g" . affe-grep))
   :config
   (setq affe-regexp-function #'orderless-pattern-compiler)
   (setq affe-highlight-function #'orderless-highlight-matches)
