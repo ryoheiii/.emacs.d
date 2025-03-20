@@ -70,12 +70,13 @@
   :hook (text-mode . my/text-mode-setup)
   :config
   (defun my/text-mode-setup ()
-    "テキストモード用の設定。"
-    (setq indent-tabs-mode nil
-          tab-width 2
-          c-basic-offset 2)
-    (setq tab-stop-list (number-sequence 4 120 4)) ; タブストップを 4 の倍数で設定
-    (subword-mode 1))                              ; CamelCase も単語として移動
+    "テキストモード用の設定。ただし markdown-mode では適用しない。"
+    (unless (derived-mode-p 'markdown-mode) ;; markdown-mode では適用しない
+      (setq indent-tabs-mode nil
+            tab-width 2
+            c-basic-offset 2)
+      (setq tab-stop-list (number-sequence 4 120 4)) ; タブストップを 4 の倍数で設定
+      (subword-mode 1)))                             ; CamelCase も単語として移動
   )
 
 (provide '21-language-modes)
