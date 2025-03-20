@@ -79,5 +79,5 @@
       (subword-mode 1)))                             ; CamelCase も単語として移動
   )
 
-(provide '21-language-modes)
+(provide '19-language-modes)
 ;;; 19-language-modes.el ends here
