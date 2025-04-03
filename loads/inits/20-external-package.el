@@ -1234,7 +1234,7 @@
   :if (executable-find "cmigemo")
   :custom
   (migemo-command "cmigemo")
-  (igemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict")
+  (migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict")
   (migemo-options '("-q" "--emacs"))
   (migemo-user-dictionary nil)
   (migemo-regex-dictionary nil)
