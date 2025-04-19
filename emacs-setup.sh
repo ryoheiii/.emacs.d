@@ -60,7 +60,7 @@ setup_env() {
     GCC_VERSION=$(gcc -dumpversion | cut -d. -f1)
     echo "Detected GCC version: $GCC_VERSION"
     ## 必須
-    sudo apt-get install -y build-essential autoconf automake texinfo
+    sudo apt-get install -y build-essential autoconf automake texinfo git libtool
     ## 推奨
     sudo apt-get install -y pkg-config                   # C/C++ プロジェクトのライブラリ依存管理ツール
     sudo apt-get install -y libgccjit-${GCC_VERSION}-dev # ネイティブコンパイル用 (Emacs29以降)
@@ -68,8 +68,10 @@ setup_env() {
     sudo apt-get install -y libtree-sitter-dev           # Tree-sitter (シンタックスハイライト)
     sudo apt-get install -y libxml2-dev                  # XML パース (shr.el, EWW)
     # sudo apt-get install -y libm17n-dev                  # 多言語テキスト処理
+    sudo apt-get install -y libdbus-1-dev                # DBus 通信用ライブラリ
     sudo apt-get install -y zlib1g zlib1g-dev            # 圧縮ライブラリ (gzip など)
-    # sudo apt-get install -y libacl1-dev                  # POSIX ACL（アクセス制御リスト)サポート
+    sudo apt-get install -y libacl1-dev                  # POSIX ACL（アクセス制御リスト)サポート
+    sudo apt-get install -y libp11-kit-dev               # GnuTLS が証明書ストアを扱うための共通ライブラリ
     # sudo apt-get install -y libsystemd-dev               # systemd の統合
 
     ### GUI (X11/GTK) で必要なもの
@@ -77,9 +79,12 @@ setup_env() {
     sudo apt-get install -y libgtk-3-dev                 # GTK3 ベースの GUI サポート
     sudo apt-get install -y libgnutls28-dev              # TLS (HTTPS/SSL) サポート
     sudo apt-get install -y libfreetype6-dev             # フォントサポート
-    # sudo apt-get install -y libotf-dev                   # Opentype フォント処理のサポート
+    sudo apt-get install -y libotf-dev                   # Opentype フォント処理のサポート
     # X11 関連。GTK3 を使う場合は不要なものもあり
+    sudo apt-get install -y libx11-dev                   # X Window System の基本ライブラリ
+    sudo apt-get install -y libxmu-dev                   # X11 のユーティリティライブラリ
     sudo apt-get install -y xorg-dev                     # X11 開発パッケージ
+    sudo apt-get install -y libxfixes-dev                # X11 の細かい修正拡張
     sudo apt-get install -y libxft-dev                   # フォント描画サポート
     sudo apt-get install -y libxkbcommon-dev             # キーボード入力処理
     sudo apt-get install -y libxrandr-dev                # 画面サイズ変更のサポート
@@ -88,21 +93,24 @@ setup_env() {
     sudo apt-get install -y libjpeg-dev                  # JPEG 画像のサポート
     sudo apt-get install -y libgif-dev                   # GIF 画像のサポート
     sudo apt-get install -y libpng-dev                   # PNG 画像のサポート
-    # sudo apt-get install -y libtiff-dev                  # TIFF 画像のサポート
+    sudo apt-get install -y libtiff-dev                  # TIFF 画像のサポート
     sudo apt-get install -y librsvg2-dev                 # SVG 画像のサポート
-    # sudo apt-get install -y libxpm-dev                   # XPM 画像のサポート
-    # sudo apt-get install -y libxaw7-dev                  # Xaw3d 用 (GUI の一部)
+    sudo apt-get install -y libxpm-dev                   # XPM 画像のサポート
+    sudo apt-get install -y libxaw7-dev                  # Xaw3d 用 (GUI の一部)
     sudo apt-get install -y libharfbuzz-dev              # 高品質なフォントレンダリング (ligature.el など使う場合に必須)
-    # sudo apt-get install -y libcairo-5c-dev              # 2Dグラフィックス
-    # sudo apt-get install -y liblcms2-dev                 # カラーマネジメント
-    # sudo apt-get install -y libwebp-dev                  # WebP 画像サポート
+    sudo apt-get install -y libxcomposite-dev            # GTX3 での合成描画
+    sudo apt-get install -y libmagickwand-dev            # ImageMagick の C API
+    sudo apt-get install -y libxi-dev                    # 入力拡張 (XInput) 用のライブラリ
+    sudo apt-get install -y libcairo-5c-dev              # 2Dグラフィックス
+    sudo apt-get install -y liblcms2-dev                 # カラーマネジメント
+    sudo apt-get install -y libwebp-dev                  # WebP 画像サポート
 
     ### ターミナル (TUI) で必要なもの
     ## 必須
     sudo apt-get install -y libncurses-dev               # ターミナルでのテキスト UI 提供ライブラリ
     sudo apt-get install -y libgpm-dev                   # General Purpose Mouse による端末でのマウスサポート
     ## 推奨
-    # sudo apt-get install -y libjansson-dev               # JSON パース (LSP・eglot 用)
+    sudo apt-get install -y libjansson-dev               # JSON パース (LSP・eglot 用)
 
     ##### Emacs 利用時に必要なパッケージのインストール
     sudo apt-get install -y clang libclang-dev           # Clang 用
@@ -142,7 +150,7 @@ install_emacs() {
     # ビルドとインストール
     cd emacs
     ./autogen.sh
-    ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation
+    ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-json --with-rsvg --with-imagemagick --with-x-toolkit=gtk3 --with-xft
     make -j$(nproc)
     make install
 
