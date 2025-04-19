@@ -26,7 +26,8 @@ Usage: $0 [options]...
 Options:
   -s, --setup               Install required dependencies for Emacs.
   -l, --list                List available Emacs versions for installation.
-  -i <ver>, --install <ver> Install Emacs <ver> (e.g., 30.1).
+  -i <ver>, --install <ver> [--gui <gtk3|lucid|pgtk|no>]
+                            Install Emacs <ver> with optional GUI backend.
   -u, --uninstall           Uninstall the locally installed Emacs.
   -c, --clean               Remove Emacs auto generated files (excluding packages).
   -C, --clean-all           Remove all Emacs auto genarated files (including packages).
@@ -137,6 +138,7 @@ list_emacs_versions() {
 # 参考: https://myemacs.readthedocs.io/ja/latest/build.html
 install_emacs() {
     local VERSION="$1"
+    local GUI="${2:-gtk3}"  # GUIオプション、デフォルトは gtk3
     [ -z "$VERSION" ] && { echo "Error: No Emacs version specified."; usage; }
     [ -d "$EMACS_SRC_DIR" ] && { echo "Emacs is already installed. Run 'uninstall' first."; exit 1; }
 
@@ -152,9 +154,33 @@ install_emacs() {
     # ビルドとインストール
     cd emacs
     ./autogen.sh
-    # ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-pgtk --with-json --with-tree-sitter --with-modules --without-pop
-    ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-x-toolkit=gtk3 --with-x --with-json --with-tree-sitter --with-modules --without-pop
-    # ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-x-toolkit=lucid --with-x --with-json --with-tree-sitter --with-modules --without-pop
+
+    local CONFIG_OPTS="--prefix=$EMACS_INSTALL_PREFIX \
+        --with-native-compilation \
+        --with-json \
+        --with-tree-sitter \
+        --with-modules \
+        --without-pop"
+    case "$GUI" in
+        gtk3)
+            CONFIG_OPTS="$CONFIG_OPTS --with-x --with-x-toolkit=gtk3"
+            ;;
+        lucid)
+            CONFIG_OPTS="$CONFIG_OPTS --with-x --with-x-toolkit=lucid"
+            ;;
+        pgtk)
+            CONFIG_OPTS="$CONFIG_OPTS --with-pgtk"
+            ;;
+        no)
+            CONFIG_OPTS="$CONFIG_OPTS --without-x"
+            ;;
+        *)
+            echo "Unsupported GUI type: $GUI"
+            echo "Supported GUI types: gtk3 (default), lucid, pgtk, no"
+            exit 1
+            ;;
+    esac
+    ./configure $CONFIG_OPTS
     make -j$(nproc)
     make install
 
@@ -251,7 +277,30 @@ ACTION="$1"; shift
 case "$ACTION" in
     -s|--setup)           setup_env ;;
     -l|--list)            list_emacs_versions ;;
-    -i|--install)         install_emacs "$1" ;;
+    -i|--install)
+        EMACS_VERSION=""
+        GUI_TOOLKIT="gtk3"  # デフォルト GUI
+
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                -g|--gui)
+                    GUI_TOOLKIT="$2"
+                    shift 2
+                    ;;
+                *)
+                    EMACS_VERSION="$1"
+                    shift
+                    ;;
+            esac
+        done
+
+        if [ -z "$EMACS_VERSION" ]; then
+            echo "Error: No Emacs version specified for install."
+            usage
+        fi
+
+        install_emacs "$EMACS_VERSION" "$GUI_TOOLKIT"
+        ;;
     -u|--uninstall)       uninstall_emacs ;;
     -c|--clean)           clean ;;
     -C|--clean-all)       clean_all ;;
