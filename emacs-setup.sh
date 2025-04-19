@@ -150,7 +150,8 @@ install_emacs() {
     # ビルドとインストール
     cd emacs
     ./autogen.sh
-    ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-json --with-rsvg --with-imagemagick --with-x-toolkit=gtk3 --with-xft
+    # ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-pgtk --with-json --with-tree-sitter --with-modules --without-pop
+    ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-x-toolkit=gtk3 --with-x --with-json --with-tree-sitter --with-modules --without-pop
     make -j$(nproc)
     make install
 
