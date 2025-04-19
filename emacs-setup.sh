@@ -104,6 +104,8 @@ setup_env() {
     sudo apt-get install -y libcairo-5c-dev              # 2Dグラフィックス
     sudo apt-get install -y liblcms2-dev                 # カラーマネジメント
     sudo apt-get install -y libwebp-dev                  # WebP 画像サポート
+    # PGTK 用
+    sudo apt-get install -y libgtk-4-dev                 # PGTK 用
 
     ### ターミナル (TUI) で必要なもの
     ## 必須
@@ -152,6 +154,7 @@ install_emacs() {
     ./autogen.sh
     # ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-pgtk --with-json --with-tree-sitter --with-modules --without-pop
     ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-x-toolkit=gtk3 --with-x --with-json --with-tree-sitter --with-modules --without-pop
+    # ./configure --prefix="$EMACS_INSTALL_PREFIX" --with-native-compilation --with-x-toolkit=lucid --with-x --with-json --with-tree-sitter --with-modules --without-pop
     make -j$(nproc)
     make install
 
