@@ -470,19 +470,9 @@
 (use-package markdown-mode
   :straight t
   :mode ("\\.md\\'" . markdown-mode)
-  :hook ((markdown-mode . flyspell-mode)                              ; スペルチェック
-         (markdown-mode . visual-line-mode)                           ; 行の折り返し
-         (markdown-mode . (lambda ()                                  ; markdown-indent-on-enter
-                            (setq markdown-indent-on-enter t)))
-         (markdown-mode . display-line-numbers-mode)                  ; 行番号表示
-         (markdown-mode . outline-minor-mode)                         ; 見出しの折りたたみ
-         (markdown-mode . (lambda ()
-                            (setq markdown-enable-math t)             ; 数式を有効化
-                            markdown-fontify-code-blocks-natively t)) ; コードブロックの色付け
-         (markdown-mode . electric-pair-mode)                         ; 括弧の自動補完
-         (markdown-mode . (lambda ()
-                            (local-set-key (kbd "C-c TAB") #'my-markdown-insert-tab))) ; 4 スペースを挿入
-         )
+  :init (setq markdown-enable-math t                   ; 数式 ($…$ / $$…$$) を有効に
+              markdown-fontify-code-blocks-natively t) ; コードブロックを必ず着色
+  :hook ((markdown-mode . my/markdown-setup))
   :custom
   (markdown-indent-level 4)
   (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
@@ -497,12 +487,11 @@
    <style>\n%s\n</style>\n
    <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
    <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
-   (my-markdown-load-css)))
+           (my-markdown-load-css)))
   ;; コードブロックのシンタックスハイライト
-  (markdown-code-lang-modes
-   '(("bash"   . shell-script)
-     ("elisp"  . emacs-lisp)
-     ("python" . python)))
+  (markdown-code-lang-modes '(("bash"   . shell-script)
+                              ("elisp"  . emacs-lisp)
+                              ("python" . python)))
   ;; 画像を表示する設定
   (markdown-image-use-cache t) ; キャッシュして表示
   :bind (("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
@@ -510,7 +499,18 @@
          ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
          ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
   :config
-  ;; 折りたたみ HTML タグを挿入する関数
+  (defun my/markdown-setup ()
+    "Things that must run *after* `markdown-mode' comes up."
+    (flyspell-mode  1)                   ; スペルチェック
+    (visual-line-mode 1)                 ; ソフト折り返し
+    (display-line-numbers-mode 1)        ; 行番号
+    (outline-minor-mode 1)               ; 見出し折りたたみ
+    (electric-pair-mode 1)               ; 括弧補完
+    (setq-local markdown-indent-on-enter t)
+    ;; 4 スペースを TAB で挿入
+    (local-set-key (kbd "C-c TAB") #'my-markdown-insert-tab))
+
+  ;; 折りたたみ `<details>` を挿入
   (defun markdown-insert-details ()
     "Insert <details> HTML tag with a <summary>."
     (interactive)
