@@ -50,30 +50,32 @@ hr {
 
 /* コードブロック */
 pre {
-    background: #252526;  /* 少し明るい VSCode ダークテーマ */
-    color: #eaeaea;
+    background: #2d2f31;
+    color: #f7f7f8;
+
     padding: 14px;
-    border-radius: 6px;  /* 角を少し丸く */
+    border-radius: 6px;
     overflow-x: auto;
     font-size: 14px;  /* 見やすいフォントサイズ */
     font-family: "Consolas", "Courier New", monospace;
     line-height: 1.4;
     position: relative;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);  /* 立体感を追加 */
+
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 /* コードブロックの中の文字 */
 pre code {
     display: block;
-    padding: 0;
     margin: 0;
+    padding: 0;
     background: none;
-    color: #eaeaea;
+    color: inherit;         /* <pre> と同色に統一 */
 }
 
 /* コードブロックの選択時の強調表示 */
 pre code::selection {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(95, 154, 255, 0.35);
 }
 
 /* インラインコード */
