@@ -1,50 +1,57 @@
-/* ==========================================================
- * markdown.css - Pandoc 用 HTML スタイルシート
- * ========================================================== */
+/* =============================================================
+ * markdown.css – Pandoc 出力 HTML 用スタイルシート
+ * ============================================================= */
 
 /* ------------------------------------------------------------------
-  1. トークン（カスタムプロパティ）
+  1. CSS カスタムプロパティ（変数）
 ------------------------------------------------------------------- */
 :root {
-  /* --- ベースカラー ------------------------------------------- */
-  --color-accent         : #0077cc;   /* アクセント色（リンク・罫線など） */
-  --color-fg             : #333;      /* 本文文字色                       */
-  --color-bg             : #ffffff;   /* ページ背景色                     */
-  --color-border         : #0077cc;   /* 主に見出し下線に使用             */
+  /* === 1‑1. ベース配色 (Base Palette) ======================== */
+  --base-accent             : #0077cc;               /* アクセント／リンク色     */
+  --base-fg                 : #333;                  /* 本文文字色               */
+  --base-bg                 : #ffffff;               /* ページ背景色             */
+  --base-border             : var(--base-accent);    /* 見出し罫線など           */
 
-  /* --- コード関連 --------------------------------------------- */
-  --code-bg              : #f5f5f5;   /* <pre> 背景色                     */
-  --code-fg              : #2e2e2e;   /* コード文字色                     */
-  --code-select          : rgba(100,150,255,.35); /* コード選択時の反転色 */
-  --inline-bg            : #f4f4f4;   /* インラインコード背景             */
-  --inline-fg            : #d63384;   /* インラインコード文字色           */
+  /* === 1‑2. コードブロック (Code Block) ====================== */
+  --code-bg                 : #f5f5f5;               /* <pre> 背景               */
+  --code-fg                 : #2e2e2e;               /* <pre> 文字色             */
+  --code-select-bg          : rgba(100,150,255,.35); /* 選択時背景               */
+  --code-font-size          : 14px;                  /* ブロックコード文字サイズ */
+  --code-line-height        : 1.4;
+  --pad-code-block          : 14px;                  /* コードブロック内余白     */
 
-  /* --- テーブル関連 ------------------------------------------- */
-  --table-border         : #ddd;      /* セル境界線                       */
-  --table-header-bg      : var(--color-accent); /* ヘッダー背景           */
-  --table-header-fg      : #ffffff;   /* ヘッダー文字色                   */
-  --table-row-alt-bg     : #f9f9f9;   /* 偶数行の交互背景                 */
+  /* === 1‑3. インラインコード (Inline Code) =================== */
+  --inline-bg               : #f4f4f4;               /* 背景                     */
+  --inline-fg               : #d63384;               /* 文字色                   */
+  --inline-font-size        : 0.81rem;               /* 13px 相当                */
+  --pad-inline-code         : 2px 5px;               /* 余白                     */
 
-  /* --- 引用ブロック関連 --------------------------------------- */
-  --blockquote-bg        : #f8f9fa;   /* 引用背景色                       */
-  --blockquote-border    : var(--color-accent); /* 左線の色               */
-  --blockquote-fg        : #555;      /* 引用文字色                       */
-  --blockquote-padding   : 0.85rem 1.2rem; /* 内部余白                    */
+  /* === 1‑4. テーブル (Table) ================================= */
+  --table-border-color      : #ddd;                  /* セル境界線               */
+  --table-header-bg         : var(--base-accent);
+  --table-header-fg         : #ffffff;
+  --table-row-alt-bg        : #f9f9f9;               /* 偶数行ストライプ背景     */
 
-  /* --- タイポグラフィ ----------------------------------------- */
-  --font-body            : "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
-  --font-mono            : "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
-  --line-height          : 1.5;       /* 本文行間                         */
+  /* === 1‑5. 引用ブロック (Blockquote) ======================== */
+  --blockquote-bg           : #f8f9fa;               /* 背景                     */
+  --blockquote-border-color : var(--base-accent);    /* 左線色                   */
+  --blockquote-text-color   : #555;                  /* 文字色                   */
+  --blockquote-padding      : 0.85rem 1.2rem;
 
-  /* --- レイアウト --------------------------------------------- */
-  --page-max             : 1000px;    /* 本文幅の上限                     */
-  --radius               : 6px;       /* 角丸半径（共通）                 */
-  --pad-code             : 14px;      /* コードブロック内余白             */
-  --pad-inline           : 2px 5px;   /* インラインコード余白             */
+  /* === 1‑6. タイポグラフィ (Typography) ====================== */
+  --font-body               : "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+  --font-mono               : "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+  --line-height-body        : 1.5;
 
-  /* --- その他 ------------------------------------------------- */
-  --shadow               : 0 4px 8px rgba(0,0,0,.12);  /* ソフトシャドウ  */
-  --hr-color-light       : #ddd;      /* 水平線グラデ用の中間色           */
+  /* === 1‑7. レイアウト (Layout) ============================== */
+  --layout-page-max         : 1000px;                /* 本文幅上限               */
+  --radius-base             : 6px;                   /* 角丸の共通半径           */
+
+  /* === 1‑8. その他 (Misc) ==================================== */
+  --shadow-soft             : 0 4px 8px rgba(0,0,0,.12);
+  --hr-grad-mid             : #ddd;                  /* 水平線グラデ中間色       */
+  --link-hover-color        : #0056b3;               /* リンク hover 文字色      */
+  --figcaption-color        : #666;                  /* キャプション文字色       */
 }
 
 /* ------------------------------------------------------------------
@@ -52,25 +59,25 @@
 ------------------------------------------------------------------- */
 html {
   box-sizing: border-box;
-  font-size : 16px;
+  font-size : 16px;                     /* 1rem = 16px */
 }
 *, *::before, *::after { box-sizing: inherit; }
 
 body {
-  max-width  : var(--page-max);
+  max-width  : var(--layout-page-max);
   margin     : auto;
   padding    : 30px;
-  color      : var(--color-fg);
-  background : var(--color-bg);
+  color      : var(--base-fg);
+  background : var(--base-bg);
   font-family: var(--font-body);
-  line-height: var(--line-height);
+  line-height: var(--line-height-body);
 }
 
 /* ------------------------------------------------------------------
-  3. 見出し
+  3. 見出し (Headings)
 ------------------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
-  margin      : auto;
+  margin      : auto;    /* 個別に余白指定するので 0 相当 */
   font-weight : 400;
   line-height : 1.5;
 }
@@ -78,7 +85,7 @@ h1, h2, h3, h4, h5, h6 {
 h1 {
   font-size     : 1.8rem;
   color         : #222;
-  border-bottom : 1px solid var(--color-border);
+  border-bottom : 1px solid var(--base-border);
   padding-bottom: 6px;
   margin-bottom : 15px;
 }
@@ -101,29 +108,29 @@ h5 { font-size: 1.05rem; }
 h6 { font-size: 1rem;  }
 
 /* ------------------------------------------------------------------
-  4. 水平線
+  4. 水平線 (Horizontal Rule)
 ------------------------------------------------------------------- */
 hr {
   border    : none;
   height    : 1px;
-  background: linear-gradient(to right, var(--color-accent), var(--hr-color-light), var(--color-accent));
+  background: linear-gradient(to right, var(--base-accent), var(--hr-grad-mid), var(--base-accent));
   margin    : 20px 0;
 }
 
 /* ------------------------------------------------------------------
-  5. テーブル
+  5. テーブル (Table)
 ------------------------------------------------------------------- */
 table {
   width           : 100%;
   border-collapse : collapse;
   margin          : 15px 0;
   background      : #fff;
-  border          : 1px solid var(--table-border);
+  border          : 1px solid var(--table-border-color);
   box-shadow      : 0 1px 3px rgba(0,0,0,0.1);
 }
 
 th, td {
-  border     : 1px solid var(--table-border);
+  border     : 1px solid var(--table-border-color);
   padding    : 8px;
   text-align : left;
 }
@@ -139,10 +146,10 @@ tr:nth-child(even) {
 }
 
 /* ------------------------------------------------------------------
-  6. リンク
+  6. リンク (Links)
 ------------------------------------------------------------------- */
 a {
-  color          : var(--color-accent);
+  color          : var(--base-accent);
   text-decoration: none;
   font-weight    : 500;
   transition     : color .2s;
@@ -150,34 +157,34 @@ a {
 
 a:hover {
   text-decoration: underline;
-  color          : #0056b3;
+  color          : var(--link-hover-color);
 }
 
 /* ------------------------------------------------------------------
-  7. 引用ブロック
+  7. 引用ブロック (Blockquote)
 ------------------------------------------------------------------- */
 blockquote {
   margin       : 1.5rem 0;
   padding      : var(--blockquote-padding);
   background   : var(--blockquote-bg);
-  border-left  : 4px solid var(--blockquote-border);
-  border-radius: calc(var(--radius) / 2);
-  color        : var(--blockquote-fg);
+  border-left  : 4px solid var(--blockquote-border-color);
+  border-radius: calc(var(--radius-base) / 2);
+  color        : var(--blockquote-text-color);
   font-style   : italic;
 }
 
 /* ------------------------------------------------------------------
-  8. コードブロック
+  8. コードブロック (Code Block)
 ------------------------------------------------------------------- */
 pre {
   background   : var(--code-bg);
   color        : var(--code-fg);
-  padding      : var(--pad-code);
-  border-radius: var(--radius);
+  padding      : var(--pad-code-block);
+  border-radius: var(--radius-base);
   overflow-x   : auto;
   font-family  : var(--font-mono);
-  font-size    : 14px;
-  line-height  : 1.4;
+  font-size    : var(--code-font-size);
+  line-height  : var(--code-line-height);
   position     : relative;
   box-shadow   : 0 3px 6px rgba(0,0,0,0.15);
 }
@@ -189,36 +196,30 @@ pre code {
   background  : none;
   color       : inherit;
   font-family : inherit;
-  white-space : pre-wrap;
+  white-space : pre-wrap;  /* 長い行を折り返す */
   word-break  : break-word;
 }
 
-pre code::selection {
-  background: var(--code-select);
-}
+pre code::selection { background: var(--code-select-bg); }
 
 /* ------------------------------------------------------------------
-  9. インラインコード
+  9. インラインコード (Inline Code)
 ------------------------------------------------------------------- */
 code:not(pre code) {
   background   : var(--inline-bg);
   color        : var(--inline-fg);
-  padding      : var(--pad-inline);
-  border-radius: calc(var(--radius) / 2);
+  padding      : var(--pad-inline-code);
+  border-radius: calc(var(--radius-base) / 2);
   font-family  : var(--font-mono);
-  font-size    : 0.81rem;
+  font-size    : var(--inline-font-size);
 }
 
 /* ------------------------------------------------------------------
-  10. 画像キャプション
+  10. 画像キャプション (Figure Caption)
 ------------------------------------------------------------------- */
-figure {
-  margin     : 2rem 0;
-  text-align : center;
-}
-
+figure { margin: 2rem 0; text-align: center; }
 figcaption {
   font-size : 0.9rem;
-  color     : #666;
+  color     : var(--figcaption-color);
   margin-top: 0.5rem;
 }
