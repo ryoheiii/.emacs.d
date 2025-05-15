@@ -36,7 +36,8 @@
   --blockquote-bg           : #f8f9fa;               /* 背景                     */
   --blockquote-border-color : var(--base-accent);    /* 左線色                   */
   --blockquote-text-color   : #555;                  /* 文字色                   */
-  --blockquote-padding      : 0.85rem 1.2rem;
+  --blockquote-padding      : 0.1rem 1.2rem;         /* 内部余白                 */
+  --blockquote-margin-y     : 1rem;                  /* 上下余白                 */
 
   /* === 1‑6. タイポグラフィ (Typography) ====================== */
   --font-body               : "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
@@ -48,7 +49,7 @@
   --radius-base             : 8px;                   /* 角丸の共通半径           */
 
   /* === 1‑8. その他 (Misc) ==================================== */
-  --shadow-soft             : 0 2px 4px rgba(0,0,0,.08)
+  --shadow-soft             : 0 2px 4px rgba(0,0,0,.08);
   --hr-grad-mid             : #ddd;                  /* 水平線グラデ中間色       */
   --link-hover-color        : color-mix(in srgb, var(--base-accent) 80%, black); /* リンク hover 文字色 */
   --figcaption-color        : #555;                  /* キャプション文字色       */
@@ -164,7 +165,7 @@ a:hover {
   7. 引用ブロック (Blockquote)
 ------------------------------------------------------------------- */
 blockquote {
-  margin       : 1.5rem 0;
+  margin       : var(--blockquote-margin-y) 0;
   padding      : var(--blockquote-padding);
   background   : var(--blockquote-bg);
   border-left  : 4px solid var(--blockquote-border-color);
