@@ -1,140 +1,224 @@
-/* 全体のスタイル */
+/* ==========================================================
+ * markdown.css - Pandoc 用 HTML スタイルシート
+ * ========================================================== */
+
+/* ------------------------------------------------------------------
+  1. トークン（カスタムプロパティ）
+------------------------------------------------------------------- */
+:root {
+  /* --- ベースカラー ------------------------------------------- */
+  --color-accent         : #0077cc;   /* アクセント色（リンク・罫線など） */
+  --color-fg             : #333;      /* 本文文字色                       */
+  --color-bg             : #ffffff;   /* ページ背景色                     */
+  --color-border         : #0077cc;   /* 主に見出し下線に使用             */
+
+  /* --- コード関連 --------------------------------------------- */
+  --code-bg              : #f5f5f5;   /* <pre> 背景色                     */
+  --code-fg              : #2e2e2e;   /* コード文字色                     */
+  --code-select          : rgba(100,150,255,.35); /* コード選択時の反転色 */
+  --inline-bg            : #f4f4f4;   /* インラインコード背景             */
+  --inline-fg            : #d63384;   /* インラインコード文字色           */
+
+  /* --- テーブル関連 ------------------------------------------- */
+  --table-border         : #ddd;      /* セル境界線                       */
+  --table-header-bg      : var(--color-accent); /* ヘッダー背景           */
+  --table-header-fg      : #ffffff;   /* ヘッダー文字色                   */
+  --table-row-alt-bg     : #f9f9f9;   /* 偶数行の交互背景                 */
+
+  /* --- 引用ブロック関連 --------------------------------------- */
+  --blockquote-bg        : #f8f9fa;   /* 引用背景色                       */
+  --blockquote-border    : var(--color-accent); /* 左線の色               */
+  --blockquote-fg        : #555;      /* 引用文字色                       */
+  --blockquote-padding   : 0.85rem 1.2rem; /* 内部余白                    */
+
+  /* --- タイポグラフィ ----------------------------------------- */
+  --font-body            : "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+  --font-mono            : "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+  --line-height          : 1.5;       /* 本文行間                         */
+
+  /* --- レイアウト --------------------------------------------- */
+  --page-max             : 1000px;    /* 本文幅の上限                     */
+  --radius               : 6px;       /* 角丸半径（共通）                 */
+  --pad-code             : 14px;      /* コードブロック内余白             */
+  --pad-inline           : 2px 5px;   /* インラインコード余白             */
+
+  /* --- その他 ------------------------------------------------- */
+  --shadow               : 0 4px 8px rgba(0,0,0,.12);  /* ソフトシャドウ  */
+  --hr-color-light       : #ddd;      /* 水平線グラデ用の中間色           */
+}
+
+/* ------------------------------------------------------------------
+  2. グローバルレイアウト
+------------------------------------------------------------------- */
+html {
+  box-sizing: border-box;
+  font-size : 16px;
+}
+*, *::before, *::after { box-sizing: inherit; }
+
 body {
-    font-family: "Inter", "Arial", sans-serif;
-    max-width: 1000px;
-    margin: auto;
-    line-height: 1.5;
-    background-color: #ffffff;
-    color: #333;
-    padding: 30px;
+  max-width  : var(--page-max);
+  margin     : auto;
+  padding    : 30px;
+  color      : var(--color-fg);
+  background : var(--color-bg);
+  font-family: var(--font-body);
+  line-height: var(--line-height);
 }
 
-/* 見出し */
+/* ------------------------------------------------------------------
+  3. 見出し
+------------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+  margin      : auto;
+  font-weight : 400;
+  line-height : 1.5;
+}
+
 h1 {
-    font-size: 1.8rem;  /* 控えめなサイズ */
-    font-weight: 400;  /* 細め */
-    color: #222;
-    border-bottom: 1px solid #0077cc;  /* 細いボーダーを復活 */
-    padding-bottom: 6px;
-    margin-bottom: 15px;
+  font-size     : 1.8rem;
+  color         : #222;
+  border-bottom : 1px solid var(--color-border);
+  padding-bottom: 6px;
+  margin-bottom : 15px;
 }
-
-/* **ページ内で最初の h1 のみ余白を縮める** */
-h1:first-of-type {
-    margin-top: 0px;  /* 最初のH1のみ余白を狭く */
-}
+h1:first-of-type { margin-top: 0; }
 
 h2 {
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: #333;
-    margin-top: 25px;
-    margin-bottom: 10px;
+  font-size : 1.5rem;
+  color     : #333;
+  margin    : 25px 0 10px;
 }
 
 h3 {
-    font-size: 1.3rem;
-    font-weight: 400;
-    color: #444;
-    margin-top: 20px;
-    margin-bottom: 8px;
+  font-size : 1.3rem;
+  color     : #444;
+  margin    : 20px 0 8px;
 }
 
-/* 水平線（区切り線） */
+h4 { font-size: 1.15rem; }
+h5 { font-size: 1.05rem; }
+h6 { font-size: 1rem;  }
+
+/* ------------------------------------------------------------------
+  4. 水平線
+------------------------------------------------------------------- */
 hr {
-    border: none;
-    height: 1px;
-    background: linear-gradient(to right, #0077cc, #ddd, #0077cc);
-    margin: 20px 0;
+  border    : none;
+  height    : 1px;
+  background: linear-gradient(to right, var(--color-accent), var(--hr-color-light), var(--color-accent));
+  margin    : 20px 0;
 }
 
-/* コードブロック */
-pre {
-    background: #2d2f31;
-    color: #f7f7f8;
-
-    padding: 14px;
-    border-radius: 6px;
-    overflow-x: auto;
-    font-size: 14px;  /* 見やすいフォントサイズ */
-    font-family: "Consolas", "Courier New", monospace;
-    line-height: 1.4;
-    position: relative;
-
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* コードブロックの中の文字 */
-pre code {
-    display: block;
-    margin: 0;
-    padding: 0;
-    background: none;
-    color: inherit;         /* <pre> と同色に統一 */
-}
-
-/* コードブロックの選択時の強調表示 */
-pre code::selection {
-    background: rgba(95, 154, 255, 0.35);
-}
-
-/* インラインコード */
-code {
-    background-color: #f4f4f4;
-    color: #d63384;
-    padding: 2px 5px;
-    border-radius: 3px;
-    font-family: "Consolas", "Courier New", monospace;
-    font-size: 13px;
-}
-
-/* 引用ブロック */
-blockquote {
-    font-style: italic;
-    color: #555;
-    border-left: 4px solid #0077cc;
-    padding-left: 14px;
-    margin: 12px 0;
-    background: #f8f9fa;
-    padding: 8px 12px;
-    border-radius: 4px;
-}
-
-/* 表（テーブル） */
+/* ------------------------------------------------------------------
+  5. テーブル
+------------------------------------------------------------------- */
 table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 15px 0;
-    background: white;
-    border: 1px solid #ddd;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width           : 100%;
+  border-collapse : collapse;
+  margin          : 15px 0;
+  background      : #fff;
+  border          : 1px solid var(--table-border);
+  box-shadow      : 0 1px 3px rgba(0,0,0,0.1);
 }
 
 th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
+  border     : 1px solid var(--table-border);
+  padding    : 8px;
+  text-align : left;
 }
 
 th {
-    background: #0077cc;
-    color: white;
-    font-weight: bold;
+  background : var(--table-header-bg);
+  color      : var(--table-header-fg);
+  font-weight: bold;
 }
 
 tr:nth-child(even) {
-    background: #f9f9f9;
+  background: var(--table-row-alt-bg);
 }
 
-/* リンク */
+/* ------------------------------------------------------------------
+  6. リンク
+------------------------------------------------------------------- */
 a {
-    color: #0077cc;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s;
+  color          : var(--color-accent);
+  text-decoration: none;
+  font-weight    : 500;
+  transition     : color .2s;
 }
 
 a:hover {
-    text-decoration: underline;
-    color: #0056b3;
+  text-decoration: underline;
+  color          : #0056b3;
+}
+
+/* ------------------------------------------------------------------
+  7. 引用ブロック
+------------------------------------------------------------------- */
+blockquote {
+  margin       : 1.5rem 0;
+  padding      : var(--blockquote-padding);
+  background   : var(--blockquote-bg);
+  border-left  : 4px solid var(--blockquote-border);
+  border-radius: calc(var(--radius) / 2);
+  color        : var(--blockquote-fg);
+  font-style   : italic;
+}
+
+/* ------------------------------------------------------------------
+  8. コードブロック
+------------------------------------------------------------------- */
+pre {
+  background   : var(--code-bg);
+  color        : var(--code-fg);
+  padding      : var(--pad-code);
+  border-radius: var(--radius);
+  overflow-x   : auto;
+  font-family  : var(--font-mono);
+  font-size    : 14px;
+  line-height  : 1.4;
+  position     : relative;
+  box-shadow   : 0 3px 6px rgba(0,0,0,0.15);
+}
+
+pre code {
+  display     : block;
+  margin      : 0;
+  padding     : 0;
+  background  : none;
+  color       : inherit;
+  font-family : inherit;
+  white-space : pre-wrap;
+  word-break  : break-word;
+}
+
+pre code::selection {
+  background: var(--code-select);
+}
+
+/* ------------------------------------------------------------------
+  9. インラインコード
+------------------------------------------------------------------- */
+code:not(pre code) {
+  background   : var(--inline-bg);
+  color        : var(--inline-fg);
+  padding      : var(--pad-inline);
+  border-radius: calc(var(--radius) / 2);
+  font-family  : var(--font-mono);
+  font-size    : 0.81rem;
+}
+
+/* ------------------------------------------------------------------
+  10. 画像キャプション
+------------------------------------------------------------------- */
+figure {
+  margin     : 2rem 0;
+  text-align : center;
+}
+
+figcaption {
+  font-size : 0.9rem;
+  color     : #666;
+  margin-top: 0.5rem;
 }
