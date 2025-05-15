@@ -7,7 +7,7 @@
 ------------------------------------------------------------------- */
 :root {
   /* === 1‑1. ベース配色 (Base Palette) ======================== */
-  --base-accent             : #0077cc;               /* アクセント／リンク色     */
+  --base-accent             : #3183e2;               /* アクセント／リンク色     */
   --base-fg                 : #333;                  /* 本文文字色               */
   --base-bg                 : #ffffff;               /* ページ背景色             */
   --base-border             : var(--base-accent);    /* 見出し罫線など           */
@@ -22,12 +22,12 @@
 
   /* === 1‑3. インラインコード (Inline Code) =================== */
   --inline-bg               : #f4f4f4;               /* 背景                     */
-  --inline-fg               : #d63384;               /* 文字色                   */
+  --inline-fg               : #b91d70;               /* 文字色                   */
   --inline-font-size        : 0.81rem;               /* 13px 相当                */
   --pad-inline-code         : 2px 5px;               /* 余白                     */
 
   /* === 1‑4. テーブル (Table) ================================= */
-  --table-border-color      : #ddd;                  /* セル境界線               */
+  --table-border-color      : #e5e5e5;               /* セル境界線               */
   --table-header-bg         : var(--base-accent);
   --table-header-fg         : #ffffff;
   --table-row-alt-bg        : #f9f9f9;               /* 偶数行ストライプ背景     */
@@ -45,13 +45,13 @@
 
   /* === 1‑7. レイアウト (Layout) ============================== */
   --layout-page-max         : 1000px;                /* 本文幅上限               */
-  --radius-base             : 6px;                   /* 角丸の共通半径           */
+  --radius-base             : 8px;                   /* 角丸の共通半径           */
 
   /* === 1‑8. その他 (Misc) ==================================== */
-  --shadow-soft             : 0 4px 8px rgba(0,0,0,.12);
+  --shadow-soft             : 0 2px 4px rgba(0,0,0,.08)
   --hr-grad-mid             : #ddd;                  /* 水平線グラデ中間色       */
-  --link-hover-color        : #0056b3;               /* リンク hover 文字色      */
-  --figcaption-color        : #666;                  /* キャプション文字色       */
+  --link-hover-color        : color-mix(in srgb, var(--base-accent) 80%, black); /* リンク hover 文字色 */
+  --figcaption-color        : #555;                  /* キャプション文字色       */
 }
 
 /* ------------------------------------------------------------------
