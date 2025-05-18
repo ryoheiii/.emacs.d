@@ -436,6 +436,11 @@
   (my-set-custom "css/markdown-style.css")
   "Path to custom markdown CSS file.")
 
+;; Markdown 用のカスタム JavaScript ファイルのパス
+(defvar my-markdown-js-file
+  (my-set-custom "js/markdown-script.js")
+  "Path to custom markdown JS file.")
+
 ;; CSS を遅延ロードしつつ HTML に埋め込む関数
 (defun my-markdown-load-css ()
   "Load the content of the markdown CSS file."
@@ -459,12 +464,18 @@
                         (string-to-number (match-string 1 version-str)))))
     version-num))
 
-(setq my-markdown-pandoc-command
-      (if (and (my-get-pandoc-version) (>= (my-get-pandoc-version) 3))
-          (concat "pandoc -s --number-sections --toc --toc-depth=3 --embed-resources --standalone -f markdown -t html5"
-                  " --css " my-markdown-css-file)
-        (concat "pandoc -s --number-sections --toc --toc-depth=3 --self-contained -f markdown -t html5"
-                " --css " my-markdown-css-file)))
+(let ((pandoc-ver (my-get-pandoc-version)))
+  (setq my-markdown-pandoc-command
+        (concat "pandoc"
+                " -s"
+                " --number-sections"
+                " --toc --toc-depth=3"
+                (if (and pandoc-ver (>= pandoc-ver 3))
+                    " --embed-resources --standalone"
+                  " --self-contained")
+                " -f markdown -t html5"
+                " --css " (shell-quote-argument my-markdown-css-file)
+                " --include-after-body " (shell-quote-argument my-markdown-js-file))))
 
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
@@ -482,11 +493,11 @@
   (markdown-export-command my-markdown-pandoc-command)
   (markdown-xhtml-header-content
    (format "<meta charset='utf-8'>\n
-   <meta name='viewport' content='width=device-width, initial-scale=1'>\n
-   <title>Markdown Export</title>\n
-   <style>\n%s\n</style>\n
-   <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
-   <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
+                <meta name='viewport' content='width=device-width, initial-scale=1'>\n
+                <title>Markdown Export</title>\n
+                <style>\n%s\n</style>\n
+                <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
+                <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
            (my-markdown-load-css)))
   ;; コードブロックのシンタックスハイライト
   (markdown-code-lang-modes '(("bash"   . shell-script)

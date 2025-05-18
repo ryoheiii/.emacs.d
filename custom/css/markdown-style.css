@@ -53,14 +53,17 @@
   --hr-grad-mid             : #ddd;                  /* 水平線グラデ中間色       */
   --link-hover-color        : color-mix(in srgb, var(--base-accent) 80%, black); /* リンク hover 文字色 */
   --figcaption-color        : #555;                  /* キャプション文字色       */
+  --copy-btn-bg             : #ccc;                  /* copy-button 背景色       */
+  --copy-btn-bg-hover       : #bbb;                  /* hover 時                 */
+  --copy-btn-fg             : #000;                  /* copy-button 文字色       */
 }
 
 /* ------------------------------------------------------------------
   2. グローバルレイアウト
 ------------------------------------------------------------------- */
 html {
-  box-sizing: border-box;
-  font-size : 16px;                     /* 1rem = 16px */
+  box-sizing : border-box;
+  font-size  : 16px;                     /* 1rem = 16px */
 }
 *, *::before, *::after { box-sizing: inherit; }
 
@@ -78,9 +81,9 @@ body {
   3. 見出し (Headings)
 ------------------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
-  margin      : auto;    /* 個別に余白指定するので 0 相当 */
-  font-weight : 400;
-  line-height : 1.5;
+  margin        : auto;    /* 個別に余白指定するので 0 相当 */
+  font-weight   : 400;
+  line-height   : 1.5;
 }
 
 h1 {
@@ -90,23 +93,25 @@ h1 {
   padding-bottom: 6px;
   margin-bottom : 15px;
 }
-h1:first-of-type { margin-top: 0; }
+h1:first-of-type {
+  margin-top    : 0;
+}
 
 h2 {
-  font-size : 1.5rem;
-  color     : #333;
-  margin    : 25px 0 10px;
+  font-size     : 1.5rem;
+  color         : #333;
+  margin        : 25px 0 10px;
 }
 
 h3 {
-  font-size : 1.3rem;
-  color     : #444;
-  margin    : 20px 0 8px;
+  font-size     : 1.3rem;
+  color         : #444;
+  margin        : 20px 0 8px;
 }
 
-h4 { font-size: 1.15rem; }
-h5 { font-size: 1.05rem; }
-h6 { font-size: 1rem;  }
+h4 { font-size  : 1.15rem; }
+h5 { font-size  : 1.05rem; }
+h6 { font-size  : 1rem;  }
 
 /* ------------------------------------------------------------------
   4. 水平線 (Horizontal Rule)
@@ -131,19 +136,19 @@ table {
 }
 
 th, td {
-  border     : 1px solid var(--table-border-color);
-  padding    : 8px;
-  text-align : left;
+  border          : 1px solid var(--table-border-color);
+  padding         : 8px;
+  text-align      : left;
 }
 
 th {
-  background : var(--table-header-bg);
-  color      : var(--table-header-fg);
-  font-weight: bold;
+  background      : var(--table-header-bg);
+  color           : var(--table-header-fg);
+  font-weight     : bold;
 }
 
 tr:nth-child(even) {
-  background: var(--table-row-alt-bg);
+  background      : var(--table-row-alt-bg);
 }
 
 /* ------------------------------------------------------------------
@@ -182,26 +187,57 @@ pre {
   color        : var(--code-fg);
   padding      : var(--pad-code-block);
   border-radius: var(--radius-base);
-  overflow-x   : auto;
+  overflow-x   : hidden;
   font-family  : var(--font-mono);
   font-size    : var(--code-font-size);
   line-height  : var(--code-line-height);
   position     : relative;
   box-shadow   : 0 3px 6px rgba(0,0,0,0.15);
+  white-space  : pre-wrap;   /* 折り返し有効 */
+  word-wrap    : break-word; /* 長い単語も折り返し対象に */
+  overflow-wrap: break-word;
 }
 
+/* --- copy-button -------------------------------------------------- */
+.copy-button {
+  position        : absolute;
+  top             : 0.4em;
+  right           : 0.6em;
+  background-color: var(--copy-btn-bg);
+  color           : var(--copy-btn-fg);
+  border          : none;
+  padding         : 0.3em 0.6em;
+  font-size       : 0.75em;
+  border-radius   : 5px;
+  cursor          : pointer;
+  opacity         : 0.8;
+  transition      : background-color 0.2s ease;
+}
+
+.copy-button:hover {
+  background-color: var(--copy-btn-bg-hover);
+}
+
+/* --- pre > code --------------------------------------------------- */
 pre code {
-  display     : block;
-  margin      : 0;
-  padding     : 0;
-  background  : none;
-  color       : inherit;
-  font-family : inherit;
-  white-space : pre-wrap;  /* 長い行を折り返す */
-  word-break  : break-word;
+  display      : block;
+  margin       : 0;
+  padding      : 0;
+  background   : none;
+  color        : inherit;
+  font-family  : inherit;
+  white-space  : pre-wrap;  /* 折り返し有効 */
+  word-break   : break-word;
 }
 
-pre code::selection { background: var(--code-select-bg); }
+pre code span {
+  white-space  : pre-wrap;
+  word-break   : break-word;
+}
+
+pre code::selection {
+  background   : var(--code-select-bg);
+}
 
 /* ------------------------------------------------------------------
   9. インラインコード (Inline Code)
@@ -218,7 +254,11 @@ code:not(pre code) {
 /* ------------------------------------------------------------------
   10. 画像キャプション (Figure Caption)
 ------------------------------------------------------------------- */
-figure { margin: 2rem 0; text-align: center; }
+figure {
+  margin    : 2rem 0;
+  text-align: center;
+}
+
 figcaption {
   font-size : 0.9rem;
   color     : var(--figcaption-color);
