@@ -81,6 +81,9 @@ setup_env() {
     sudo apt-get install -y libgnutls28-dev              # TLS (HTTPS/SSL) サポート
     sudo apt-get install -y libfreetype6-dev             # フォントサポート
     sudo apt-get install -y libotf-dev                   # Opentype フォント処理のサポート
+    sudo apt-get install -y adwaita-icon-theme           # Icon
+    sudo apt-get install -y hicolor-icon-theme           # Icon
+    sudo apt-get install -y gnome-icon-theme             # Icon
     # X11 関連。GTK3 を使う場合は不要なものもあり
     sudo apt-get install -y libx11-dev                   # X Window System の基本ライブラリ
     sudo apt-get install -y libxmu-dev                   # X11 のユーティリティライブラリ
