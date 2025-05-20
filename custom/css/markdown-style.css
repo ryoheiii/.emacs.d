@@ -201,17 +201,18 @@ pre {
 /* --- copy-button -------------------------------------------------- */
 .copy-button {
   position        : absolute;
-  top             : 0.4em;
-  right           : 0.6em;
+  top             : 0.1em;
+  right           : 0.1em;
   background-color: var(--copy-btn-bg);
   color           : var(--copy-btn-fg);
   border          : none;
-  padding         : 0.3em 0.6em;
+  padding         : 0.12em 0.6em;
   font-size       : 0.75em;
-  border-radius   : 5px;
+  border-radius   : 4px;
   cursor          : pointer;
-  opacity         : 0.8;
+  opacity         : 0.7;
   transition      : background-color 0.2s ease;
+  z-index         : 1;
 }
 
 .copy-button:hover {
