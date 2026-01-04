@@ -181,6 +181,24 @@ tr:nth-child(even) {
   background      : var(--table-row-alt-bg);
 }
 
+/* 表が右に余る（widthが負ける）問題の強制上書き */
+body[for="html-export"] .markdown-preview table,
+body[for="html-export"] table {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: table !important; /* inline-table/inline-block 化されてても戻す */
+}
+
+/* Pandoc が table を div.table で包むケースの保険 */
+body[for="html-export"] .markdown-preview .table,
+body[for="html-export"] .table {
+  width: 100%;
+}
+body[for="html-export"] .markdown-preview .table > table,
+body[for="html-export"] .table > table {
+  width: 100% !important;
+}
+
 /* ------------------------------------------------------------------
   6. リンク (Links)
 ------------------------------------------------------------------- */
