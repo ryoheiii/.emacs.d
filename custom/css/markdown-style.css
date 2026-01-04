@@ -63,7 +63,7 @@
 ------------------------------------------------------------------- */
 html {
   box-sizing : border-box;
-  font-size  : 16px;                     /* 1rem = 16px */
+  /* font-size  : 16px;                     /\* 1rem = 16px *\/ */
 }
 *, *::before, *::after { box-sizing: inherit; }
 
@@ -77,11 +77,41 @@ body {
   line-height: var(--line-height-body);
 }
 
+/* --- Pandocなど一般HTML用（.markdown-preview が存在しない場合） --- */
+body:not([for="html-export"]) {
+  max-width  : var(--layout-page-max);
+  margin     : 0 auto;
+  padding    : 30px;
+  color      : var(--base-fg);
+  background : var(--base-bg);
+  font-family: var(--font-body);
+  line-height: var(--line-height-body);
+}
+
+/* --- MPE HTML出力用：bodyはレイアウトを持たせない（競合回避） --- */
+body[for="html-export"] {
+  margin     : 0;
+  padding    : 0;
+  color      : var(--base-fg);
+  background : var(--base-bg);
+  font-family: var(--font-body);
+  line-height: var(--line-height-body);
+}
+
+/* --- MPE 本文コンテナ --- */
+body[for="html-export"] .markdown-preview {
+  /* max-width: var(--layout-page-max); */
+  margin   : 0 auto;
+  padding  : 30px;
+  background: var(--base-bg);
+}
+
 /* ------------------------------------------------------------------
   3. 見出し (Headings)
 ------------------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
-  margin        : auto;    /* 個別に余白指定するので 0 相当 */
+  /* margin        : auto;    /\* 個別に余白指定するので 0 相当 *\/ */
+  margin        : 0;
   font-weight   : 400;
   line-height   : 1.5;
 }
