@@ -295,3 +295,12 @@ figcaption {
   color     : var(--figcaption-color);
   margin-top: 0.5rem;
 }
+
+/* ------------------------------------------------------------------
+  11. TOC サイドバー (Table of Contents Sidebar)
+------------------------------------------------------------------- */
+/* TOCサイドバーの見た目調整 */
+.md-sidebar-toc.md-sidebar-toc {
+  background: var(--base-bg);
+  color: var(--base-fg);
+}
