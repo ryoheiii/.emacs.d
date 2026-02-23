@@ -256,7 +256,7 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 - **バッファ内補完**: Corfu + Cape
 - **テーマ**: doom-themes (doom-dracula) + doom-modeline
 - **Git**: Magit + diff-hl
-- **C/C++**: cc-mode, google-c-style, irony, helm-gtags
+- **C/C++**: cc-mode, google-c-style, irony, ggtags
 - **日本語入力**: Mozc, Migemo, TR-ime (Windows)
 - **Undo**: vundo + undo-fu + undohist
 
@@ -276,3 +276,21 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 - 設定は `:custom`、フックは `:hook`、キーバインドは `:bind` にグループ化
 - セクションヘッダーは `;;;;;` コメント形式: `;;;;; [Group] セクション名 ;;;;;`
 - 自動生成ファイルはリポジトリルートに置かず、`my-var-dir` や `my-history-dir` 経由で配置する
+
+### タグナビゲーションのキーバインド制約
+
+以下の C/C++ タグナビゲーション用キーバインドは固定であり、変更してはならない。バックエンドの実装が変わっても、ユーザーの操作体験を維持すること。
+
+| キーバインド | 機能 | 現在の実装 |
+|---|---|---|
+| `C-t d` / `C-t C-d` | 関数の定義場所の検索 (define) | `my/gtags-find-definition` |
+| `C-t u` / `C-t C-u` | 関数の使用箇所の検索 (use) | `my/gtags-find-references` |
+| `C-t v` / `C-t C-v` | 変数の使用箇所の検索 (variable) | `my/gtags-find-symbol` |
+| `C-t f` / `C-t C-f` | ファイルの検索 (find) | `my/gtags-find-file` |
+| `C-t p` / `C-t C-p` | 前の履歴へ移動 (previous) | `xref-go-back` |
+| `C-t n` / `C-t C-n` | 次の履歴へ移動 (next) | `xref-go-forward` |
+
+**注意事項:**
+- バックエンドを将来変更する場合（例: ggtags → citre、eglot 等）でも、上記キーバインドは維持すること
+- `C-t` プレフィックスは C/C++ モード専用のタグナビゲーション用に予約されている
+- `update-gtags` 関数は手動タグ更新用に維持すること
