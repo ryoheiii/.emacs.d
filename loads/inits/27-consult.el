@@ -17,15 +17,20 @@
    ("C-x b"   . consult-buffer)
    ("C-x i"   . consult-imenu)
    ("C-s"     . consult-line)
-   ("C-S"     . consult-line-multi)
+   ("C-S"     . my/consult-line-multi)
    ("C-."     . consult-goto-line)
    ("C-x g"   . consult-grep)
    ;; ("C-x g"   . affe-grep)
    )
   :custom
-  (consult-async-min-input 1)
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
+  :config
+  (defun my/consult-line-multi (&rest args)
+    "1 文字から検索を開始する `consult-line-multi' ラッパー."
+    (interactive "P")
+    (let ((consult-async-min-input 1))
+      (apply #'consult-line-multi args)))
   )
 
 ;;; Consult-yasnippet - Yasnippet の `consult` インテグレーション
