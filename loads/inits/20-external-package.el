@@ -432,7 +432,7 @@
   (interactive)
   (insert "    "))
 
-;; Pandoc コマンドの設定
+;; Pandoc コマンドの設定（遅延構築: 初回参照時にサブプロセスでバージョン取得）
 ;; その他 option: "--toc --toc-depth=2", "--highlight-style=tango"
 (defun my-get-pandoc-version ()
   "Pandoc のバージョン番号を取得し、数値で返す。"
@@ -441,18 +441,24 @@
                         (string-to-number (match-string 1 version-str)))))
     version-num))
 
-(let ((pandoc-ver (my-get-pandoc-version)))
-  (setq my-markdown-pandoc-command
-        (concat "pandoc"
-                " -s"
-                " --number-sections"
-                " --toc --toc-depth=3"
-                (if (and pandoc-ver (>= pandoc-ver 3))
-                    " --embed-resources --standalone"
-                  " --self-contained")
-                " -f markdown -t html5"
-                " --css " (shell-quote-argument my-markdown-css-file)
-                " --include-after-body " (shell-quote-argument my-markdown-js-file))))
+(defvar my-markdown-pandoc-command nil
+  "Pandoc コマンド文字列。初回参照時に遅延構築される。")
+
+(defun my-markdown-pandoc-command ()
+  "Pandoc コマンドを遅延構築して返す。"
+  (or my-markdown-pandoc-command
+      (setq my-markdown-pandoc-command
+            (let ((pandoc-ver (my-get-pandoc-version)))
+              (concat "pandoc"
+                      " -s"
+                      " --number-sections"
+                      " --toc --toc-depth=3"
+                      (if (and pandoc-ver (>= pandoc-ver 3))
+                          " --embed-resources --standalone"
+                        " --self-contained")
+                      " -f markdown -t html5"
+                      " --css " (shell-quote-argument my-markdown-css-file)
+                      " --include-after-body " (shell-quote-argument my-markdown-js-file))))))
 
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
@@ -465,17 +471,6 @@
   (markdown-indent-level 4)
   (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
   (markdown-header-scaling t)                            ; 見出しサイズの自動調整
-  ;; markdown コマンドを pandoc に置き換え
-  (markdown-command my-markdown-pandoc-command)          ; Pandoc で Markdown をエクスポート
-  (markdown-export-command my-markdown-pandoc-command)
-  (markdown-xhtml-header-content
-   (format "<meta charset='utf-8'>\n
-                <meta name='viewport' content='width=device-width, initial-scale=1'>\n
-                <title>Markdown Export</title>\n
-                <style>\n%s\n</style>\n
-                <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
-                <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
-           (my-markdown-load-css)))
   ;; コードブロックのシンタックスハイライト
   (markdown-code-lang-modes '(("bash"   . shell-script)
                               ("elisp"  . emacs-lisp)
@@ -487,6 +482,18 @@
          ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
          ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
   :config
+  ;; Pandoc コマンドと CSS を遅延設定（markdown-mode ロード時に初めて構築）
+  (setq markdown-command (my-markdown-pandoc-command))
+  (setq markdown-export-command (my-markdown-pandoc-command))
+  (setq markdown-xhtml-header-content
+        (format "<meta charset='utf-8'>\n
+                <meta name='viewport' content='width=device-width, initial-scale=1'>\n
+                <title>Markdown Export</title>\n
+                <style>\n%s\n</style>\n
+                <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
+                <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
+                (my-markdown-load-css)))
+
   (defun my/markdown-setup ()
     "Things that must run *after* `markdown-mode' comes up."
     (flyspell-mode  1)                   ; スペルチェック
