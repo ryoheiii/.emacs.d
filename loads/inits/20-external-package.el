@@ -1577,8 +1577,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   :custom
   (undo-fu-session-directory (my-set-history "undo-fu-session/"))
   :init
-  ;; undo-fu-session-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 1 nil #'undo-fu-session-global-mode 1)
+  ;; undo 永続化はデータ保全に関わるため、アイドル遅延ではなく起動完了直後に有効化
+  (add-hook 'emacs-startup-hook (lambda () (undo-fu-session-global-mode 1)))
   :config
   (unless (file-exists-p undo-fu-session-directory)
     (make-directory undo-fu-session-directory t))
