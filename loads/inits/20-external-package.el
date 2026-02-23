@@ -649,31 +649,142 @@
   :hook (embark-collect-mode . consult-preview-at-point-mode)
   )
 
-;;; Helm-gtags - ソースコード内のシンボル検索とナビゲーション (Xref で置き換えたい)
-(use-package helm-gtags
+;;; Ggtags - GNU Global によるソースコード内のシンボル検索とナビゲーション
+;; ggtags の xref バックエンドを経由せず、global コマンドを call-process で直接実行し
+;; 結果を consult-xref → vertico で高速表示する
+(use-package ggtags
   :straight t
   :defer t
-  :hook ((c-mode   . helm-gtags-mode)
-         (c++-mode . helm-gtags-mode))
-  :bind (:map helm-gtags-mode-map
-              ("C-t d"   . helm-gtags-find-tag)         ; 関数の定義場所の検索 (define)
-              ("C-t C-d" . helm-gtags-find-tag)
-              ("C-t u"   . helm-gtags-find-rtag)        ; 関数の使用箇所の検索 (use)
-              ("C-t C-u" . helm-gtags-find-rtag)
-              ("C-t v"   . helm-gtags-find-symbol)      ; 変数の使用箇所の検索 (variable)
-              ("C-t C-v" . helm-gtags-find-symbol)
-              ("C-t f"   . helm-gtags-find-files)       ; ファイルの検索 (find)
-              ("C-t C-f" . helm-gtags-find-files)
-              ("C-t p"   . helm-gtags-previous-history) ; 前の履歴へ移動 (previous)
-              ("C-t C-p" . helm-gtags-previous-history)
-              ("C-t n"   . helm-gtags-next-history)     ; 次の履歴へ移動 (next)
-              ("C-t C-n" . helm-gtags-next-history))
+  :hook ((c-mode   . ggtags-mode)
+         (c++-mode . ggtags-mode))
+  :bind (:map ggtags-mode-map
+              ("C-t d"   . my/gtags-find-definition)     ; 関数の定義場所の検索 (define)
+              ("C-t C-d" . my/gtags-find-definition)
+              ("C-t u"   . my/gtags-find-references)     ; 関数の使用箇所の検索 (use)
+              ("C-t C-u" . my/gtags-find-references)
+              ("C-t v"   . my/gtags-find-symbol)         ; 変数の使用箇所の検索 (variable)
+              ("C-t C-v" . my/gtags-find-symbol)
+              ("C-t f"   . my/gtags-find-file)           ; ファイルの検索 (find)
+              ("C-t C-f" . my/gtags-find-file)
+              ("C-t p"   . xref-go-back)                 ; 前の履歴へ移動 (previous)
+              ("C-t C-p" . xref-go-back)
+              ("C-t n"   . xref-go-forward)              ; 次の履歴へ移動 (next)
+              ("C-t C-n" . xref-go-forward))
   :custom
-  (helm-gtags-path-style 'root)  ; プロジェクトルート基準でタグを検索
-  ;; (helm-gtags-ignore-case t)     ; 大文字小文字を区別しない検索
-  ;; (helm-gtags-auto-update t)     ; ファイル変更時に自動でタグを更新
+  (ggtags-update-on-save t)           ; ファイル保存時にタグを更新
+  (ggtags-highlight-tag nil)          ; パフォーマンス: カーソル位置のタグハイライト無効化
   :config
-  ;; 'global -uv' を用いた GTAGS の自動更新
+  ;; ── global 直接実行エンジン ──────────────────────────────
+  ;; ggtags の xref バックエンド・プロセス管理・プロジェクト検証を経由せず
+  ;; call-process で global を直接実行し、最短パスで結果を得る
+
+  (defun my/gtags--project-root ()
+    "GTAGS ファイルを探索してプロジェクトルートを返す."
+    (or (locate-dominating-file default-directory "GTAGS")
+        default-directory))
+
+  (defun my/gtags--run (flag input)
+    "GNU Global を FLAG と INPUT で実行し xref アイテムのリストを返す.
+シェルを経由せず call-process で直接実行する。
+終了コード: 0=成功, 1=一致なし（正常）, ≥2=実行エラー。"
+    (let* ((root (my/gtags--project-root))
+           (default-directory root)
+           (xrefs '()))
+      (with-temp-buffer
+        (let ((exit-code (call-process "global" nil t nil
+                                       "--result=grep" flag "--" input)))
+          (when (>= exit-code 2)
+            (user-error "global エラー (exit %d): %s"
+                        exit-code (string-trim (buffer-string)))))
+        (goto-char (point-min))
+        (while (not (eobp))
+          (when (looking-at "^\\(.+\\):\\([0-9]+\\):\\(.*\\)$")
+            (let ((file (expand-file-name (match-string 1) root))
+                  (lnum (string-to-number (match-string 2)))
+                  (text (string-trim (match-string 3))))
+              (push (xref-make text (xref-make-file-location file lnum 0)) xrefs)))
+          (forward-line 1)))
+      (nreverse xrefs)))
+
+  (defun my/gtags--show (xrefs input)
+    "XREFS を表示: 単一結果は直接ジャンプ、複数結果は consult-xref で表示.
+呼び出し元で xref-push-marker-stack を実行済みであること。"
+    (cond
+     ((= (length xrefs) 1)
+      (let ((loc (xref-item-location (car xrefs))))
+        (find-file (xref-file-location-file loc))
+        (goto-char (point-min))
+        (forward-line (1- (xref-file-location-line loc)))))
+     (t
+      (funcall xref-show-xrefs-function
+               (lambda () xrefs)
+               `((window . ,(selected-window)))))))
+
+  ;; ── 検索コマンド ─────────────────────────────────────────
+
+  (defun my/gtags-find-definition (&optional prompt)
+    "カーソル位置のシンボルの定義を検索.
+C-u 付きで呼ぶとシンボルを手動入力できる。"
+    (interactive "P")
+    (let* ((default (thing-at-point 'symbol t))
+           (symbol (if prompt
+                       (read-string
+                        (if default (format "Find definition (default %s): " default)
+                          "Find definition: ")
+                        nil nil default)
+                     (or default (read-string "Find definition: "))))
+           (xrefs (my/gtags--run "-d" symbol)))
+      (if xrefs
+          (progn (xref-push-marker-stack)
+                 (my/gtags--show xrefs symbol))
+        (message "見つかりません: %s" symbol))))
+
+  (defun my/gtags-find-references (&optional prompt)
+    "カーソル位置のシンボルの参照を検索.
+C-u 付きで呼ぶとシンボルを手動入力できる。"
+    (interactive "P")
+    (let* ((default (thing-at-point 'symbol t))
+           (symbol (if prompt
+                       (read-string
+                        (if default (format "Find references (default %s): " default)
+                          "Find references: ")
+                        nil nil default)
+                     (or default (read-string "Find references: "))))
+           (xrefs (my/gtags--run "-r" symbol)))
+      (if xrefs
+          (progn (xref-push-marker-stack)
+                 (my/gtags--show xrefs symbol))
+        (message "見つかりません: %s" symbol))))
+
+  (defun my/gtags-find-symbol ()
+    "シンボル検索（定義・参照以外の出現箇所）."
+    (interactive)
+    (let* ((default (thing-at-point 'symbol t))
+           (input (read-string
+                   (if default (format "Find symbol (default %s): " default)
+                     "Find symbol: ")
+                   nil nil default))
+           (xrefs (my/gtags--run "-s" input)))
+      (if xrefs
+          (progn (xref-push-marker-stack)
+                 (my/gtags--show xrefs input))
+        (message "見つかりません: %s" input))))
+
+  (defun my/gtags-find-file ()
+    "ファイル名パターンで検索."
+    (interactive)
+    (let* ((default (thing-at-point 'filename t))
+           (input (read-string
+                   (if default (format "Find file (default %s): " default)
+                     "Find file: ")
+                   nil nil default))
+           (xrefs (my/gtags--run "-P" input)))
+      (if xrefs
+          (progn (xref-push-marker-stack)
+                 (my/gtags--show xrefs input))
+        (message "見つかりません: %s" input))))
+
+  ;; 'global -uv' を用いた GTAGS の手動フル更新
   (defun update-gtags ()
     "Update GTAGS database."
     (interactive)
