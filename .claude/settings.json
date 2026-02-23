@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/ryohei/.emacs.d/**)",
+      "Bash(git -C /home/ryohei/.emacs.d log --oneline)",
+      "Bash(git -C /home/ryohei/.emacs.d log --all --oneline)"
+    ]
+  }
+}
