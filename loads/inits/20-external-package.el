@@ -7,15 +7,18 @@
 ;;;; [Group] Library - ライブラリ関連 ;;;;;;
 ;;; dash - Emacs 用のモダンなリスト操作ライブラリ
 (use-package dash
-  :straight t)
+  :straight t
+  :defer t)
 
 ;;; s - 文字列操作のための便利なユーティリティ
 (use-package s
-  :straight t)
+  :straight t
+  :defer t)
 
 ;;; diminish - モードラインの表示を最適化
 (use-package diminish
-  :straight t)
+  :straight t
+  :defer t)
 
 
 
@@ -125,8 +128,10 @@
 ;;; smart-mode-line - モードラインの外観と情報表示を最適化
 (use-package smart-mode-line
   :straight t
+  :defer t
   :init
-  (sml/setup)
+  ;; sml/setup は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'sml/setup)
   :config
   (setq sml/no-confirm-load-theme t
         sml/theme 'dark
@@ -149,8 +154,10 @@
 (use-package pulsar
   :straight t
   :if (display-graphic-p)
-  :config
-  (pulsar-global-mode +1)
+  :defer t
+  :init
+  ;; pulsar-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'pulsar-global-mode 1)
   )
 
 ;;; goggles - 編集箇所をハイライト
@@ -165,6 +172,10 @@
 (use-package spacious-padding
   :straight t
   :if (display-graphic-p)
+  :defer t
+  :init
+  ;; spacious-padding-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'spacious-padding-mode 1)
   :config
   (setq spacious-padding-widths
         '( :internal-border-width 15
@@ -178,16 +189,17 @@
   ;; is very flexible and provides several examples.
   (setq spacious-padding-subtle-mode-line
         `( :mode-line-active 'default
-           :mode-line-inactive vertical-border))
-
-  (spacious-padding-mode +1))
+           :mode-line-inactive vertical-border)))
 
 ;;; perfect-margin - バッファが一つの時に中央寄せ
 (use-package perfect-margin
   :straight t
+  :defer t
+  :init
+  ;; perfect-margin-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'perfect-margin-mode 1)
   :config
   (setq perfect-margin-ignore-filters nil)
-  (perfect-margin-mode +1)
   )
 
 ;;; volatile-highlights - 一時的なハイライト（選択範囲など）を強調表示
@@ -265,24 +277,31 @@
 (use-package nyan-mode
   :straight t
   :if (display-graphic-p)
+  :defer t
+  :custom
+  (nyan-bar-length 24)
   :init
-  (setq nyan-bar-length 24)
-  (nyan-mode +1)
+  ;; nyan-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'nyan-mode 1)
   )
 
 ;;; Minions - マイナーモードをハンバーガーメニューで表示
 (use-package minions
   :straight t
   :if (display-graphic-p)
+  :defer t
   :init
-  (minions-mode +1)
+  ;; minions-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'minions-mode 1)
   )
 
 ;;; page-break-lines ^Lの改ページ文字の表示を良くする
 (use-package page-break-lines
   :straight t
-  :config
-  (page-break-lines-mode +1)
+  :defer t
+  :init
+  ;; page-break-lines-mode は autoload 済み（バッファローカル）
+  (run-with-idle-timer 0.5 nil #'page-break-lines-mode 1)
   )
 
 ;;; highlight-defined - 既知のシンボルに色を付ける
@@ -579,6 +598,7 @@
 ;;; Vertico-truncate - vertico の補完候補を横方向に切り詰める
 (use-package vertico-truncate
   :straight (:host github :repo "jdtsmith/vertico-truncate")
+  :after vertico
   :config
   (vertico-truncate-mode +1)
   (setq vertico-truncate-length 50)   ;; 最大表示幅 (デフォルト: 40)
@@ -779,6 +799,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Affe - 高速検索（grep 代替）
 (use-package affe
   :straight t
+  :defer t
+  :commands (affe-grep affe-find)
   :config
   (setq affe-regexp-function #'orderless-pattern-compiler)
   (setq affe-highlight-function #'orderless-highlight-matches)
@@ -953,6 +975,7 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Flx - 柔軟なスコアリング
 (use-package flx
   :straight t
+  :after prescient
   :config
   (with-eval-after-load 'prescient
     ;; 入力文字を抽出
@@ -1043,8 +1066,10 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
            (getenv "DISPLAY")        ; X11 の DISPLAY 変数がある
            (executable-find "xclip")) ; `xclip` がシステムにインストールされている
   :straight t
-  :config
-  (xclip-mode 1)
+  :defer t
+  :init
+  ;; xclip-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'xclip-mode 1)
   )
 
 ;;; dashboard - Emacs のスタートアップ画面をカスタマイズ
@@ -1089,6 +1114,7 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; recentf-ext - recentf の拡張機能
 (use-package recentf-ext
   :straight t
+  :after recentf
   )
 
 ;;; smooth-scroll - スムーズなスクロール
@@ -1325,10 +1351,12 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
   :straight t
+  :defer t
   :custom
   (popwin:popup-window-position 'bottom) ;; ポップアップの位置を下部に設定
   :init
-  (popwin-mode 1)
+  ;; popwin-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'popwin-mode 1)
   )
 
 ;;; Migemo - 日本語を含む検索時の挙動改善
@@ -1462,9 +1490,11 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
          (magit-post-refresh . diff-hl-magit-post-refresh)
          (dired-mode . diff-hl-dired-mode))
   :init
-  (global-diff-hl-mode +1)
-  (global-diff-hl-show-hunk-mouse-mode +1)
-  (diff-hl-margin-mode +1)
+  ;; global-diff-hl-mode は autoload 済み → タイマーで遅延ロード
+  (run-with-idle-timer 1 nil (lambda ()
+    (global-diff-hl-mode +1)
+    (global-diff-hl-show-hunk-mouse-mode +1)
+    (diff-hl-margin-mode +1)))
   )
 
 ;;; Difftastic
@@ -1489,6 +1519,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn
   :straight t
+  :defer t
+  :commands (svn-status svn-update)
   )
 
 
@@ -1518,11 +1550,14 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Free-keys - 未使用のキーバインドを表示
 (use-package free-keys
   :straight t
+  :defer t
+  :commands (free-keys)
   )
 
 ;;; Amx - M-x コマンドの履歴強化
 (use-package amx
   :straight t
+  :defer t
   :custom
   (amx-save-file (my-set-history "amx-items"))
   )
@@ -1570,6 +1605,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
              :type git
              :host github
              :repo "blue0513/stopwatch") ; https://github.com/blue0513/stopwatch
+  :defer t
+  :commands (stopwatch-start stopwatch-stop stopwatch-restart stopwatch-pause)
   )
 
 (provide '20-external-package)
