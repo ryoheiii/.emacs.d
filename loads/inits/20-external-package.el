@@ -198,16 +198,6 @@
   (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
   )
 
-;;; highlight-indent-guides - インデントレベルを視覚的に区別するためのガイド
-(use-package highlight-indent-guides
-  :straight t
-  :if (version< emacs-version "29")  ;; Emacs 29 以降は無効（位置ズレが発生するため）
-  :hook (emacs-lisp-mode . highlight-indent-guides-mode)
-  :custom
-  (highlight-indent-guides-auto-enabled t)
-  (highlight-indent-guides-responsive t)
-  (highlight-indent-guides-method 'character))
-
 ;;; highlight-symbol - シンボルのハイライトとナビゲーション
 (use-package highlight-symbol
   :straight t
@@ -339,93 +329,80 @@
   :hook (org-mode . org-indent-mode)
   )
 
-;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
-(use-package org-modern
-  :disabled t
-  :straight t
-  :after (org)
-  :hook (org-mode . org-modern-mode)
-  :config
-  (setopt
-   ;; Edit settings
-   org-auto-align-tags nil
-   org-tags-column 0
-   org-catch-invisible-edits 'show-and-error
-   org-special-ctrl-a/e t
-   org-insert-heading-respect-content t
+;; ;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
+;; (use-package org-modern
+;;   :straight t
+;;   :after (org)
+;;   :hook (org-mode . org-modern-mode)
+;;   :config
+;;   (setopt
+;;    org-auto-align-tags nil
+;;    org-tags-column 0
+;;    org-catch-invisible-edits 'show-and-error
+;;    org-special-ctrl-a/e t
+;;    org-insert-heading-respect-content t
+;;    org-hide-emphasis-markers t
+;;    org-pretty-entities t
+;;    org-agenda-tags-column 0
+;;    org-agenda-block-separator ?─
+;;    org-agenda-time-grid
+;;    '((daily today require-timed)
+;;      (800 1000 1200 1400 1600 1800 2000)
+;;      " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+;;    org-agenda-current-time-string
+;;    "◀── now ─────────────────────────────────────────────────")
+;;   (setopt org-ellipsis "…")
+;;   (set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
+;;   (global-org-modern-mode)
+;;   )
 
-   ;; Org styling, hide markup etc.
-   org-hide-emphasis-markers t
-   org-pretty-entities t
+;; ;;; org-download - 画像のクリップボード貼り付け
+;; (use-package org-download
+;;   :straight t
+;;   :after (org)
+;;   :bind (:map org-mode-map
+;;               ("C-c i" . org-download-clipboard))
+;;   :custom
+;;   (org-download-method 'directory)
+;;   (org-download-image-dir "~/org/images/")
+;;   (org-download-heading-lvl nil)
+;;   (org-download-timestamp "_%Y%m%d-%H%M%S")
+;;   :config
+;;   (add-hook 'dired-mode-hook 'org-download-enable)
+;;   )
 
-   ;; Agenda styling
-   org-agenda-tags-column 0
-   org-agenda-block-separator ?─
-   org-agenda-time-grid
-   '((daily today require-timed)
-     (800 1000 1200 1400 1600 1800 2000)
-     " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
-   org-agenda-current-time-string
-   "◀── now ─────────────────────────────────────────────────")
+;; ;;; org-roam - ノート管理
+;; (use-package org-roam
+;;   :straight t
+;;   :after (org)
+;;   :custom
+;;   (org-roam-directory "~/org/roam")
+;;   (org-roam-database-connector 'sqlite)
+;;   (org-roam-db-location (expand-file-name "org-roam.db") my-db-dir)
+;;   :bind (("C-c n l" . org-roam-buffer-toggle)
+;;          ("C-c n f" . org-roam-node-find)
+;;          ("C-c n g" . org-roam-graph)
+;;          ("C-c n i" . org-roam-node-insert)
+;;          ("C-c n c" . org-roam-capture)
+;;          ("C-c n j" . org-roam-dailies-capture-today))
+;;   :config
+;;   (org-roam-db-autosync-mode)
+;;   )
 
-  ;; Ellipsis styling
-  (setopt org-ellipsis "…")
-  (set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
-
-  (global-org-modern-mode)
-  )
-
-;;; org-download - 画像のクリップボード貼り付け
-(use-package org-download
-  :disabled t
-  :straight t
-  :after (org)
-  :bind (:map org-mode-map
-              ("C-c i" . org-download-clipboard))
-  :custom
-  (org-download-method 'directory)
-  (org-download-image-dir "~/org/images/")
-  (org-download-heading-lvl nil)
-  (org-download-timestamp "_%Y%m%d-%H%M%S")
-  :config
-  (add-hook 'dired-mode-hook 'org-download-enable)
-  )
-
-;;; org-roam - ノート管理
-(use-package org-roam
-  :disabled t
-  :straight t
-  :after (org)
-  :custom
-  (org-roam-directory "~/org/roam")
-  (org-roam-database-connector 'sqlite)
-  (org-roam-db-location (expand-file-name "org-roam.db") my-db-dir) ;; my-db-dir @early-init.el
-  :bind (("C-c n l" . org-roam-buffer-toggle)
-         ("C-c n f" . org-roam-node-find)
-         ("C-c n g" . org-roam-graph)
-         ("C-c n i" . org-roam-node-insert)
-         ("C-c n c" . org-roam-capture)
-         ;; Dailies
-         ("C-c n j" . org-roam-dailies-capture-today))
-  :config
-  (org-roam-db-autosync-mode)
-  )
-
-;;; org-agenda - スケジュール管理
-(use-package org-agenda
-  :disabled t
-  :straight nil
-  :after (org)
-  :bind ("C-c a" . org-agenda)
-  :custom
-  (org-agenda-files (directory-files-recursively "~/org/agenda/" "\\.org$"))
-  (org-agenda-start-on-weekday nil)
-  (org-agenda-span 'week)
-  (org-agenda-use-time-grid t)
-  (org-agenda-time-grid '((daily today)
-                          (800 1000 1200 1400 1600 1800 2000)
-                          "......" "----------------"))
-  )
+;; ;;; org-agenda - スケジュール管理
+;; (use-package org-agenda
+;;   :straight nil
+;;   :after (org)
+;;   :bind ("C-c a" . org-agenda)
+;;   :custom
+;;   (org-agenda-files (directory-files-recursively "~/org/agenda/" "\\.org$"))
+;;   (org-agenda-start-on-weekday nil)
+;;   (org-agenda-span 'week)
+;;   (org-agenda-use-time-grid t)
+;;   (org-agenda-time-grid '((daily today)
+;;                           (800 1000 1200 1400 1600 1800 2000)
+;;                           "......" "----------------"))
+;;   )
 
 
 
@@ -1219,32 +1196,26 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   (use-package yasnippet-snippets :straight t)
   )
 
-;;; Copilot - Github copilot による補完
-(use-package copilot
-  :disabled t
-  :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-  :hook (prog-mode . copilot-mode)
-  :custom
-  (copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node") ; Node.js の実行パス
-  ;; *** Copilot の警告を抑止 ***
-  ;; [Warning (copilot): ... copilot--infer-indentation-offset found no mode-specific indentation offset]
-  ;; emacs-lisp-mode にて発生。copilot--indentation-alist への emacs-lisp-mode のダミー設定では抑制できず。
-  ;; lisp-indent-offset への値設定にて抑制できるが、emacs-lisp-mode の思想に反し、
-  ;; かつ aggresive-indent との競合が発生するため、警告抑止で対応する
-  (warning-suppress-log-types '((copilot copilot-no-mode-indent)))  ; Copilot の警告抑制
-  (warning-suppress-types '((copilot copilot-no-mode-indent)))
-  :bind (:map copilot-mode-map
-              ("C-M-<return>" . copilot-complete)            ; C-M-Enter で起動
-              ("C-c c"        . copilot-clear-overlay)       ; C-c c     でオーバーレイをクリア
-              ("C-c C-c"      . copilot-clear-overlay)       ; C-c C-c   でオーバーレイをクリア
-              ("C-c i"        . copilot-panel-complete)      ; C-c i     で補完候補のパネル表示
-              ("C-c C-i"      . copilot-panel-complete)      ; C-c C-i   で補完候補のパネル表示
-              ("C-c p"        . copilot-previous-completion) ; C-c p     で前の補完候補を表示
-              ("C-c C-p"      . copilot-previous-completion) ; C-c C-p   で前の補完候補を表示
-              ("C-c n"        . copilot-next-completion)     ; C-c n     で次の補完候補を表示
-              ("C-c C-n"      . copilot-next-completion)     ; C-c C-n   で次の補完候補を表示
-              ("C-<return>"   . copilot-accept-completion))  ; C-Enter   で補完を受け入れる
-  )
+;; ;;; Copilot - Github copilot による補完
+;; (use-package copilot
+;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+;;   :hook (prog-mode . copilot-mode)
+;;   :custom
+;;   (copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node")
+;;   (warning-suppress-log-types '((copilot copilot-no-mode-indent)))
+;;   (warning-suppress-types '((copilot copilot-no-mode-indent)))
+;;   :bind (:map copilot-mode-map
+;;               ("C-M-<return>" . copilot-complete)
+;;               ("C-c c"        . copilot-clear-overlay)
+;;               ("C-c C-c"      . copilot-clear-overlay)
+;;               ("C-c i"        . copilot-panel-complete)
+;;               ("C-c C-i"      . copilot-panel-complete)
+;;               ("C-c p"        . copilot-previous-completion)
+;;               ("C-c C-p"      . copilot-previous-completion)
+;;               ("C-c n"        . copilot-next-completion)
+;;               ("C-c C-n"      . copilot-next-completion)
+;;               ("C-<return>"   . copilot-accept-completion))
+;;   )
 
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
@@ -1281,7 +1252,6 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
     "C-o" 'mc/sort-regions
     "O"  'mc/reverse-regions)
   (global-set-key (kbd "C-q") my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
-  (repeat-mode 1) ; `repeat-mode` を有効化
   )
 
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
@@ -1401,15 +1371,6 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 
 
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
-;;; Mozc - 日本語入力の設定
-(use-package mozc
-  :straight nil
-  :if window-system
-  :config
-  (set-language-environment "Japanese")
-  (prefer-coding-system 'utf-8)
-  )
-
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
   :straight nil
@@ -1586,32 +1547,12 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   (define-key vundo-mode-map (kbd "C-p") 'vundo-previous) ; 上の分岐へ (↑)
   )
 
-;;; Undohist - アンドゥ履歴のファイル保存
-(use-package undohist
-  :straight t
-  :custom
-  (undohist-directory (my-set-history "undohist"))
-  :config
-  (undohist-initialize)
-  )
-
 ;;; Stopwatch - シンプルなストップウォッチ
 (use-package stopwatch
   :straight (stopwatch
              :type git
              :host github
              :repo "blue0513/stopwatch") ; https://github.com/blue0513/stopwatch
-  )
-
-;;; Initchart - 初期化処理の実行時間を記録
-(use-package initchart
-  :straight (initchart
-             :type git
-             :host github
-             :repo "yuttie/initchart") ; https://github.com/yuttie/initchart
-  :config
-  (initchart-record-execution-time-of load file)
-  (initchart-record-execution-time-of require feature)
   )
 
 (provide '20-external-package)

@@ -1,4 +1,4 @@
-;;; 19-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
+;;; 18-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; Emacs 組み込みパッケージの設定
 
@@ -10,13 +10,6 @@
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain) ;; コントロールバッファを同一フレームに表示
   (ediff-split-window-function 'split-window-horizontally) ;; diff のバッファを左右に配置
-  )
-
-;;;;;; [Group] Completion - 補完 ;;;;;;
-;;; Icomplete - 補完可能なものを随時表示
-(use-package icomplete
-  :straight nil
-  :hook (after-init . icomplete-mode)
   )
 
 ;;;;;; [Group] Visual Enhancements - 視覚的な補助 ;;;;;;
