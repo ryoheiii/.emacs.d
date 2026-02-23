@@ -17,7 +17,7 @@
    ("C-x b"   . consult-buffer)
    ("C-x i"   . consult-imenu)
    ("C-s"     . consult-line)
-   ("C-S"     . consult-line-multi)
+   ("C-S"     . my/consult-line-multi)
    ("C-."     . consult-goto-line)
    ("C-x g"   . consult-grep)
    ;; ("C-x g"   . affe-grep)
@@ -25,6 +25,12 @@
   :custom
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
+  :config
+  (defun my/consult-line-multi (&rest args)
+    "1 文字から検索を開始する `consult-line-multi' ラッパー."
+    (interactive "P")
+    (let ((consult-async-min-input 1))
+      (apply #'consult-line-multi args)))
   )
 
 ;;; Consult-yasnippet - Yasnippet の `consult` インテグレーション
@@ -67,10 +73,11 @@
   ;; migemo を利用したローマ字検索
   (with-eval-after-load 'migemo
     (defun orderless-migemo (component)
-      (let ((pattern (downcase (migemo-get-pattern component))))
-        (condition-case nil
-            (progn (string-match-p pattern "") pattern)
-          (invalid-regexp nil))))
+      (when (>= (length component) 2)
+        (let ((pattern (downcase (migemo-get-pattern component))))
+          (condition-case nil
+              (progn (string-match-p pattern "") pattern)
+            (invalid-regexp nil)))))
     (add-to-list 'orderless-matching-styles 'orderless-migemo))
 
   ;; corfuはorderless-flexで絞り込む
