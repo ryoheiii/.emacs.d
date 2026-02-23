@@ -2,11 +2,13 @@
 
 #*#
 *.dat
+*.elc
 elpa/
 eln-cache/
 var/*
 loads/elisp/*
 loads/site-elisp/*
+!loads/site-elisp/my-*.el
 loads/straight
 custom/snippets/*
 
