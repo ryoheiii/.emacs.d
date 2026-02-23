@@ -7,15 +7,18 @@
 ;;;; [Group] Library - ライブラリ関連 ;;;;;;
 ;;; dash - Emacs 用のモダンなリスト操作ライブラリ
 (use-package dash
-  :straight t)
+  :straight t
+  :defer t)
 
 ;;; s - 文字列操作のための便利なユーティリティ
 (use-package s
-  :straight t)
+  :straight t
+  :defer t)
 
 ;;; diminish - モードラインの表示を最適化
 (use-package diminish
-  :straight t)
+  :straight t
+  :defer t)
 
 
 
@@ -125,8 +128,10 @@
 ;;; smart-mode-line - モードラインの外観と情報表示を最適化
 (use-package smart-mode-line
   :straight t
+  :defer t
   :init
-  (sml/setup)
+  ;; sml/setup は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'sml/setup)
   :config
   (setq sml/no-confirm-load-theme t
         sml/theme 'dark
@@ -149,8 +154,10 @@
 (use-package pulsar
   :straight t
   :if (display-graphic-p)
-  :config
-  (pulsar-global-mode +1)
+  :defer t
+  :init
+  ;; pulsar-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'pulsar-global-mode 1)
   )
 
 ;;; goggles - 編集箇所をハイライト
@@ -165,6 +172,10 @@
 (use-package spacious-padding
   :straight t
   :if (display-graphic-p)
+  :defer t
+  :init
+  ;; spacious-padding-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'spacious-padding-mode 1)
   :config
   (setq spacious-padding-widths
         '( :internal-border-width 15
@@ -178,16 +189,17 @@
   ;; is very flexible and provides several examples.
   (setq spacious-padding-subtle-mode-line
         `( :mode-line-active 'default
-           :mode-line-inactive vertical-border))
-
-  (spacious-padding-mode +1))
+           :mode-line-inactive vertical-border)))
 
 ;;; perfect-margin - バッファが一つの時に中央寄せ
 (use-package perfect-margin
   :straight t
+  :defer t
+  :init
+  ;; perfect-margin-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'perfect-margin-mode 1)
   :config
   (setq perfect-margin-ignore-filters nil)
-  (perfect-margin-mode +1)
   )
 
 ;;; volatile-highlights - 一時的なハイライト（選択範囲など）を強調表示
@@ -197,16 +209,6 @@
   :custom-face
   (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
   )
-
-;;; highlight-indent-guides - インデントレベルを視覚的に区別するためのガイド
-(use-package highlight-indent-guides
-  :straight t
-  :if (version< emacs-version "29")  ;; Emacs 29 以降は無効（位置ズレが発生するため）
-  :hook (emacs-lisp-mode . highlight-indent-guides-mode)
-  :custom
-  (highlight-indent-guides-auto-enabled t)
-  (highlight-indent-guides-responsive t)
-  (highlight-indent-guides-method 'character))
 
 ;;; highlight-symbol - シンボルのハイライトとナビゲーション
 (use-package highlight-symbol
@@ -275,24 +277,31 @@
 (use-package nyan-mode
   :straight t
   :if (display-graphic-p)
+  :defer t
+  :custom
+  (nyan-bar-length 24)
   :init
-  (setq nyan-bar-length 24)
-  (nyan-mode +1)
+  ;; nyan-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'nyan-mode 1)
   )
 
 ;;; Minions - マイナーモードをハンバーガーメニューで表示
 (use-package minions
   :straight t
   :if (display-graphic-p)
+  :defer t
   :init
-  (minions-mode +1)
+  ;; minions-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'minions-mode 1)
   )
 
 ;;; page-break-lines ^Lの改ページ文字の表示を良くする
 (use-package page-break-lines
   :straight t
-  :config
-  (page-break-lines-mode +1)
+  :defer t
+  :init
+  ;; page-break-lines-mode は autoload 済み（バッファローカル）
+  (run-with-idle-timer 0.5 nil #'page-break-lines-mode 1)
   )
 
 ;;; highlight-defined - 既知のシンボルに色を付ける
@@ -339,93 +348,80 @@
   :hook (org-mode . org-indent-mode)
   )
 
-;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
-(use-package org-modern
-  :disabled t
-  :straight t
-  :after (org)
-  :hook (org-mode . org-modern-mode)
-  :config
-  (setopt
-   ;; Edit settings
-   org-auto-align-tags nil
-   org-tags-column 0
-   org-catch-invisible-edits 'show-and-error
-   org-special-ctrl-a/e t
-   org-insert-heading-respect-content t
+;; ;;; org-modern - 全体的なUI向上 (*) org-indent-mode と相性が悪いため一旦無効化
+;; (use-package org-modern
+;;   :straight t
+;;   :after (org)
+;;   :hook (org-mode . org-modern-mode)
+;;   :config
+;;   (setopt
+;;    org-auto-align-tags nil
+;;    org-tags-column 0
+;;    org-catch-invisible-edits 'show-and-error
+;;    org-special-ctrl-a/e t
+;;    org-insert-heading-respect-content t
+;;    org-hide-emphasis-markers t
+;;    org-pretty-entities t
+;;    org-agenda-tags-column 0
+;;    org-agenda-block-separator ?─
+;;    org-agenda-time-grid
+;;    '((daily today require-timed)
+;;      (800 1000 1200 1400 1600 1800 2000)
+;;      " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+;;    org-agenda-current-time-string
+;;    "◀── now ─────────────────────────────────────────────────")
+;;   (setopt org-ellipsis "…")
+;;   (set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
+;;   (global-org-modern-mode)
+;;   )
 
-   ;; Org styling, hide markup etc.
-   org-hide-emphasis-markers t
-   org-pretty-entities t
+;; ;;; org-download - 画像のクリップボード貼り付け
+;; (use-package org-download
+;;   :straight t
+;;   :after (org)
+;;   :bind (:map org-mode-map
+;;               ("C-c i" . org-download-clipboard))
+;;   :custom
+;;   (org-download-method 'directory)
+;;   (org-download-image-dir "~/org/images/")
+;;   (org-download-heading-lvl nil)
+;;   (org-download-timestamp "_%Y%m%d-%H%M%S")
+;;   :config
+;;   (add-hook 'dired-mode-hook 'org-download-enable)
+;;   )
 
-   ;; Agenda styling
-   org-agenda-tags-column 0
-   org-agenda-block-separator ?─
-   org-agenda-time-grid
-   '((daily today require-timed)
-     (800 1000 1200 1400 1600 1800 2000)
-     " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
-   org-agenda-current-time-string
-   "◀── now ─────────────────────────────────────────────────")
+;; ;;; org-roam - ノート管理
+;; (use-package org-roam
+;;   :straight t
+;;   :after (org)
+;;   :custom
+;;   (org-roam-directory "~/org/roam")
+;;   (org-roam-database-connector 'sqlite)
+;;   (org-roam-db-location (expand-file-name "org-roam.db") my-db-dir)
+;;   :bind (("C-c n l" . org-roam-buffer-toggle)
+;;          ("C-c n f" . org-roam-node-find)
+;;          ("C-c n g" . org-roam-graph)
+;;          ("C-c n i" . org-roam-node-insert)
+;;          ("C-c n c" . org-roam-capture)
+;;          ("C-c n j" . org-roam-dailies-capture-today))
+;;   :config
+;;   (org-roam-db-autosync-mode)
+;;   )
 
-  ;; Ellipsis styling
-  (setopt org-ellipsis "…")
-  (set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
-
-  (global-org-modern-mode)
-  )
-
-;;; org-download - 画像のクリップボード貼り付け
-(use-package org-download
-  :disabled t
-  :straight t
-  :after (org)
-  :bind (:map org-mode-map
-              ("C-c i" . org-download-clipboard))
-  :custom
-  (org-download-method 'directory)
-  (org-download-image-dir "~/org/images/")
-  (org-download-heading-lvl nil)
-  (org-download-timestamp "_%Y%m%d-%H%M%S")
-  :config
-  (add-hook 'dired-mode-hook 'org-download-enable)
-  )
-
-;;; org-roam - ノート管理
-(use-package org-roam
-  :disabled t
-  :straight t
-  :after (org)
-  :custom
-  (org-roam-directory "~/org/roam")
-  (org-roam-database-connector 'sqlite)
-  (org-roam-db-location (expand-file-name "org-roam.db") my-db-dir) ;; my-db-dir @early-init.el
-  :bind (("C-c n l" . org-roam-buffer-toggle)
-         ("C-c n f" . org-roam-node-find)
-         ("C-c n g" . org-roam-graph)
-         ("C-c n i" . org-roam-node-insert)
-         ("C-c n c" . org-roam-capture)
-         ;; Dailies
-         ("C-c n j" . org-roam-dailies-capture-today))
-  :config
-  (org-roam-db-autosync-mode)
-  )
-
-;;; org-agenda - スケジュール管理
-(use-package org-agenda
-  :disabled t
-  :straight nil
-  :after (org)
-  :bind ("C-c a" . org-agenda)
-  :custom
-  (org-agenda-files (directory-files-recursively "~/org/agenda/" "\\.org$"))
-  (org-agenda-start-on-weekday nil)
-  (org-agenda-span 'week)
-  (org-agenda-use-time-grid t)
-  (org-agenda-time-grid '((daily today)
-                          (800 1000 1200 1400 1600 1800 2000)
-                          "......" "----------------"))
-  )
+;; ;;; org-agenda - スケジュール管理
+;; (use-package org-agenda
+;;   :straight nil
+;;   :after (org)
+;;   :bind ("C-c a" . org-agenda)
+;;   :custom
+;;   (org-agenda-files (directory-files-recursively "~/org/agenda/" "\\.org$"))
+;;   (org-agenda-start-on-weekday nil)
+;;   (org-agenda-span 'week)
+;;   (org-agenda-use-time-grid t)
+;;   (org-agenda-time-grid '((daily today)
+;;                           (800 1000 1200 1400 1600 1800 2000)
+;;                           "......" "----------------"))
+;;   )
 
 
 
@@ -455,7 +451,7 @@
   (interactive)
   (insert "    "))
 
-;; Pandoc コマンドの設定
+;; Pandoc コマンドの設定（遅延構築: 初回参照時にサブプロセスでバージョン取得）
 ;; その他 option: "--toc --toc-depth=2", "--highlight-style=tango"
 (defun my-get-pandoc-version ()
   "Pandoc のバージョン番号を取得し、数値で返す。"
@@ -464,18 +460,24 @@
                         (string-to-number (match-string 1 version-str)))))
     version-num))
 
-(let ((pandoc-ver (my-get-pandoc-version)))
-  (setq my-markdown-pandoc-command
-        (concat "pandoc"
-                " -s"
-                " --number-sections"
-                " --toc --toc-depth=3"
-                (if (and pandoc-ver (>= pandoc-ver 3))
-                    " --embed-resources --standalone"
-                  " --self-contained")
-                " -f markdown -t html5"
-                " --css " (shell-quote-argument my-markdown-css-file)
-                " --include-after-body " (shell-quote-argument my-markdown-js-file))))
+(defvar my-markdown-pandoc-command nil
+  "Pandoc コマンド文字列。初回参照時に遅延構築される。")
+
+(defun my-markdown-pandoc-command ()
+  "Pandoc コマンドを遅延構築して返す。"
+  (or my-markdown-pandoc-command
+      (setq my-markdown-pandoc-command
+            (let ((pandoc-ver (my-get-pandoc-version)))
+              (concat "pandoc"
+                      " -s"
+                      " --number-sections"
+                      " --toc --toc-depth=3"
+                      (if (and pandoc-ver (>= pandoc-ver 3))
+                          " --embed-resources --standalone"
+                        " --self-contained")
+                      " -f markdown -t html5"
+                      " --css " (shell-quote-argument my-markdown-css-file)
+                      " --include-after-body " (shell-quote-argument my-markdown-js-file))))))
 
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
@@ -488,17 +490,6 @@
   (markdown-indent-level 4)
   (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
   (markdown-header-scaling t)                            ; 見出しサイズの自動調整
-  ;; markdown コマンドを pandoc に置き換え
-  (markdown-command my-markdown-pandoc-command)          ; Pandoc で Markdown をエクスポート
-  (markdown-export-command my-markdown-pandoc-command)
-  (markdown-xhtml-header-content
-   (format "<meta charset='utf-8'>\n
-                <meta name='viewport' content='width=device-width, initial-scale=1'>\n
-                <title>Markdown Export</title>\n
-                <style>\n%s\n</style>\n
-                <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
-                <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
-           (my-markdown-load-css)))
   ;; コードブロックのシンタックスハイライト
   (markdown-code-lang-modes '(("bash"   . shell-script)
                               ("elisp"  . emacs-lisp)
@@ -510,6 +501,18 @@
          ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
          ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
   :config
+  ;; Pandoc コマンドと CSS を遅延設定（markdown-mode ロード時に初めて構築）
+  (setq markdown-command (my-markdown-pandoc-command))
+  (setq markdown-export-command (my-markdown-pandoc-command))
+  (setq markdown-xhtml-header-content
+        (format "<meta charset='utf-8'>\n
+                <meta name='viewport' content='width=device-width, initial-scale=1'>\n
+                <title>Markdown Export</title>\n
+                <style>\n%s\n</style>\n
+                <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
+                <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
+                (my-markdown-load-css)))
+
   (defun my/markdown-setup ()
     "Things that must run *after* `markdown-mode' comes up."
     (flyspell-mode  1)                   ; スペルチェック
@@ -595,6 +598,7 @@
 ;;; Vertico-truncate - vertico の補完候補を横方向に切り詰める
 (use-package vertico-truncate
   :straight (:host github :repo "jdtsmith/vertico-truncate")
+  :after vertico
   :config
   (vertico-truncate-mode +1)
   (setq vertico-truncate-length 50)   ;; 最大表示幅 (デフォルト: 40)
@@ -795,6 +799,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Affe - 高速検索（grep 代替）
 (use-package affe
   :straight t
+  :defer t
+  :commands (affe-grep affe-find)
   :config
   (setq affe-regexp-function #'orderless-pattern-compiler)
   (setq affe-highlight-function #'orderless-highlight-matches)
@@ -969,6 +975,7 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Flx - 柔軟なスコアリング
 (use-package flx
   :straight t
+  :after prescient
   :config
   (with-eval-after-load 'prescient
     ;; 入力文字を抽出
@@ -1027,7 +1034,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   (prescient-aggressive-file-save t)
   (prescient-save-file (my-set-history "prescient-save.el"))
   :config
-  (prescient-persist-mode +1)
+  ;; prescient-persist-mode は autoload なし → パッケージは即ロード、ファイル I/O のみ遅延
+  (run-with-idle-timer 1 nil #'prescient-persist-mode 1)
   )
 
 ;;; Vertico-prescient - `vertico` 用のスコアリング
@@ -1058,8 +1066,10 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
            (getenv "DISPLAY")        ; X11 の DISPLAY 変数がある
            (executable-find "xclip")) ; `xclip` がシステムにインストールされている
   :straight t
-  :config
-  (xclip-mode 1)
+  :defer t
+  :init
+  ;; xclip-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'xclip-mode 1)
   )
 
 ;;; dashboard - Emacs のスタートアップ画面をカスタマイズ
@@ -1104,6 +1114,7 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; recentf-ext - recentf の拡張機能
 (use-package recentf-ext
   :straight t
+  :after recentf
   )
 
 ;;; smooth-scroll - スムーズなスクロール
@@ -1173,9 +1184,13 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :straight t
+  :defer t
   :custom
   (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))  ; スニペット展開のプロンプト
   (yas-trigger-key "TAB")                                 ; トリガーキーを TAB に設定
+  :init
+  ;; yas-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 1 nil #'yas-global-mode 1)
   :config
   ;; ロードスニペットの設定
   (setq yas-snippet-dirs
@@ -1213,38 +1228,31 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
                           (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-ts-mode")
                           (my-set-elisp "straight/build/yasnippet-snippets/snippets/text-mode")
                           )))
-  (yas-global-mode 1)
 
   ;; Yasnippet Snippets - 追加スニペット集
   (use-package yasnippet-snippets :straight t)
   )
 
-;;; Copilot - Github copilot による補完
-(use-package copilot
-  :disabled t
-  :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-  :hook (prog-mode . copilot-mode)
-  :custom
-  (copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node") ; Node.js の実行パス
-  ;; *** Copilot の警告を抑止 ***
-  ;; [Warning (copilot): ... copilot--infer-indentation-offset found no mode-specific indentation offset]
-  ;; emacs-lisp-mode にて発生。copilot--indentation-alist への emacs-lisp-mode のダミー設定では抑制できず。
-  ;; lisp-indent-offset への値設定にて抑制できるが、emacs-lisp-mode の思想に反し、
-  ;; かつ aggresive-indent との競合が発生するため、警告抑止で対応する
-  (warning-suppress-log-types '((copilot copilot-no-mode-indent)))  ; Copilot の警告抑制
-  (warning-suppress-types '((copilot copilot-no-mode-indent)))
-  :bind (:map copilot-mode-map
-              ("C-M-<return>" . copilot-complete)            ; C-M-Enter で起動
-              ("C-c c"        . copilot-clear-overlay)       ; C-c c     でオーバーレイをクリア
-              ("C-c C-c"      . copilot-clear-overlay)       ; C-c C-c   でオーバーレイをクリア
-              ("C-c i"        . copilot-panel-complete)      ; C-c i     で補完候補のパネル表示
-              ("C-c C-i"      . copilot-panel-complete)      ; C-c C-i   で補完候補のパネル表示
-              ("C-c p"        . copilot-previous-completion) ; C-c p     で前の補完候補を表示
-              ("C-c C-p"      . copilot-previous-completion) ; C-c C-p   で前の補完候補を表示
-              ("C-c n"        . copilot-next-completion)     ; C-c n     で次の補完候補を表示
-              ("C-c C-n"      . copilot-next-completion)     ; C-c C-n   で次の補完候補を表示
-              ("C-<return>"   . copilot-accept-completion))  ; C-Enter   で補完を受け入れる
-  )
+;; ;;; Copilot - Github copilot による補完
+;; (use-package copilot
+;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
+;;   :hook (prog-mode . copilot-mode)
+;;   :custom
+;;   (copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node")
+;;   (warning-suppress-log-types '((copilot copilot-no-mode-indent)))
+;;   (warning-suppress-types '((copilot copilot-no-mode-indent)))
+;;   :bind (:map copilot-mode-map
+;;               ("C-M-<return>" . copilot-complete)
+;;               ("C-c c"        . copilot-clear-overlay)
+;;               ("C-c C-c"      . copilot-clear-overlay)
+;;               ("C-c i"        . copilot-panel-complete)
+;;               ("C-c C-i"      . copilot-panel-complete)
+;;               ("C-c p"        . copilot-previous-completion)
+;;               ("C-c C-p"      . copilot-previous-completion)
+;;               ("C-c n"        . copilot-next-completion)
+;;               ("C-c C-n"      . copilot-next-completion)
+;;               ("C-<return>"   . copilot-accept-completion))
+;;   )
 
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
@@ -1281,7 +1289,6 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
     "C-o" 'mc/sort-regions
     "O"  'mc/reverse-regions)
   (global-set-key (kbd "C-q") my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
-  (repeat-mode 1) ; `repeat-mode` を有効化
   )
 
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
@@ -1344,10 +1351,12 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
   :straight t
+  :defer t
   :custom
   (popwin:popup-window-position 'bottom) ;; ポップアップの位置を下部に設定
   :init
-  (popwin-mode 1)
+  ;; popwin-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 0.5 nil #'popwin-mode 1)
   )
 
 ;;; Migemo - 日本語を含む検索時の挙動改善
@@ -1362,7 +1371,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   (migemo-regex-dictionary nil)
   (migemo-coding-system 'utf-8-unix)
   :config
-  (migemo-init)
+  ;; migemo-init は autoload なし → パッケージは即ロード、重い初期化のみ遅延
+  (run-with-idle-timer 1 nil #'migemo-init)
   )
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
@@ -1401,15 +1411,6 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 
 
 ;;;;; [Group] Languages-and-Style - 言語とスタイル関連 ;;;;;
-;;; Mozc - 日本語入力の設定
-(use-package mozc
-  :straight nil
-  :if window-system
-  :config
-  (set-language-environment "Japanese")
-  (prefer-coding-system 'utf-8)
-  )
-
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
   :straight nil
@@ -1489,15 +1490,17 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
          (magit-post-refresh . diff-hl-magit-post-refresh)
          (dired-mode . diff-hl-dired-mode))
   :init
-  (global-diff-hl-mode +1)
-  (global-diff-hl-show-hunk-mouse-mode +1)
-  (diff-hl-margin-mode +1)
+  ;; global-diff-hl-mode は autoload 済み → タイマーで遅延ロード
+  (run-with-idle-timer 1 nil (lambda ()
+    (global-diff-hl-mode +1)
+    (global-diff-hl-show-hunk-mouse-mode +1)
+    (diff-hl-margin-mode +1)))
   )
 
 ;;; Difftastic
 (use-package difftastic
   :straight t
-  :demand t
+  :after magit
   :bind (:map magit-blame-read-only-mode-map
               ("D" . difftastic-magit-show)
               ("S" . difftastic-magit-show))
@@ -1516,6 +1519,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn
   :straight t
+  :defer t
+  :commands (svn-status svn-update)
   )
 
 
@@ -1524,10 +1529,12 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Paradox - パッケージ管理 UI の強化
 (use-package paradox
   :straight t
-  :config
-  (paradox-enable)
+  :defer t
+  :commands (paradox-list-packages paradox-upgrade-packages)
   :custom
   (paradox-github-token t)
+  :config
+  (paradox-enable)
   )
 
 ;;; Which-key - 使用可能なキーバインドの表示
@@ -1543,11 +1550,14 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Free-keys - 未使用のキーバインドを表示
 (use-package free-keys
   :straight t
+  :defer t
+  :commands (free-keys)
   )
 
 ;;; Amx - M-x コマンドの履歴強化
 (use-package amx
   :straight t
+  :defer t
   :custom
   (amx-save-file (my-set-history "amx-items"))
   )
@@ -1563,12 +1573,15 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; undo-fu-session - undo 情報を Emacs 終了後も保持
 (use-package undo-fu-session
   :straight t
+  :defer t
   :custom
   (undo-fu-session-directory (my-set-history "undo-fu-session/"))
+  :init
+  ;; undo-fu-session-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 1 nil #'undo-fu-session-global-mode 1)
   :config
   (unless (file-exists-p undo-fu-session-directory)
     (make-directory undo-fu-session-directory t))
-  (undo-fu-session-global-mode t)
   )
 
 ;;; Vundo - アンドゥの操作をツリー表示で管理
@@ -1586,32 +1599,14 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   (define-key vundo-mode-map (kbd "C-p") 'vundo-previous) ; 上の分岐へ (↑)
   )
 
-;;; Undohist - アンドゥ履歴のファイル保存
-(use-package undohist
-  :straight t
-  :custom
-  (undohist-directory (my-set-history "undohist"))
-  :config
-  (undohist-initialize)
-  )
-
 ;;; Stopwatch - シンプルなストップウォッチ
 (use-package stopwatch
   :straight (stopwatch
              :type git
              :host github
              :repo "blue0513/stopwatch") ; https://github.com/blue0513/stopwatch
-  )
-
-;;; Initchart - 初期化処理の実行時間を記録
-(use-package initchart
-  :straight (initchart
-             :type git
-             :host github
-             :repo "yuttie/initchart") ; https://github.com/yuttie/initchart
-  :config
-  (initchart-record-execution-time-of load file)
-  (initchart-record-execution-time-of require feature)
+  :defer t
+  :commands (stopwatch-start stopwatch-stop stopwatch-restart stopwatch-pause)
   )
 
 (provide '20-external-package)

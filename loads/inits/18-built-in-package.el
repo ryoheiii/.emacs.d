@@ -1,4 +1,4 @@
-;;; 19-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
+;;; 18-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; Emacs 組み込みパッケージの設定
 
@@ -10,13 +10,6 @@
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain) ;; コントロールバッファを同一フレームに表示
   (ediff-split-window-function 'split-window-horizontally) ;; diff のバッファを左右に配置
-  )
-
-;;;;;; [Group] Completion - 補完 ;;;;;;
-;;; Icomplete - 補完可能なものを随時表示
-(use-package icomplete
-  :straight nil
-  :hook (after-init . icomplete-mode)
   )
 
 ;;;;;; [Group] Visual Enhancements - 視覚的な補助 ;;;;;;
@@ -135,23 +128,20 @@
 (use-package files
   :straight nil
   :custom (auto-save-visited-interval 30)
-  :config
-  (auto-save-visited-mode +1)
+  :hook (after-init . auto-save-visited-mode)
   )
 
 ;;; Delsel - 選択している状態で入力したときに、region を削除して挿入
 (use-package delsel
   :straight nil
-  :config
-  (delete-selection-mode +1)
+  :hook (after-init . delete-selection-mode)
   )
 
 ;;;;;; [Group] Window & Buffer Management - ウィンドウ・バッファ管理 ;;;;;;
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove
   :straight nil
-  :config
-  (windmove-default-keybindings) ;; Shift + 矢印キーでウィンドウ間を移動
+  :hook (after-init . windmove-default-keybindings)
   )
 
 ;;; Uniquify - バッファ名のユニーク化。同名ファイルを開いた際にディレクトリ名で区別

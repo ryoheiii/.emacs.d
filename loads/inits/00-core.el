@@ -78,9 +78,11 @@
       comint-scroll-show-maximum-output t)
 
 ;;;;;; [Group] Garbage Collection - GC設定 ;;;;;;
-(setq gc-cons-percentage 0.2
-      gc-cons-threshold (* 512 1024 1024)
-      garbage-collection-messages t)
+;; early-init.el で most-positive-fixnum に設定した GC 閾値を起動完了後に復元
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 100 1024 1024)
+                  gc-cons-percentage 0.2)))
 (add-hook 'focus-out-hook #'garbage-collect)
 (add-to-list 'warning-suppress-types '(undo discard-info))
 

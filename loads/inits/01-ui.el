@@ -21,16 +21,7 @@
 (transient-mark-mode t)
 
 ;; 行番号表示
-(if (version< emacs-version "29")
-    (global-linum-mode t)               ; Emacs28 以前
-  (global-display-line-numbers-mode t)) ; Emacs29 以降
-(setq linum-format "%4d "
-      linum-delay t)
-;; nlinum.el の遅延更新
-(advice-add 'linum-schedule :around
-            (lambda (orig-fn &rest args)
-              (run-with-idle-timer 0.2 nil #'linum-update-current)
-              (apply orig-fn args)))
+(global-display-line-numbers-mode t)
 
 ;; 行設定
 (setq kill-whole-line t)                ; 行の先頭でC-kを一回押すだけで行全体を消去する

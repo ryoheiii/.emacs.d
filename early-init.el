@@ -7,7 +7,9 @@
 ;;;;; [Group] Debug ;;;;;
 ;; (setq debug-on-error t)
 
-
+;;;;; [Group] GC - 起動時の GC 抑制 ;;;;;
+;; 起動中は GC を完全に抑制し、emacs-startup-hook で適正値に復元（00-core.el）
+(setq gc-cons-threshold most-positive-fixnum)
 
 ;;;;; [Group] Define - 定数
 ;;; OS判定用定数
