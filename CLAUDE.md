@@ -127,6 +127,12 @@ git worktree prune
 - テストを実行し、失敗があれば修正。
 - `git push -u origin HEAD` でリモートに push。
 
+#### マージ
+
+- ブランチを main にマージする際は **必ずマージコミットを作成** する（`git merge --no-ff`）。fast-forward マージは禁止。
+- マージ前にコミット履歴を整理する（fixup/squash を活用し、論理単位のコミットにまとめる）。
+- マージコミットメッセージは `Merge branch '<ブランチ名>'` + 変更概要を含める。
+
 #### 禁止事項
 
 - `main/master` への直コミット禁止。
