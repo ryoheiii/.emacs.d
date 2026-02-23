@@ -1011,7 +1011,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   (prescient-aggressive-file-save t)
   (prescient-save-file (my-set-history "prescient-save.el"))
   :config
-  (prescient-persist-mode +1)
+  ;; prescient-persist-mode は autoload なし → パッケージは即ロード、ファイル I/O のみ遅延
+  (run-with-idle-timer 1 nil #'prescient-persist-mode 1)
   )
 
 ;;; Vertico-prescient - `vertico` 用のスコアリング
@@ -1157,9 +1158,13 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :straight t
+  :defer t
   :custom
   (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))  ; スニペット展開のプロンプト
   (yas-trigger-key "TAB")                                 ; トリガーキーを TAB に設定
+  :init
+  ;; yas-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 1 nil #'yas-global-mode 1)
   :config
   ;; ロードスニペットの設定
   (setq yas-snippet-dirs
@@ -1197,7 +1202,6 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
                           (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-ts-mode")
                           (my-set-elisp "straight/build/yasnippet-snippets/snippets/text-mode")
                           )))
-  (yas-global-mode 1)
 
   ;; Yasnippet Snippets - 追加スニペット集
   (use-package yasnippet-snippets :straight t)
@@ -1339,7 +1343,8 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
   (migemo-regex-dictionary nil)
   (migemo-coding-system 'utf-8-unix)
   :config
-  (migemo-init)
+  ;; migemo-init は autoload なし → パッケージは即ロード、重い初期化のみ遅延
+  (run-with-idle-timer 1 nil #'migemo-init)
   )
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
@@ -1465,7 +1470,7 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Difftastic
 (use-package difftastic
   :straight t
-  :demand t
+  :after magit
   :bind (:map magit-blame-read-only-mode-map
               ("D" . difftastic-magit-show)
               ("S" . difftastic-magit-show))
@@ -1492,10 +1497,12 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; Paradox - パッケージ管理 UI の強化
 (use-package paradox
   :straight t
-  :config
-  (paradox-enable)
+  :defer t
+  :commands (paradox-list-packages paradox-upgrade-packages)
   :custom
   (paradox-github-token t)
+  :config
+  (paradox-enable)
   )
 
 ;;; Which-key - 使用可能なキーバインドの表示
@@ -1531,12 +1538,15 @@ C-u 付きで呼ぶとシンボルを手動入力できる。"
 ;;; undo-fu-session - undo 情報を Emacs 終了後も保持
 (use-package undo-fu-session
   :straight t
+  :defer t
   :custom
   (undo-fu-session-directory (my-set-history "undo-fu-session/"))
+  :init
+  ;; undo-fu-session-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
+  (run-with-idle-timer 1 nil #'undo-fu-session-global-mode 1)
   :config
   (unless (file-exists-p undo-fu-session-directory)
     (make-directory undo-fu-session-directory t))
-  (undo-fu-session-global-mode t)
   )
 
 ;;; Vundo - アンドゥの操作をツリー表示で管理
