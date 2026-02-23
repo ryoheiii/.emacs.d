@@ -3,7 +3,13 @@
     "allow": [
       "Read(//home/ryohei/.emacs.d/**)",
       "Bash(git -C /home/ryohei/.emacs.d log --oneline)",
-      "Bash(git -C /home/ryohei/.emacs.d log --all --oneline)"
+      "Bash(git -C /home/ryohei/.emacs.d log --all --oneline)",
+      "Bash(grep:*)",
+      "Bash(emacs:*)",
+      "Bash(git check-ignore:*)"
+    ],
+    "additionalDirectories": [
+      "/home/ryohei/.claude/plans"
     ]
   }
 }
