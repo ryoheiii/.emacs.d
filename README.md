@@ -6,7 +6,7 @@
 ## 動作環境
 
 - Emacs 30.x 以上
-- Linux / WSL2 / macOS
+- Linux (Debian/Ubuntu) / WSL2 / macOS (Emacs 設定のみ。emacs-setup.sh は未対応)
 - パッケージ管理: [straight.el](https://github.com/radian-software/straight.el)（`package.el` は不使用）
 
 ---
