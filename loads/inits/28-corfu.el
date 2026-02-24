@@ -43,11 +43,15 @@
 
   ;; ミニバッファー上でverticoによる補完が行われない場合、corfu の補完が出るように
   ;; https://github.com/minad/corfu#completing-in-the-minibuffer
+  ;; ただし read-string 等の基本ミニバッファ（minibuffer-local-map のみ）では
+  ;; 補完バックエンドがないため Corfu を無効にする
   (defun corfu-enable-always-in-minibuffer ()
-    "Enable Corfu in the minibuffer if Vertico/Mct are not active."
+    "Enable Corfu in the minibuffer if Vertico/Mct are not active.
+`read-string' など基本キーマップのみのミニバッファでは Corfu を無効にする。
+独自キーマップを持つミニバッファ（`eval-expression' 等）では有効化する。"
     (unless (or (bound-and-true-p mct--active)
-                (bound-and-true-p vertico--input))
-      ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
+                (bound-and-true-p vertico--input)
+                (eq (current-local-map) minibuffer-local-map))
       (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
                   corfu-popupinfo-delay nil)
       (corfu-mode 1)))
