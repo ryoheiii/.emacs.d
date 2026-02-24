@@ -178,11 +178,15 @@ git worktree prune
 
 ## Claude Code 設定
 
-### 権限（`.claude/settings.local.json`）
+### 設定ファイルの使い分け
 
-許可されたコマンド：
-- `.venv/Scripts/python.exe` — Python 実行
-- `source` — 仮想環境の有効化
+| ファイル | 用途 | git 管理 |
+|---|---|---|
+| `.claude/settings.json` | プロジェクト共有の設定（全開発者共通） | 対象 |
+| `.claude/settings.local.json` | ローカル環境固有の設定（権限、パス等） | `.gitignore` で除外 |
+
+- **ローカル固有の権限（絶対パス、マシン固有コマンド等）は `settings.local.json` に格納する**
+- Claude Code がセッション中に自動追加する権限は `settings.json` に蓄積される。コミット前に確認し、ローカル依存のものは `settings.local.json` に移動して `settings.json` をクリーンに保つこと
 
 ### コマンド
 
