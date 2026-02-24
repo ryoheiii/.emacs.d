@@ -25,6 +25,10 @@
   :custom
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
+  :custom-face
+  ;; consult-file は font-lock-function-name-face を継承し斜体になるが、
+  ;; Ricty Diminished Discord に italic バリアントがなく合成斜体でギザつくため無効化
+  (consult-file ((t (:inherit font-lock-function-name-face :slant normal))))
   :config
   (defun my/consult-line-multi (&rest args)
     "1 文字から検索を開始する `consult-line-multi' ラッパー."
