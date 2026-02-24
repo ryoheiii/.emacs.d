@@ -72,39 +72,14 @@
 ;;; Transient パッケージの一時ファイル保存先
 (setq transient-history-file (my-set-history "transient/history.el"))
 
-;;; eln-cache の保存先を変更
-(when (boundp 'native-comp-eln-load-path)
-  (setq native-comp-eln-load-path (list (my-set-package "eln-cache/"))))
+;;; eln-cache の保存先を変更（Emacs 29+ 公式 API）
+(when (fboundp 'startup-redirect-eln-cache)
+  (startup-redirect-eln-cache (my-set-package "eln-cache/")))
 
-;;; emacs 起動後に ~/.emacs.d/eln-cache が生成される課題への対策
-;; ディレクトリが存在する場合に削除
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (let ((default-eln-cache (my-set-emacs "eln-cache/")))
-              (when (file-exists-p default-eln-cache)
-                (delete-directory default-eln-cache t)
-                (message "Deleted unwanted default eln-cache at %s" default-eln-cache)))))
-
-;;; emacs 起動後に ~/.emacs.d/snippets が生成される課題への対策
-;; ;; 初期状態で yas-snippet-dirs を nil に設定し、yasnippet ロード時に明示的に設定
-;; (setq yas-snippet-dirs '())
-;; ディレクトリが存在する場合に削除 (Package install 時に一度生成されてしまう課題への対応)
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (let ((default-snippets (my-set-emacs "snippets/")))
-              (when (file-exists-p default-snippets)
-                (delete-directory default-snippets t)
-                (message "Deleted unwanted default snippets at %s" default-snippets)))))
-
-;;; emacs 起動後に ~/.emacs.d/auto-save-list が生成される課題への対策（正常系では発生しない）
-;; ディレクトリが存在する場合に削除
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (let ((default-auto-save-list (my-set-emacs "auto-save-list/")))
-              (when (file-exists-p default-auto-save-list)
-                (delete-directory default-auto-save-list t)
-                (message "Deleted unwanted default auto-save-list at %s" default-auto-save-list)))))
-
+;;; yasnippet のデフォルト snippets/ ディレクトリ生成を防止
+;; straight.el のビルド過程で yasnippet がロードされる前に設定する必要がある
+;; （use-package の :init では間に合わない — :straight が先に処理されるため）
+(setq yas-snippet-dirs (list (my-set-custom "snippets")))
 
 
 ;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;
