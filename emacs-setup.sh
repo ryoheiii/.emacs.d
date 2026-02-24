@@ -15,8 +15,16 @@ VAR_DIR="$EMACS_DIR/var"
 # packing/extract_package
 PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"
 PACKAGE_TARGET=("repos" "versions/default.el")
-PACKAGE_BUILD_CMD="emacs --batch --eval \"(setq user-emacs-directory \\\"$EMACS_DIR\\\")\" -l \"$EMACS_DIR/early-init.el\" -l \"$EMACS_DIR/init.el\" -f straight-rebuild-all"
 
+
+##### バリデーション #####
+validate_version() {
+    local ver="$1"
+    if [[ ! "$ver" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+        echo "Error: Invalid version format '$ver'. Expected format: NN.N or NN.N.N (e.g., 30.1, 29.4.1)"
+        exit 1
+    fi
+}
 
 ##### ヘルプ #####
 usage() {
@@ -30,7 +38,7 @@ Options:
                             Install Emacs <ver> with optional GUI backend.
   -u, --uninstall           Uninstall the locally installed Emacs.
   -c, --clean               Remove Emacs auto generated files (excluding packages).
-  -C, --clean-all           Remove all Emacs auto genarated files (including packages).
+  -C, --clean-all           Remove all Emacs auto generated files (including packages).
   -p, --packing-package     Archive the package directory ($PACKAGE_DIR).
   -x, --extract-package     Extract the package archive to .emacs.d/loads/$PACKAGE_DIR.
   -h, --help                Show this help message.
@@ -38,14 +46,14 @@ Options:
 Examples:
   $0 --setup
   $0 --list
-  $0 --install 30.1  Install Emacs version 30.1.
+  $0 --install 30.1              # Install Emacs version 30.1.
   $0 --uninstall
   $0 --clean
   $0 --clean-all
   $0 --packing-package
-  $0 --extract-straight
+  $0 --extract-package
 EOF
-    exit 1
+    exit "${1:-1}"
 }
 
 ##### 関連パッケージインストール #####
@@ -57,84 +65,107 @@ setup_env() {
     sudo apt-get update
 
     ##### Emacs インストール時に必要なパッケージのインストール
+
     ### 両方の環境 (GUI & TUI) で必要なもの
+    ## 必須（build-essential を先にインストールして GCC を確保）
+    sudo apt-get install -y build-essential autoconf automake texinfo git libtool
+
+    ## GCC バージョン検出（libgccjit 用）
     GCC_VERSION=$(gcc -dumpversion | cut -d. -f1)
     echo "Detected GCC version: $GCC_VERSION"
-    ## 必須
-    sudo apt-get install -y build-essential autoconf automake texinfo git libtool
+
     ## 推奨
-    sudo apt-get install -y pkg-config                   # C/C++ プロジェクトのライブラリ依存管理ツール
-    sudo apt-get install -y libgccjit-${GCC_VERSION}-dev # ネイティブコンパイル用 (Emacs29以降)
-    sudo apt-get install -y libsqlite3-dev               # SQLite バックエンド (Org-roam など)
-    sudo apt-get install -y libtree-sitter-dev           # Tree-sitter (シンタックスハイライト)
-    sudo apt-get install -y libxml2-dev                  # XML パース (shr.el, EWW)
-    # sudo apt-get install -y libm17n-dev                  # 多言語テキスト処理
-    sudo apt-get install -y libdbus-1-dev                # DBus 通信用ライブラリ
-    sudo apt-get install -y zlib1g zlib1g-dev            # 圧縮ライブラリ (gzip など)
-    sudo apt-get install -y libacl1-dev                  # POSIX ACL（アクセス制御リスト)サポート
-    sudo apt-get install -y libp11-kit-dev               # GnuTLS が証明書ストアを扱うための共通ライブラリ
-    # sudo apt-get install -y libsystemd-dev               # systemd の統合
+    # libm17n-dev              — 多言語テキスト処理（必要に応じて有効化）
+    # libsystemd-dev           — systemd の統合（必要に応じて有効化）
+    local COMMON_PACKAGES=(
+        pkg-config                      # C/C++ プロジェクトのライブラリ依存管理ツール
+        "libgccjit-${GCC_VERSION}-dev"  # ネイティブコンパイル用 (Emacs29以降)
+        libsqlite3-dev                  # SQLite バックエンド (Org-roam など)
+        libtree-sitter-dev              # Tree-sitter (シンタックスハイライト)
+        libxml2-dev                     # XML パース (shr.el, EWW)
+        libdbus-1-dev                   # DBus 通信用ライブラリ
+        zlib1g zlib1g-dev               # 圧縮ライブラリ (gzip など)
+        libacl1-dev                     # POSIX ACL（アクセス制御リスト)サポート
+        libp11-kit-dev                  # GnuTLS が証明書ストアを扱うための共通ライブラリ
+    )
 
     ### GUI (X11/GTK) で必要なもの
-    ## 必須
-    sudo apt-get install -y libgtk-3-dev                 # GTK3 ベースの GUI サポート
-    sudo apt-get install -y libgnutls28-dev              # TLS (HTTPS/SSL) サポート
-    sudo apt-get install -y libfreetype6-dev             # フォントサポート
-    sudo apt-get install -y libotf-dev                   # Opentype フォント処理のサポート
-    sudo apt-get install -y adwaita-icon-theme           # Icon
-    sudo apt-get install -y hicolor-icon-theme           # Icon
-    sudo apt-get install -y gnome-icon-theme             # Icon
-    # X11 関連。GTK3 を使う場合は不要なものもあり
-    sudo apt-get install -y libx11-dev                   # X Window System の基本ライブラリ
-    sudo apt-get install -y libxmu-dev                   # X11 のユーティリティライブラリ
-    sudo apt-get install -y xorg-dev                     # X11 開発パッケージ
-    sudo apt-get install -y libxfixes-dev                # X11 の細かい修正拡張
-    sudo apt-get install -y libxft-dev                   # フォント描画サポート
-    sudo apt-get install -y libxkbcommon-dev             # キーボード入力処理
-    sudo apt-get install -y libxrandr-dev                # 画面サイズ変更のサポート
-    sudo apt-get install -y libxt-dev                    # X Toolkit サポート
-    ## 推奨
-    sudo apt-get install -y libjpeg-dev                  # JPEG 画像のサポート
-    sudo apt-get install -y libgif-dev                   # GIF 画像のサポート
-    sudo apt-get install -y libpng-dev                   # PNG 画像のサポート
-    sudo apt-get install -y libtiff-dev                  # TIFF 画像のサポート
-    sudo apt-get install -y librsvg2-dev                 # SVG 画像のサポート
-    sudo apt-get install -y libxpm-dev                   # XPM 画像のサポート
-    sudo apt-get install -y libxaw7-dev                  # Xaw3d 用 (GUI の一部)
-    sudo apt-get install -y libharfbuzz-dev              # 高品質なフォントレンダリング (ligature.el など使う場合に必須)
-    sudo apt-get install -y libxcomposite-dev            # GTX3 での合成描画
-    sudo apt-get install -y libmagickwand-dev            # ImageMagick の C API
-    sudo apt-get install -y libxi-dev                    # 入力拡張 (XInput) 用のライブラリ
-    sudo apt-get install -y libcairo-5c-dev              # 2Dグラフィックス
-    sudo apt-get install -y liblcms2-dev                 # カラーマネジメント
-    sudo apt-get install -y libwebp-dev                  # WebP 画像サポート
-    # PGTK 用
-    sudo apt-get install -y libgtk-4-dev                 # PGTK 用
+    local GUI_PACKAGES=(
+        ## 必須
+        libgtk-3-dev                    # GTK3 ベースの GUI サポート
+        libgnutls28-dev                 # TLS (HTTPS/SSL) サポート
+        libfreetype6-dev                # フォントサポート
+        libotf-dev                      # Opentype フォント処理のサポート
+        adwaita-icon-theme              # Icon
+        hicolor-icon-theme              # Icon
+        gnome-icon-theme                # Icon
+        # X11 関連
+        libx11-dev                      # X Window System の基本ライブラリ
+        libxmu-dev                      # X11 のユーティリティライブラリ
+        xorg-dev                        # X11 開発パッケージ
+        libxfixes-dev                   # X11 の細かい修正拡張
+        libxft-dev                      # フォント描画サポート
+        libxkbcommon-dev                # キーボード入力処理
+        libxrandr-dev                   # 画面サイズ変更のサポート
+        libxt-dev                       # X Toolkit サポート
+        ## 推奨
+        libjpeg-dev                     # JPEG 画像のサポート
+        libgif-dev                      # GIF 画像のサポート
+        libpng-dev                      # PNG 画像のサポート
+        libtiff-dev                     # TIFF 画像のサポート
+        librsvg2-dev                    # SVG 画像のサポート
+        libxpm-dev                      # XPM 画像のサポート
+        libxaw7-dev                     # Xaw3d 用 (GUI の一部)
+        libharfbuzz-dev                 # 高品質なフォントレンダリング
+        libxcomposite-dev               # GTK3 での合成描画
+        libmagickwand-dev               # ImageMagick の C API
+        libxi-dev                       # 入力拡張 (XInput) 用のライブラリ
+        libcairo-5c-dev                 # 2Dグラフィックス
+        liblcms2-dev                    # カラーマネジメント
+        libwebp-dev                     # WebP 画像サポート
+        # PGTK 用
+        libgtk-4-dev                    # PGTK 用
+    )
 
     ### ターミナル (TUI) で必要なもの
-    ## 必須
-    sudo apt-get install -y libncurses-dev               # ターミナルでのテキスト UI 提供ライブラリ
-    sudo apt-get install -y libgpm-dev                   # General Purpose Mouse による端末でのマウスサポート
-    ## 推奨
-    sudo apt-get install -y libjansson-dev               # JSON パース (LSP・eglot 用)
+    local TUI_PACKAGES=(
+        ## 必須
+        libncurses-dev                  # ターミナルでのテキスト UI 提供ライブラリ
+        libgpm-dev                      # General Purpose Mouse による端末でのマウスサポート
+        ## 推奨
+        libjansson-dev                  # JSON パース (LSP・eglot 用)
+    )
 
     ##### Emacs 利用時に必要なパッケージのインストール
-    sudo apt-get install -y clang libclang-dev           # Clang 用
-    sudo apt-get install -y elpa-color-theme-modern      # カラーテーマ用
-    sudo apt-get install -y fonts-ricty-diminished       # フォント用
-    sudo apt-get install -y global                       # GTAGS (ソースコード検索ツール)
-    sudo apt-get install -y cmigemo                      # Migemo (ローマ字で日本語検索)
-    sudo apt-get install -y hunspell hunspell-en-us      # Hunspell (スペルチェック)
-    sudo apt-get install -y aspell aspell-en             # Aspell (スペルチェック)
-    sudo apt-get install -y cmake llvm libclang-dev      # CMake and LLVM, Libclang (irony-install-server 用)
-    sudo apt-get install -y pandoc                       # Pandoc (Markdown 用)
+    local EMACS_TOOL_PACKAGES=(
+        clang libclang-dev              # Clang 用
+        elpa-color-theme-modern         # カラーテーマ用
+        fonts-ricty-diminished          # フォント用
+        global                          # GTAGS (ソースコード検索ツール)
+        cmigemo                         # Migemo (ローマ字で日本語検索)
+        hunspell hunspell-en-us         # Hunspell (スペルチェック)
+        aspell aspell-en                # Aspell (スペルチェック)
+        cmake llvm                      # CMake and LLVM (irony-install-server 用)
+        pandoc                          # Pandoc (Markdown 用)
+    )
+
+    sudo apt-get install -y "${COMMON_PACKAGES[@]}"
+    sudo apt-get install -y "${GUI_PACKAGES[@]}"
+    sudo apt-get install -y "${TUI_PACKAGES[@]}"
+    sudo apt-get install -y "${EMACS_TOOL_PACKAGES[@]}"
+
     echo "Emacs setup-env complete."
 }
 
 ##### インストール可能な Emacs バージョンを取得 #####
 list_emacs_versions() {
     echo "Fetching available Emacs versions..."
-    curl -s http://ftp.gnu.org/gnu/emacs/ | grep -oP 'emacs-\d+\.\d+(?:\.\d+)?' | sed 's/emacs-//' | sort -V | uniq
+    local html
+    if ! html=$(curl -sf https://ftp.gnu.org/gnu/emacs/); then
+        echo "Error: バージョン一覧の取得に失敗しました。" >&2
+        exit 1
+    fi
+    echo "$html" | grep -oP 'emacs-\d+\.\d+(?:\.\d+)?' | sed 's/emacs-//' | sort -V | uniq
 }
 
 ##### Emacs インストール #####
@@ -151,31 +182,36 @@ install_emacs() {
     mkdir -p "$DL_DIR"
     cd "$DL_DIR"
     TAR_FILE="emacs-$VERSION.tar.gz"
-    [ ! -f "$TAR_FILE" ] && wget "http://ftp.jaist.ac.jp/pub/GNU/emacs/$TAR_FILE"
+    if [ ! -f "$TAR_FILE" ]; then
+        wget "https://ftp.jaist.ac.jp/pub/GNU/emacs/$TAR_FILE"
+    fi
+
     tar xvf "$TAR_FILE" --transform="s/^emacs-$VERSION/emacs/"
 
     # ビルドとインストール
     cd emacs
     ./autogen.sh
 
-    local CONFIG_OPTS="--prefix=$EMACS_INSTALL_PREFIX \
-        --with-native-compilation \
-        --with-json \
-        --with-tree-sitter \
-        --with-modules \
-        --without-pop"
+    local -a CONFIG_OPTS=(
+        "--prefix=$EMACS_INSTALL_PREFIX"
+        "--with-native-compilation"
+        "--with-json"
+        "--with-tree-sitter"
+        "--with-modules"
+        "--without-pop"
+    )
     case "$GUI" in
         gtk3)
-            CONFIG_OPTS="$CONFIG_OPTS --with-x --with-x-toolkit=gtk3"
+            CONFIG_OPTS+=("--with-x" "--with-x-toolkit=gtk3")
             ;;
         lucid)
-            CONFIG_OPTS="$CONFIG_OPTS --with-x --with-x-toolkit=lucid"
+            CONFIG_OPTS+=("--with-x" "--with-x-toolkit=lucid")
             ;;
         pgtk)
-            CONFIG_OPTS="$CONFIG_OPTS --with-pgtk"
+            CONFIG_OPTS+=("--with-pgtk")
             ;;
         no)
-            CONFIG_OPTS="$CONFIG_OPTS --without-x"
+            CONFIG_OPTS+=("--without-x")
             ;;
         *)
             echo "Unsupported GUI type: $GUI"
@@ -183,7 +219,7 @@ install_emacs() {
             exit 1
             ;;
     esac
-    ./configure $CONFIG_OPTS
+    ./configure "${CONFIG_OPTS[@]}"
     make -j$(nproc)
     make install
 
@@ -209,7 +245,10 @@ uninstall_emacs() {
 ##### Emacs クリーンアップ（パッケージを除外） #####
 clean() {
     echo "Cleaning Emacs auto created files (excluding packages)..."
-    [ -d "$VAR_DIR" ] && echo "Removing $VAR_DIR ..." && rm -rf "$VAR_DIR"
+    if [ -d "$VAR_DIR" ]; then
+        echo "Removing $VAR_DIR ..."
+        rm -rf "$VAR_DIR"
+    fi
     echo "Emacs clean complete."
 }
 
@@ -217,8 +256,20 @@ clean() {
 clean_all() {
     echo "Cleaning all Emacs-related files, including packages..."
     clean
-    [ -d "$LOADS_DIR/$PACKAGE_DIR" ] && echo "Removing $LOADS_DIR/$PACKAGE_DIR ..." && rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+    if [ -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
+        echo "Removing $LOADS_DIR/$PACKAGE_DIR ..."
+        rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+    fi
     echo "Emacs full clean complete."
+}
+
+##### パッケージビルド #####
+run_package_build() {
+    emacs --batch \
+        --eval "(setq user-emacs-directory \"$EMACS_DIR\")" \
+        -l "$EMACS_DIR/early-init.el" \
+        -l "$EMACS_DIR/init.el" \
+        -f straight-rebuild-all
 }
 
 ##### パッケージディレクトリの圧縮 #####
@@ -227,6 +278,7 @@ packing_package() {
         echo "Archiving package directory..."
 
         # 一時リストファイルの作成
+        local TMP_LIST
         TMP_LIST=$(mktemp)
 
         # `PACKAGE_TARGET` の各項目をリストに追加
@@ -238,15 +290,18 @@ packing_package() {
 
         # 圧縮
         if [ -s "$TMP_LIST" ]; then
-            tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$TMP_LIST"
+            if ! tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$TMP_LIST"; then
+                rm -f "$TMP_LIST"
+                echo "Error: Archive creation failed."
+                exit 1
+            fi
+            rm -f "$TMP_LIST"
             echo "Package directory archived as $PACKAGE_ARCHIVE"
         else
+            rm -f "$TMP_LIST"
             echo "Error: No valid files/directories to archive."
             exit 1
         fi
-
-        # 一時リストファイルの削除
-        rm -f "$TMP_LIST"
     else
         echo "Error: Package directory does not exist. Skipping archive."
         exit 1
@@ -258,16 +313,17 @@ extract_package() {
     if [ -f "$PACKAGE_ARCHIVE" ]; then
         # 展開
         echo "Extracting package directory..."
-        [ -d "$LOADS_DIR/$PACKAGE_DIR" ] && echo "Removing existing $LOADS_DIR/$PACKAGE_DIR..." && rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+        if [ -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
+            echo "Removing existing $LOADS_DIR/$PACKAGE_DIR..."
+            rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+        fi
         tar -xzf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR"
         echo "Package directory extracted to $LOADS_DIR/$PACKAGE_DIR"
         clean
 
         # ビルド
-        if [ -n "$PACKAGE_BUILD_CMD" ]; then
-            echo "Running package build command: $PACKAGE_BUILD_CMD"
-            eval "$PACKAGE_BUILD_CMD"
-        fi
+        echo "Running package build..."
+        run_package_build
     else
         echo "Error: Archive file $PACKAGE_ARCHIVE not found."
         exit 1
@@ -287,10 +343,22 @@ case "$ACTION" in
         while [[ $# -gt 0 ]]; do
             case "$1" in
                 -g|--gui)
+                    if [[ $# -lt 2 || "$2" == -* ]]; then
+                        echo "Error: --gui requires a value (gtk3, lucid, pgtk, no)."
+                        exit 1
+                    fi
                     GUI_TOOLKIT="$2"
                     shift 2
                     ;;
+                -*)
+                    echo "Error: Unknown option '$1' for --install."
+                    usage
+                    ;;
                 *)
+                    if [[ -n "$EMACS_VERSION" ]]; then
+                        echo "Error: Multiple version arguments specified ('$EMACS_VERSION' and '$1')."
+                        exit 1
+                    fi
                     EMACS_VERSION="$1"
                     shift
                     ;;
@@ -301,6 +369,7 @@ case "$ACTION" in
             echo "Error: No Emacs version specified for install."
             usage
         fi
+        validate_version "$EMACS_VERSION"
 
         install_emacs "$EMACS_VERSION" "$GUI_TOOLKIT"
         ;;
@@ -309,6 +378,6 @@ case "$ACTION" in
     -C|--clean-all)       clean_all ;;
     -p|--packing-package) packing_package ;;
     -x|--extract-package) extract_package ;;
-    -h|--help)            usage ;;
+    -h|--help)            usage 0 ;;
     *) echo "Error: Invalid argument '$ACTION'"; usage ;;
 esac
