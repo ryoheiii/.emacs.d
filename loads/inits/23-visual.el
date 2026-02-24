@@ -51,8 +51,8 @@
   :straight t
   :defer t
   :init
-  ;; perfect-margin-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'perfect-margin-mode 1)
+  ;; perfect-margin-mode に autoload が未定義のため、明示的に require してから有効化
+  (run-with-idle-timer 0.5 nil (lambda () (require 'perfect-margin) (perfect-margin-mode 1)))
   :config
   (setq perfect-margin-ignore-filters nil)
   )
