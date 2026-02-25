@@ -81,6 +81,22 @@
    ((executable-find "aspell")
     (setq ispell-program-name "aspell"
           ispell-extra-args '("--sug-mode=ultra"))))
+
+  ;; ispell 辞書未整備時に CAPF エラーを抑制する
+  (defvar my/ispell-capf-warned nil
+    "Non-nil なら ispell CAPF エラー警告は表示済み.")
+
+  (defun my/safe-ispell-completion-at-point (orig-fn &rest args)
+    "ispell エラー時に初回のみ警告を出し nil を返して CAPF として無害化する."
+    (condition-case err
+        (apply orig-fn args)
+      (error
+       (unless my/ispell-capf-warned
+         (setq my/ispell-capf-warned t)
+         (message "ispell: completion error (%s)" (error-message-string err)))
+       nil)))
+  (unless (advice-member-p #'my/safe-ispell-completion-at-point 'ispell-completion-at-point)
+    (advice-add 'ispell-completion-at-point :around #'my/safe-ispell-completion-at-point))
   )
 
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）

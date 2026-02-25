@@ -34,7 +34,9 @@
             score)))
 
     (defun my/flx-tiebreaker (c1 c2)
-      (let ((total (or vertico--total corfu--total 0))
+      (let ((total (or (bound-and-true-p vertico--total)
+                       (bound-and-true-p corfu--total)
+                       0))
             (query-length (length my/input-query)))
         (if (and (< total 3000)
                  (> query-length 2)
