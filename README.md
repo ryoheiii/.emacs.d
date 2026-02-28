@@ -32,6 +32,12 @@
 ./emacs-setup.sh --install 30.1 --gui pgtk
 ```
 
+### Node.js のインストール（Copilot 利用時）
+
+``` sh
+./emacs-setup.sh --setup-node
+```
+
 ### アンインストール
 
 ``` sh
@@ -57,6 +63,8 @@
 | Irony サーバー | C/C++ ファイルを開いて `M-x irony-install-server` |
 | Migemo 辞書 | `loads/inits/32-navigation.el` で辞書パスを確認 |
 | Nerd-icons フォント | `M-x nerd-icons-install-fonts` |
+| Copilot サーバー | `M-x copilot-install-server` → `M-x copilot-login` |
+| Copilot 無効化 | `custom.el` に `(setq my/copilot-enabled nil)` を追加 |
 
 ---
 
@@ -109,6 +117,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `32-navigation.el` | ナビゲーション・スペルチェック（migemo, neotree, flyspell） |
 | `33-vcs.el` | バージョン管理（magit, diff-hl, difftastic） |
 | `34-misc.el` | ユーティリティ（which-key, undo-fu, vundo） |
+| `35-copilot.el` | AI 補完（GitHub Copilot + Copilot Chat） |
 | `99-private.el` | プライベート設定 |
 
 #### site-elisp モジュール
@@ -129,6 +138,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | C/C++ | cc-mode, google-c-style, irony, ggtags |
 | 日本語入力 | Mozc, Migemo, TR-ime (Windows) |
 | Undo | vundo + undo-fu + undo-fu-session |
+| AI 補完 | GitHub Copilot (copilot.el + copilot-chat.el) |
 
 ### パスヘルパー関数
 
@@ -170,7 +180,7 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 - **環境プレフィックス**: プラットフォーム固有設定用
   - `linux-`, `windows-`, `nw-`（ターミナル）, `cocoa-emacs-`
   - 例: `linux-clipboard.el`
-- **外部パッケージは 20〜34 番台に記述**
+- **外部パッケージは 20〜35 番台に記述**
 
 ---
 

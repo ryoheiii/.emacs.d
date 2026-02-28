@@ -59,6 +59,65 @@ assert_exit "clean succeeds"     0  --clean
 assert_exit "clean-all succeeds" 0  --clean-all
 
 echo ""
+echo "=== --setup-node ==="
+assert_output_contains "setup-node in help"  "setup-node"  --help
+
+# ネットワーク依存テスト（環境変数ガード）
+if [ "${RUN_INTEGRATION:-0}" = "1" ]; then
+    echo "(integration tests enabled)"
+    # 一度だけ実行して出力と終了コードを保存
+    SETUP_NODE_OUTPUT=$("$SCRIPT" --setup-node 2>&1)
+    SETUP_NODE_RC=$?
+    if [ "$SETUP_NODE_RC" -ne 0 ]; then
+        echo "FAIL: setup-node exited with $SETUP_NODE_RC"
+        ((FAIL++))
+    else
+        echo "PASS: setup-node exit code 0"
+        ((PASS++))
+    fi
+    if echo "$SETUP_NODE_OUTPUT" | grep -qi "installed via fnm"; then
+        echo "PASS: setup-node installs via fnm"
+        ((PASS++))
+    else
+        echo "FAIL: setup-node installs via fnm — pattern not found"
+        ((FAIL++))
+    fi
+    if echo "$SETUP_NODE_OUTPUT" | grep -qi "v22"; then
+        echo "PASS: setup-node installs node 22"
+        ((PASS++))
+    else
+        echo "FAIL: setup-node installs node 22 — pattern not found"
+        ((FAIL++))
+    fi
+    # 実状態検証: fnm default が v22 系か確認
+    # setup_node 本体と同じく command -v で実際の fnm を検出（パス固定を避ける）
+    FNM_BIN="$(command -v fnm 2>/dev/null || echo "$HOME/.local/share/fnm/fnm")"
+    if [ -x "$FNM_BIN" ]; then
+        eval "$("$FNM_BIN" env --shell bash)"
+        FNM_DEFAULT=$("$FNM_BIN" current 2>/dev/null || true)
+        if echo "$FNM_DEFAULT" | grep -q "^v22"; then
+            echo "PASS: fnm current is v22.x ($FNM_DEFAULT)"
+            ((PASS++))
+        else
+            echo "FAIL: fnm current expected v22.x, got '$FNM_DEFAULT'"
+            ((FAIL++))
+        fi
+        NODE_PATH=$(command -v node 2>/dev/null || true)
+        if [ -n "$NODE_PATH" ] && "$NODE_PATH" -v 2>/dev/null | grep -q "^v22"; then
+            echo "PASS: node binary is v22.x ($("$NODE_PATH" -v))"
+            ((PASS++))
+        else
+            echo "FAIL: node binary not v22.x (path=$NODE_PATH)"
+            ((FAIL++))
+        fi
+    else
+        echo "SKIP: fnm binary not found at $FNM_BIN — state verification skipped"
+    fi
+else
+    echo "(skipping integration tests; set RUN_INTEGRATION=1 to enable)"
+fi
+
+echo ""
 echo "=== 構文チェック ==="
 if bash -n "$SCRIPT" 2>/dev/null; then
     echo "PASS: bash -n syntax check"

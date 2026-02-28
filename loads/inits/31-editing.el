@@ -145,27 +145,6 @@
   (require 'my-gtags)
   )
 
-;; ;;; Copilot - Github copilot による補完
-;; (use-package copilot
-;;   :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
-;;   :hook (prog-mode . copilot-mode)
-;;   :custom
-;;   (copilot-node-executable "~/.nvm/versions/node/v21.6.1/bin/node")
-;;   (warning-suppress-log-types '((copilot copilot-no-mode-indent)))
-;;   (warning-suppress-types '((copilot copilot-no-mode-indent)))
-;;   :bind (:map copilot-mode-map
-;;               ("C-M-<return>" . copilot-complete)
-;;               ("C-c c"        . copilot-clear-overlay)
-;;               ("C-c C-c"      . copilot-clear-overlay)
-;;               ("C-c i"        . copilot-panel-complete)
-;;               ("C-c C-i"      . copilot-panel-complete)
-;;               ("C-c p"        . copilot-previous-completion)
-;;               ("C-c C-p"      . copilot-previous-completion)
-;;               ("C-c n"        . copilot-next-completion)
-;;               ("C-c C-n"      . copilot-next-completion)
-;;               ("C-<return>"   . copilot-accept-completion))
-;;   )
-
 ;;;;; [Group] Multi-editing - 複数編集 ;;;;;
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors

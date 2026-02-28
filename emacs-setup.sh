@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 ##### 設定 #####
 EMACS_DIR="$HOME/.emacs.d"
@@ -33,6 +33,7 @@ Usage: $0 [options]...
 
 Options:
   -s, --setup               Install required dependencies for Emacs.
+  -n, --setup-node          Install Node.js 22 LTS via fnm (for Copilot etc.).
   -l, --list                List available Emacs versions for installation.
   -i <ver>, --install <ver> [--gui <gtk3|lucid|pgtk|no>]
                             Install Emacs <ver> with optional GUI backend.
@@ -45,6 +46,7 @@ Options:
 
 Examples:
   $0 --setup
+  $0 --setup-node
   $0 --list
   $0 --install 30.1              # Install Emacs version 30.1.
   $0 --uninstall
@@ -54,6 +56,50 @@ Examples:
   $0 --extract-package
 EOF
     exit "${1:-1}"
+}
+
+##### Node.js インストール（fnm 経由） #####
+setup_node() {
+    echo "Setting up Node.js via fnm..."
+
+    local FNM_DIR="$HOME/.local/share/fnm"
+
+    # fnm インストール
+    if ! command -v fnm &>/dev/null && [ ! -x "$FNM_DIR/fnm" ]; then
+        echo "Installing fnm to $FNM_DIR ..."
+        curl -fsSL https://fnm.vercel.app/install | bash -s -- \
+            --install-dir "$FNM_DIR" --skip-shell
+        # インストール成功を検証（実行可能かチェック）
+        if [ ! -x "$FNM_DIR/fnm" ]; then
+            echo "Error: fnm installation failed." >&2
+            exit 1
+        fi
+    fi
+
+    export PATH="$FNM_DIR:$PATH"
+
+    # fnm が実行可能か最終検証
+    if ! command -v fnm &>/dev/null; then
+        echo "Error: fnm is not executable after installation." >&2
+        exit 1
+    fi
+
+    eval "$(fnm env --shell bash)"
+
+    # Node.js 22 LTS をインストール・デフォルト化
+    fnm install 22
+    fnm default 22
+
+    echo ""
+    echo "Node.js $(node --version) installed via fnm."
+    echo ""
+    echo "=== シェル設定 ==="
+    echo "以下を ~/.bashrc や ~/.zshrc に追加してください:"
+    # 実際の fnm バイナリのディレクトリを案内（既存 fnm 流用時のパスずれを防止）
+    local fnm_bin_dir
+    fnm_bin_dir="$(dirname "$(command -v fnm)")"
+    echo "  export PATH=\"${fnm_bin_dir/#"$HOME"/\$HOME}:\$PATH\""
+    echo '  eval "$(fnm env)"'
 }
 
 ##### 関連パッケージインストール #####
@@ -335,6 +381,7 @@ extract_package() {
 ACTION="$1"; shift
 case "$ACTION" in
     -s|--setup)           setup_env ;;
+    -n|--setup-node)      setup_node ;;
     -l|--list)            list_emacs_versions ;;
     -i|--install)
         EMACS_VERSION=""
