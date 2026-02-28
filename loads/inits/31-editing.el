@@ -46,6 +46,22 @@
   ;; Irony モードのインストール場所とオプションファイルの設定
   (irony-server-install-prefix    (my-set-history "irony"))
   (irony-server-options-directory (my-set-history "irony"))
+  :config
+  ;; irony-server 未インストール時に CAPF エラーを抑制する
+  (defvar my/irony-capf-warned nil
+    "Non-nil なら irony CAPF エラー警告は表示済み.")
+
+  (defun my/safe-irony-completion-at-point (orig-fn &rest args)
+    "irony エラー時に初回のみ警告を出し nil を返して CAPF として無害化する."
+    (condition-case err
+        (apply orig-fn args)
+      (error
+       (unless my/irony-capf-warned
+         (setq my/irony-capf-warned t)
+         (message "irony: completion error (%s)" (error-message-string err)))
+       nil)))
+  (unless (advice-member-p #'my/safe-irony-completion-at-point 'irony-completion-at-point)
+    (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point))
   )
 
 ;;; Yasnippet - コードスニペットの管理と挿入

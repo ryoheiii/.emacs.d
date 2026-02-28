@@ -32,6 +32,14 @@
   (corfu-separator ?\s)                       ; orderless 用のセパレータ
   (completion-ignore-case t)                  ; 大文字小文字を区別しない
   (tab-always-indent 'complete)
+  ;; ミニバッファ: Vertico/Mct 使用時とパスワード入力時は Corfu を無効化
+  ;; read-string 等の基本ミニバッファ (minibuffer-local-map) でも無効
+  (global-corfu-minibuffer
+   (lambda ()
+     (not (or (bound-and-true-p mct--active)
+              (bound-and-true-p vertico--input)
+              (eq (current-local-map) read-passwd-map)
+              (eq (current-local-map) minibuffer-local-map)))))
   :config
   ;; c-mode などの一部のモードではタブに `c-indent-line-or-region` が割り当てられているので、
   ;; 補完が出るように `indent-for-tab-command` に置き換える
@@ -40,22 +48,6 @@
   (add-hook 'c-mode-hook #'my/corfu-remap-tab-command)
   (add-hook 'c++-mode-hook #'my/corfu-remap-tab-command)
   (add-hook 'java-mode-hook #'my/corfu-remap-tab-command)
-
-  ;; ミニバッファー上でverticoによる補完が行われない場合、corfu の補完が出るように
-  ;; https://github.com/minad/corfu#completing-in-the-minibuffer
-  ;; ただし read-string 等の基本ミニバッファ（minibuffer-local-map のみ）では
-  ;; 補完バックエンドがないため Corfu を無効にする
-  (defun corfu-enable-always-in-minibuffer ()
-    "Enable Corfu in the minibuffer if Vertico/Mct are not active.
-`read-string' など基本キーマップのみのミニバッファでは Corfu を無効にする。
-独自キーマップを持つミニバッファ（`eval-expression' 等）では有効化する。"
-    (unless (or (bound-and-true-p mct--active)
-                (bound-and-true-p vertico--input)
-                (eq (current-local-map) minibuffer-local-map))
-      (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
-                  corfu-popupinfo-delay nil)
-      (corfu-mode 1)))
-  (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
 
   (with-eval-after-load 'meow
     (define-key corfu-map (kbd "<escape>")
@@ -102,11 +94,16 @@
   ;; 全モード共通の補完関数
   (defun my/global-capf ()
     "Set up global `completion-at-point-functions` for all modes."
-    (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
-    (advice-add 'eglot-completion-at-point :around #'cape-wrap-nonexclusive)
-    (advice-add 'lsp-completion-at-point :around #'cape-wrap-buster)
-    (advice-add 'lsp-completion-at-point :around #'cape-wrap-nonexclusive)
-    (advice-add 'lsp-completion-at-point :around #'cape-wrap-noninterruptible)
+    (unless (advice-member-p #'cape-wrap-buster 'eglot-completion-at-point)
+      (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster))
+    (unless (advice-member-p #'cape-wrap-nonexclusive 'eglot-completion-at-point)
+      (advice-add 'eglot-completion-at-point :around #'cape-wrap-nonexclusive))
+    (unless (advice-member-p #'cape-wrap-buster 'lsp-completion-at-point)
+      (advice-add 'lsp-completion-at-point :around #'cape-wrap-buster))
+    (unless (advice-member-p #'cape-wrap-nonexclusive 'lsp-completion-at-point)
+      (advice-add 'lsp-completion-at-point :around #'cape-wrap-nonexclusive))
+    (unless (advice-member-p #'cape-wrap-noninterruptible 'lsp-completion-at-point)
+      (advice-add 'lsp-completion-at-point :around #'cape-wrap-noninterruptible))
     (add-hook 'completion-at-point-functions #'cape-dabbrev)
     (add-hook 'completion-at-point-functions #'cape-keyword)
     (add-hook 'completion-at-point-functions #'cape-file)
@@ -128,7 +125,9 @@
                        #'cape-elisp-block))))
 
   ;; `M-x eval-expression` (`C-x C-e` など) でも補完可能に
-  (add-hook 'eval-expression-minibuffer-setup-hook #'cape-elisp-symbol)
+  (add-hook 'eval-expression-minibuffer-setup-hook
+            (lambda ()
+              (add-hook 'completion-at-point-functions #'cape-elisp-symbol nil t)))
 
   ;; `yas-minor-mode` 有効時のみ cape-yasnippet を補完関数に追加
   (add-hook 'yas-minor-mode-hook

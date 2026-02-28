@@ -97,7 +97,7 @@
     (defun my/setup-corfu-for-orderless ()
       (setq-local corfu-auto-delay 0
                   corfu-auto-prefix 1
-                  completion-styles '(orderless-fast)))
+                  completion-styles '(orderless-fast basic)))
 
     (add-hook 'corfu-mode-hook #'my/setup-corfu-for-orderless))
   )
