@@ -10,6 +10,10 @@ PACKAGE_DIR="straight"
 DL_DIR="$HOME/.local/downloads"
 EMACS_SRC_DIR="$DL_DIR/emacs"
 EMACS_INSTALL_PREFIX="$HOME/.local"
+# setup-node (offline)
+NODE_DL_DIR="$DL_DIR/node"
+NODE_INSTALL_BASE="$HOME/.local/share/nodejs"
+NODE_ACTIVE_LINK="$HOME/.local/node"
 # clean
 VAR_DIR="$EMACS_DIR/var"
 # packing/extract_package
@@ -33,7 +37,8 @@ Usage: $0 [options]...
 
 Options:
   -s, --setup               Install required dependencies for Emacs.
-  -n, --setup-node          Install Node.js 22 LTS via fnm (for Copilot etc.).
+  -n, --setup-node          Install Node.js (offline tarball or fnm fallback).
+  --uninstall-node          Uninstall Node.js (offline install and/or fnm).
   -l, --list                List available Emacs versions for installation.
   -i <ver>, --install <ver> [--gui <gtk3|lucid|pgtk|no>]
                             Install Emacs <ver> with optional GUI backend.
@@ -47,6 +52,7 @@ Options:
 Examples:
   $0 --setup
   $0 --setup-node
+  $0 --uninstall-node
   $0 --list
   $0 --install 30.1              # Install Emacs version 30.1.
   $0 --uninstall
@@ -58,8 +64,66 @@ EOF
     exit "${1:-1}"
 }
 
+##### Node.js アーキテクチャ検出 #####
+detect_node_arch() {
+    local machine
+    machine="$(uname -m)"
+    case "$machine" in
+        x86_64)  echo "x64" ;;
+        aarch64) echo "arm64" ;;
+        armv7l)  echo "armv7l" ;;
+        *)
+            echo "Error: Unsupported architecture: $machine" >&2
+            exit 1
+            ;;
+    esac
+}
+
+##### Node.js オフラインインストール #####
+setup_node_offline() {
+    local arch tarball topdir
+    arch="$(detect_node_arch)"
+
+    # ダウンロードディレクトリから最新の tarball を自動検出
+    tarball="$(find "$NODE_DL_DIR" -maxdepth 1 -name "node-v*-linux-${arch}.tar.xz" 2>/dev/null \
+        | sort -V | tail -n 1)"
+
+    if [ -z "$tarball" ]; then
+        return 1
+    fi
+
+    echo "Installing Node.js from offline tarball: $(basename "$tarball") ..."
+
+    mkdir -p "$NODE_INSTALL_BASE"
+
+    # tarball 内のトップレベルディレクトリ名を取得
+    topdir="$(tar -tf "$tarball" | head -n 1 | cut -d/ -f1)"
+
+    # 既存の同バージョンディレクトリがあれば削除して再インストール
+    [ -d "$NODE_INSTALL_BASE/$topdir" ] && rm -rf "$NODE_INSTALL_BASE/$topdir"
+
+    # 展開
+    tar -xJf "$tarball" -C "$NODE_INSTALL_BASE"
+
+    # アクティブシンボリックリンクの作成
+    ln -sfn "$NODE_INSTALL_BASE/$topdir" "$NODE_ACTIVE_LINK"
+
+    # インストール検証
+    export PATH="$NODE_ACTIVE_LINK/bin:$PATH"
+    echo ""
+    echo "node: $(node -v)"
+    echo "npm:  $(npm -v)"
+    echo "path: $(command -v node)"
+    echo ""
+    echo "Node.js installation complete."
+    echo ""
+    echo "=== シェル設定 ==="
+    echo "以下を ~/.bashrc や ~/.zshrc に追加してください:"
+    echo "  export PATH=\"\$HOME/.local/node/bin:\$PATH\""
+}
+
 ##### Node.js インストール（fnm 経由） #####
-setup_node() {
+setup_node_fnm() {
     echo "Setting up Node.js via fnm..."
 
     local FNM_DIR="$HOME/.local/share/fnm"
@@ -100,6 +164,52 @@ setup_node() {
     fnm_bin_dir="$(dirname "$(command -v fnm)")"
     echo "  export PATH=\"${fnm_bin_dir/#"$HOME"/\$HOME}:\$PATH\""
     echo '  eval "$(fnm env)"'
+}
+
+##### Node.js セットアップ（オフライン優先、fnm フォールバック） #####
+setup_node() {
+    if setup_node_offline; then
+        return
+    fi
+    echo "No offline tarball found in $NODE_DL_DIR. Falling back to fnm..."
+    setup_node_fnm
+}
+
+##### Node.js アンインストール #####
+uninstall_node() {
+    echo "Uninstalling Node.js..."
+    local found=false
+
+    # オフラインインストールの削除
+    if [ -L "$NODE_ACTIVE_LINK" ]; then
+        local target
+        target="$(readlink -f "$NODE_ACTIVE_LINK")"
+        rm -f "$NODE_ACTIVE_LINK"
+        echo "Removed symlink: $NODE_ACTIVE_LINK"
+        if [ -d "$target" ]; then
+            rm -rf "$target"
+            echo "Removed directory: $target"
+        fi
+        # インストールベースディレクトリが空なら削除
+        if [ -d "$NODE_INSTALL_BASE" ] && [ -z "$(ls -A "$NODE_INSTALL_BASE")" ]; then
+            rmdir "$NODE_INSTALL_BASE"
+        fi
+        found=true
+    fi
+
+    # fnm インストールの削除
+    local FNM_DIR="$HOME/.local/share/fnm"
+    if [ -d "$FNM_DIR" ]; then
+        rm -rf "$FNM_DIR"
+        echo "Removed fnm directory: $FNM_DIR"
+        found=true
+    fi
+
+    if [ "$found" = false ]; then
+        echo "No Node.js installation found."
+    else
+        echo "Node.js uninstallation complete."
+    fi
 }
 
 ##### 関連パッケージインストール #####
@@ -382,6 +492,7 @@ ACTION="$1"; shift
 case "$ACTION" in
     -s|--setup)           setup_env ;;
     -n|--setup-node)      setup_node ;;
+    --uninstall-node)     uninstall_node ;;
     -l|--list)            list_emacs_versions ;;
     -i|--install)
         EMACS_VERSION=""
