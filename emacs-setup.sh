@@ -65,6 +65,8 @@ EOF
 }
 
 ##### Node.js アーキテクチャ検出 #####
+# 成功時はアーキテクチャ名を stdout に出力し 0 を返す。
+# 非対応アーキテクチャの場合は stderr にメッセージを出し 1 を返す。
 detect_node_arch() {
     local machine
     machine="$(uname -m)"
@@ -73,31 +75,43 @@ detect_node_arch() {
         aarch64) echo "arm64" ;;
         armv7l)  echo "armv7l" ;;
         *)
-            echo "Error: Unsupported architecture: $machine" >&2
-            exit 1
+            echo "Warning: Unsupported architecture for offline install: $machine" >&2
+            return 1
             ;;
     esac
 }
 
-##### Node.js オフラインインストール #####
-setup_node_offline() {
-    local arch tarball topdir
-    arch="$(detect_node_arch)"
+##### Node.js オフラインインストールが可能か判定 #####
+# tarball が存在すれば 0 を返し、パスを stdout に出力する。
+# 存在しなければ 1 を返す。
+find_node_tarball() {
+    local arch tarball
+    arch="$(detect_node_arch)" || return 1
 
-    # ダウンロードディレクトリから最新の tarball を自動検出
     tarball="$(find "$NODE_DL_DIR" -maxdepth 1 -name "node-v*-linux-${arch}.tar.xz" 2>/dev/null \
         | sort -V | tail -n 1)"
 
     if [ -z "$tarball" ]; then
         return 1
     fi
+    echo "$tarball"
+}
+
+##### Node.js オフラインインストール #####
+setup_node_offline() {
+    local tarball="$1"
 
     echo "Installing Node.js from offline tarball: $(basename "$tarball") ..."
 
     mkdir -p "$NODE_INSTALL_BASE"
 
-    # tarball 内のトップレベルディレクトリ名を取得
+    # tarball 内のトップレベルディレクトリ名を取得・検証
+    local topdir
     topdir="$(tar -tf "$tarball" | head -n 1 | cut -d/ -f1)"
+    if [ -z "$topdir" ]; then
+        echo "Error: Failed to read tarball contents: $tarball" >&2
+        exit 1
+    fi
 
     # 既存の同バージョンディレクトリがあれば削除して再インストール
     [ -d "$NODE_INSTALL_BASE/$topdir" ] && rm -rf "$NODE_INSTALL_BASE/$topdir"
@@ -108,12 +122,17 @@ setup_node_offline() {
     # アクティブシンボリックリンクの作成
     ln -sfn "$NODE_INSTALL_BASE/$topdir" "$NODE_ACTIVE_LINK"
 
-    # インストール検証
-    export PATH="$NODE_ACTIVE_LINK/bin:$PATH"
+    # インストール検証（絶対パスで実行し、システムの node を誤検出しない）
+    local node_bin="$NODE_ACTIVE_LINK/bin/node"
+    local npm_bin="$NODE_ACTIVE_LINK/bin/npm"
+    if [ ! -x "$node_bin" ]; then
+        echo "Error: node binary not found at $node_bin" >&2
+        exit 1
+    fi
     echo ""
-    echo "node: $(node -v)"
-    echo "npm:  $(npm -v)"
-    echo "path: $(command -v node)"
+    echo "node: $("$node_bin" -v)"
+    echo "npm:  $("$npm_bin" -v)"
+    echo "path: $node_bin"
     echo ""
     echo "Node.js installation complete."
     echo ""
@@ -168,7 +187,11 @@ setup_node_fnm() {
 
 ##### Node.js セットアップ（オフライン優先、fnm フォールバック） #####
 setup_node() {
-    if setup_node_offline; then
+    local tarball
+    # tarball 検索のみ if で判定（set -e が無効になっても安全）
+    if tarball="$(find_node_tarball)"; then
+        # 本体は直接呼び出し（set -e が有効な文脈で実行）
+        setup_node_offline "$tarball"
         return
     fi
     echo "No offline tarball found in $NODE_DL_DIR. Falling back to fnm..."
@@ -186,10 +209,17 @@ uninstall_node() {
         target="$(readlink -f "$NODE_ACTIVE_LINK")"
         rm -f "$NODE_ACTIVE_LINK"
         echo "Removed symlink: $NODE_ACTIVE_LINK"
-        if [ -d "$target" ]; then
+
+        # リンク先が NODE_INSTALL_BASE 配下の場合のみ削除（任意ディレクトリ削除を防止）
+        local real_install_base
+        real_install_base="$(readlink -f "$NODE_INSTALL_BASE" 2>/dev/null || echo "$NODE_INSTALL_BASE")"
+        if [ -d "$target" ] && [[ "$target" == "$real_install_base"/* ]]; then
             rm -rf "$target"
             echo "Removed directory: $target"
+        elif [ -d "$target" ]; then
+            echo "Warning: Skipped deletion of $target (outside $NODE_INSTALL_BASE)" >&2
         fi
+
         # インストールベースディレクトリが空なら削除
         if [ -d "$NODE_INSTALL_BASE" ] && [ -z "$(ls -A "$NODE_INSTALL_BASE")" ]; then
             rmdir "$NODE_INSTALL_BASE"
