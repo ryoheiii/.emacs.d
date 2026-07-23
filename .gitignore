@@ -19,6 +19,10 @@ custom/custom.el
 99-private.el
 README.html
 package.tar.gz
+plan.md
+
+# キャッシュ
+.cache/
 
 # Claude Code
 .claude/settings.local.json
