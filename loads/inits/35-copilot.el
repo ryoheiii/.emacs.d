@@ -117,6 +117,8 @@ NVM-DIR は nvm のルート。DEPTH はループ防止用（最大 10）.
   :custom
   (copilot-idle-delay 0)                                        ; 即時補完
   (copilot-indent-offset-warning-disable t)
+  ;; デフォルトの .emacs.d/.cache/ はリポジトリ直下に自動生成物を作るため var/package/ 配下へ
+  (copilot-install-dir (my-set-package "copilot/"))             ; language server の保存先
   :config
   ;; WSL2 環境では Language Server の起動が遅いためタイムアウトを延長
   ;; copilot--request はマクロのため advice 不可 → jsonrpc-request を advice し
