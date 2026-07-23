@@ -7,16 +7,20 @@ globs: ["**/*"]
 
 変更を完了とする前に、変更範囲に応じて次を上から実行する。
 
-## 1. バッチ起動
+## 1. 回帰テスト
 
-設定変更後は、次のコマンドで起動エラーがないことを確認する。
+設定変更後は、変更範囲に応じて Makefile のテストランナーを実行する。
 
 ```sh
-emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
-  -l early-init.el -l init.el
+# フルスイート
+make test
+
+# 起動設定だけを変更した場合の最小検証
+make test-startup
 ```
 
-終了コードと標準エラーを確認し、警告を無条件に成功扱いしない。
+終了コードと標準エラーを確認する。init-loader のエラーログが非空の場合は
+`make test-startup` が非ゼロ終了するため、警告を無条件に成功扱いしない。
 
 ## 2. パッケージのリビルド
 
@@ -28,12 +32,13 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 `test-emacs-setup.sh` が存在し、`emacs-setup.sh` または関連するセットアップ動作を変更した場合は、次を実行する。
 
 ```sh
-./test-emacs-setup.sh
+make test-setup
 ```
 
 ## 4. 差分確認
 
 - `git status --porcelain` で変更対象を列挙する。
+- `git status --porcelain --ignored` で ignore 対象も確認し、リポジトリルート直下へ意図しない生成物が増えていないことを確かめる。
 - `git diff` で内容を確認し、意図しない編集がないことを確かめる。
 - 特にリポジトリルート直下へ自動生成ファイルが混入していないことを確認する。
 - 実行したコマンド、結果、未実施項目と理由を完了報告へ記載する。
