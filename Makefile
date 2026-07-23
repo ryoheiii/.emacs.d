@@ -104,6 +104,9 @@ test:
 	+@$(MAKE) test-setup
 
 # CI の部分一致キャッシュを lockfile のリビジョンへ揃える。
+# thaw 中の対話プロンプト（例: straight.el 自身のブランチ正規化確認）は
+# batch では表示できず error になるため、「c: この repo の処理をキャンセルして
+# 先へ進む」を自動応答する。スキップ内容はログの message で確認できる。
 straight-thaw: | prepare-straight
 	@set -eu; \
 	test "$${CI:-}" = "true"; \
@@ -113,6 +116,10 @@ straight-thaw: | prepare-straight
 	$(EMACS) $(EMACS_TEST_OPTIONS) \
 		-l "$$test_root/early-init.el" \
 		-l "$$test_root/init.el" \
+		--eval "(advice-add 'straight--popup-raw :override \
+			(lambda (prompt actions) \
+			  (message \"thaw prompt を自動キャンセル: %s\" prompt) \
+			  (funcall (nth 2 (assoc \"c\" actions)))))" \
 		-f straight-thaw-versions
 
 clean-test:
