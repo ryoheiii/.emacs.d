@@ -10,9 +10,13 @@ STRAIGHT_BUILD ?= $(STRAIGHT_DIR)/build
 STRAIGHT_VERSIONS ?= $(STRAIGHT_DIR)/versions
 TEST_STRAIGHT_DIR ?= $(STRAIGHT_DIR)
 
+# native-comp 無効ビルド（CI の Nix Emacs 等）では native-comp-eln-load-path が
+# 未定義のまま early-init.el の startup-redirect-eln-cache が呼ばれて落ちるため、
+# ロード前に defvar で定義する（native ビルドでは既存値を上書きしない）。
 EMACS_TEST_OPTIONS = \
 	--batch \
 	--eval "(setq user-emacs-directory \"$$test_root/\")" \
+	--eval "(defvar native-comp-eln-load-path nil)" \
 	--eval "(setq native-comp-jit-compilation nil)" \
 	--eval "(setq use-package-expand-minimally t)" \
 	--eval "(setq use-package-verbose 'errors)" \
