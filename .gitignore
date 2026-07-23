@@ -9,7 +9,8 @@ var/*
 loads/elisp/*
 loads/site-elisp/*
 !loads/site-elisp/my-*.el
-loads/straight
+loads/straight/*
+!loads/straight/versions/
 custom/snippets/*
 
 !.gitkeep
