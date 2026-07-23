@@ -5,7 +5,23 @@
       "Bash(emacs:*)",
       "Bash(git check-ignore:*)",
       "Bash(global:*)",
-      "Bash(zcat:*)"
+      "Bash(zcat:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(rg:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(diff:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(tree:*)",
+      "Bash(which:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)"
     ]
   }
 }

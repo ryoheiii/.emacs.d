@@ -1,0 +1,9 @@
+# このファイルは、信頼済みチェックアウト向けの共有 Codex デフォルトである。
+# マシン固有の trust 判断、writable roots、モデル設定は ~/.codex/config.toml に置き、
+# このリポジトリへは持ち込まない。
+#
+# 注意: Codex CLI のサンドボックスは .codex/ 配下への自己書き込みを拒否する。
+# このファイルの変更は、ユーザーまたは Codex 以外のエージェントが明示的に行う。
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
