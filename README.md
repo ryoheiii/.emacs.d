@@ -28,8 +28,8 @@
 # ビルド・インストール（GUI バックエンド: gtk3, lucid, pgtk, no）
 ./emacs-setup.sh --install <バージョン> [--gui <バックエンド>]
 
-# 例: Emacs 30.1 を pgtk でインストール
-./emacs-setup.sh --install 30.1 --gui pgtk
+# 例: Emacs 30.2 を pgtk でインストール
+./emacs-setup.sh --install 30.2 --gui pgtk
 ```
 
 ### アンインストール
@@ -196,10 +196,10 @@ make test
 実行する。実行時データは一時ルートへ隔離され、ローカル専用の未追跡設定は
 読み込まれない。
 
-GitHub Actions は push と pull request で Emacs 30.1 の安定レーンと
+GitHub Actions は push と pull request で Emacs 30.2 の安定レーンと
 snapshot のカナリアレーンを実行する。snapshot の失敗は non-blocking とする。
 実測時間（2026-07 時点）: キャッシュミス時（全パッケージ clone）は
-30.1 レーンで約 4 分 30 秒、キャッシュヒット時は約 1 分 20 秒。
+安定レーンで約 4 分 30 秒、キャッシュヒット時は約 1 分 20 秒。
 
 ---
 
