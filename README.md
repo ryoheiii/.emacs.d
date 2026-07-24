@@ -94,9 +94,8 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `10-functions.el` | カスタム関数 |
 | `18-built-in-package.el` | 組み込みパッケージ設定（eglot を含む） |
 | `19-language-modes.el` | 言語モード設定 |
-| `20-library.el` | 基盤ライブラリ（dash, s, diminish） |
 | `21-ime.el` | 日本語入力（tr-ime, mozc） |
-| `22-theme.el` | テーマとモードライン（doom-themes, doom-modeline, smart-mode-line） |
+| `22-theme.el` | テーマとモードライン（doom-themes, doom-modeline） |
 | `23-visual.el` | 視覚効果・アイコン・ハイライト（pulsar, nerd-icons, rainbow-delimiters 等） |
 | `24-org.el` | Org モード |
 | `25-markdown.el` | Markdown（markdown-mode, pandoc-mode） |
