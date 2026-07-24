@@ -10,7 +10,6 @@
 (setq frame-title-format (format "%%f - Emacs@%s" (system-name))) ; タイトルバーにフルパス表示
 (setq use-short-answers t)              ; 確認ダイアログを簡略化 (yes/no → y/n)
 (setq eval-expression-print-length nil) ; evalした結果を全部表示
-(setq ring-bell-function 'ignore)       ; エラー音を鳴らさない
 
 ;; タブ幅・インデント設定
 (setq-default tab-width 4

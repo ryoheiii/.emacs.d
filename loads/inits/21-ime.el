@@ -18,7 +18,6 @@
 ;;; Mozc - mozc 設定
 (use-package mozc
   :straight t
-  :if (display-graphic-p)
   :unless IS-WINDOWS
   :init
   (setq default-input-method "japanese-mozc")
