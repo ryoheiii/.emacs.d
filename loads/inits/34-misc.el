@@ -5,17 +5,6 @@
 ;;; Code:
 
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
-;;; Paradox - パッケージ管理 UI の強化
-(use-package paradox
-  :straight t
-  :defer t
-  :commands (paradox-list-packages paradox-upgrade-packages)
-  :custom
-  (paradox-github-token t)
-  :config
-  (paradox-enable)
-  )
-
 ;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
   :straight nil
@@ -31,14 +20,6 @@
   :straight t
   :defer t
   :commands (free-keys)
-  )
-
-;;; Amx - M-x コマンドの履歴強化
-(use-package amx
-  :straight t
-  :defer t
-  :custom
-  (amx-save-file (my-set-history "amx-items"))
   )
 
 ;;; undo-fu - undo と redo を強化

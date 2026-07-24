@@ -4,6 +4,10 @@
 
 ;;; Code:
 
+;; project-root は autoload されないため、コンパイラ警告のみ declare で抑える
+;; (実行時は project-current の autoload が project.el をロードする)
+(declare-function project-root "project" (project &optional maybe-prompt))
+
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
@@ -46,7 +50,8 @@
   (defun neotree-toggle ()
     "Toggle NeoTree, opening at the project root or current file."
     (interactive)
-    (let ((project-dir (ignore-errors (projectile-project-root)))
+    (let ((project-dir (when-let ((proj (project-current)))
+                         (project-root proj)))
           (file-name (buffer-file-name)))
       (if (neo-global--window-exists-p)
           (neotree-hide)
