@@ -8,11 +8,9 @@
 ;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
 (use-package pulsar
   :straight t
-  :if (display-graphic-p)
-  :defer t
-  :init
-  ;; pulsar-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'pulsar-global-mode 1)
+  :defer 0.5
+  :config
+  (pulsar-global-mode 1)
   )
 
 ;;; goggles - 編集箇所をハイライト
@@ -27,10 +25,7 @@
 (use-package spacious-padding
   :straight t
   :if (display-graphic-p)
-  :defer t
-  :init
-  ;; spacious-padding-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'spacious-padding-mode 1)
+  :defer 0.5
   :config
   (setq spacious-padding-widths
         '( :internal-border-width 15
@@ -44,35 +39,17 @@
   ;; is very flexible and provides several examples.
   (setq spacious-padding-subtle-mode-line
         `( :mode-line-active 'default
-           :mode-line-inactive vertical-border)))
+           :mode-line-inactive vertical-border))
+  (spacious-padding-mode 1)
+  )
 
 ;;; perfect-margin - バッファが一つの時に中央寄せ
 (use-package perfect-margin
   :straight t
-  :defer t
-  :init
-  ;; perfect-margin-mode に autoload が未定義のため、明示的に require してから有効化
-  (run-with-idle-timer 0.5 nil (lambda () (require 'perfect-margin) (perfect-margin-mode 1)))
+  :defer 0.5
   :config
   (setq perfect-margin-ignore-filters nil)
-  )
-
-;;; volatile-highlights - 一時的なハイライト（選択範囲など）を強調表示
-(use-package volatile-highlights
-  :straight t
-  :hook (after-init . volatile-highlights-mode)
-  :custom-face
-  (vhl/default-face ((nil (:foreground "#FF3333" :background "#FFCDCD"))))
-  )
-
-;;; highlight-symbol - シンボルのハイライトとナビゲーション
-(use-package highlight-symbol
-  :straight t
-  :bind (([f3] . highlight-symbol-at-point)
-         ([f4] . highlight-symbol-remove-all))
-  :config
-  (setq highlight-symbol-colors '("DeepSkyBlue1" "LimeGreen" "HotPink1" "Yellow"
-                                  "Cyan" "OrangeRed1" "MediumOrchid1" "SkyBlue"))
+  (perfect-margin-mode 1)
   )
 
 ;;; Rainbow-delimiters - 括弧の色分けで対応関係を視覚化
@@ -132,31 +109,27 @@
 (use-package nyan-mode
   :straight t
   :if (display-graphic-p)
-  :defer t
+  :defer 0.5
   :custom
   (nyan-bar-length 24)
-  :init
-  ;; nyan-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'nyan-mode 1)
+  :config
+  (nyan-mode 1)
   )
 
 ;;; Minions - マイナーモードをハンバーガーメニューで表示
 (use-package minions
   :straight t
-  :if (display-graphic-p)
-  :defer t
-  :init
-  ;; minions-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'minions-mode 1)
+  :defer 0.5
+  :config
+  (minions-mode 1)
   )
 
 ;;; page-break-lines ^Lの改ページ文字の表示を良くする
 (use-package page-break-lines
   :straight t
-  :defer t
-  :init
-  ;; page-break-lines-mode は autoload 済み（バッファローカル）
-  (run-with-idle-timer 0.5 nil #'page-break-lines-mode 1)
+  :defer 0.5
+  :config
+  (global-page-break-lines-mode 1)
   )
 
 ;;; highlight-defined - 既知のシンボルに色を付ける

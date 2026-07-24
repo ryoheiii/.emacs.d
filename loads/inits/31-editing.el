@@ -219,12 +219,14 @@
   :bind (("C-," . er/expand-region))
   )
 
-;;; symbol-overlay - シンボルの置換
+;;; symbol-overlay - シンボルのハイライトと置換
 ;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
 (use-package symbol-overlay
   :straight t
   :hook (prog-mode . symbol-overlay-mode)
-  :bind (("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
+  :bind (([f3]      . symbol-overlay-put)                   ; シンボルの永続ハイライトをトグル
+         ([f4]      . symbol-overlay-remove-all)            ; ハイライトを全解除
+         ("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
          ("C-x a"   . my-symbol-overlay-rename-in-function) ; 関数・メソッド内の置換
          ("C-x C-g" . symbol-overlay-rename))               ; バッファ全体のシンボルを置換
   :config
