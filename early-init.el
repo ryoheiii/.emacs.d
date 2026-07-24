@@ -98,13 +98,17 @@
 ;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;
 (setq frame-inhibit-implied-resize t) ; フレームの暗黙リサイズを抑制
 (setq inhibit-compacting-font-caches t) ; フォントキャッシュの圧縮を抑制
-(setq use-file-dialog nil)           ;ファイル選択ウィンドウを使用しない
+(setq use-file-dialog nil)           ; ファイル選択ウィンドウを使用しない
 (setq inhibit-startup-buffer-menu t) ; バッファメニューの使用を抑制
-(when window-system
-  (scroll-bar-mode -1))              ; スクロール非表示
-(menu-bar-mode -1)                   ; メニューバーを消す
-(when window-system
-  (tool-bar-mode -1))                ; ツールバーを消す
+;; フレーム生成前にパラメータで UI 要素を無効化する
+;; (モード関数の呼び出しより速く、daemon 起動でも GUI クライアントに正しく効く)
+(push '(menu-bar-lines . 0) default-frame-alist)          ; メニューバーを消す
+(push '(tool-bar-lines . 0) default-frame-alist)          ; ツールバーを消す
+(push '(vertical-scroll-bars . nil) default-frame-alist)  ; スクロールバー非表示
+;; モード変数も同期し、M-x での再有効化を 1 回のトグルで済むようにする
+(setq menu-bar-mode nil
+      tool-bar-mode nil
+      scroll-bar-mode nil)
 (blink-cursor-mode 0)                ; カーソルの点滅を止める
 
 
