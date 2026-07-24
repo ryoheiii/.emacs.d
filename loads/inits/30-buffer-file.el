@@ -62,12 +62,15 @@
   :after recentf
   )
 
-;;; smooth-scroll - スムーズなスクロール
-(use-package smooth-scroll
-  :straight t
-  :hook (after-init . smooth-scroll-mode)
+;;; pixel-scroll - ピクセル単位のスムーズなスクロール(組み込み)
+;; ロード時の GUI 判定のため daemon 起動は対象外
+;; (doom-modeline 等の既存 GUI 限定宣言と同一方針)
+(use-package pixel-scroll
+  :straight nil
+  :if (display-graphic-p)
+  :hook (after-init . pixel-scroll-precision-mode)
   :custom
-  (smooth-scroll/vscroll-step-size 8) ; スクロールのステップサイズ
+  (pixel-scroll-precision-interpolate-page t) ; ページ送りも補間する
   )
 
 ;;; anzu - 検索・置換時にマッチ数や現在位置を表示
