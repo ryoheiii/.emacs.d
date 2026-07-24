@@ -113,7 +113,8 @@
 
 ;;; パフォーマンス向上
 ;;; https://ayatakesi.github.io/lispref/25.2/html/Output-from-Processes.html
-(setq process-adaptive-read-buffering t)
+(setq process-adaptive-read-buffering t
+      read-process-output-max (* 1024 1024))
 ;;; protesilaos - https://protesilaos.com/emacs/dotemacs
 (setq blink-matching-paren nil)         ; 閉じ括弧を入力しても点滅させない
 ;;; doomemacs - https://github.com/doomemacs/doomemacs/blob/master/lisp/doom-start.el

@@ -83,6 +83,8 @@
 
 
 ;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;
+(setq frame-inhibit-implied-resize t) ; フレームの暗黙リサイズを抑制
+(setq inhibit-compacting-font-caches t) ; フォントキャッシュの圧縮を抑制
 (setq use-file-dialog nil)           ;ファイル選択ウィンドウを使用しない
 (setq inhibit-startup-buffer-menu t) ; バッファメニューの使用を抑制
 (when window-system
