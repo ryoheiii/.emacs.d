@@ -11,6 +11,19 @@
 ;; 起動中は GC を完全に抑制し、emacs-startup-hook で適正値に復元（00-core.el）
 (setq gc-cons-threshold most-positive-fixnum)
 
+;;;;; [Group] Startup - file-name-handler 最適化 ;;;;;
+;; 起動中はファイル名ハンドラを無効化し、起動完了後に復元する
+;; (バッチ実行では復元フックが発火しないため対話起動に限定する)
+(unless noninteractive
+  (defvar my/saved-file-name-handler-alist file-name-handler-alist)
+  (setq file-name-handler-alist nil)
+  (add-hook 'emacs-startup-hook
+            (lambda ()
+              (setq file-name-handler-alist
+                    (delete-dups (append file-name-handler-alist
+                                         my/saved-file-name-handler-alist))))
+            99))
+
 ;;;;; [Group] Define - 定数
 ;;; OS判定用定数
 (defconst IS-MAC (eq system-type 'darwin))
