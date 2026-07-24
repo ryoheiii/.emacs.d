@@ -120,9 +120,11 @@
 (use-package grep
   :straight nil
   :bind ("C-c g" . grep)
-  :config
+  :custom
   ;; 初期入力を "grep -nr -e  ." とし、カーソルを -e の直後へ置く
-  (setq grep-command '("grep -nr -e  ." . 13))
+  ;; (cons 形式は組み込み grep-default-command が string-match で型エラーになるため不可)
+  (grep-command "grep -nr -e  .")
+  (grep-command-position 13)
   )
 
 ;;;;;; [Group] Editing - 編集補助 ;;;;;;
