@@ -18,7 +18,7 @@
   (enable-recursive-minibuffers t)
   :config
   ;; ディレクトリを先に表示し、ファイルはアルファベット順にソート
-  (defun my-vertico-sort-directories-first (files)
+  (defun my/vertico-sort-directories-first (files)
     "ディレクトリを先にソートし、それ以外をアルファベット順にする."
     (let ((dirs (seq-filter #'file-directory-p files))
           (nondirs (seq-remove #'file-directory-p files)))
@@ -26,7 +26,7 @@
 
   ;; `file` カテゴリに限定してソート適用
   (add-to-list 'vertico-multiform-categories
-               '(file (vertico-sort-override-function . my-vertico-sort-directories-first)))
+               '(file (vertico-sort-override-function . my/vertico-sort-directories-first)))
   )
 
 ;;; Vertico-repeat - 直前の補完を再実施
@@ -34,9 +34,6 @@
   :straight nil
   :after vertico
   :hook (minibuffer-setup . vertico-repeat-save)
-  :init
-  (with-eval-after-load 'meow
-    (meow-leader-define-key '("z" . vertico-repeat)))
   )
 
 ;;; Vertico-directory - ディレクトリ補完
@@ -53,8 +50,6 @@
   :after vertico
   :config
   (vertico-truncate-mode +1)
-  (setq vertico-truncate-length 50)   ;; 最大表示幅 (デフォルト: 40)
-  (setq vertico-truncate-suffix "…") ;; 省略記号 (デフォルト: "…")
   )
 
 ;;; Marginalia - 詳細な補完情報の表示
