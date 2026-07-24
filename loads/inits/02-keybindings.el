@@ -35,8 +35,8 @@
 (global-set-key (kbd "<henkan>") #'my/input-method-on)    ; IME を ON
 
 ;;;;;; [Group] Window Management - ウィンドウ操作 ;;;;;;
-(global-set-key (kbd "C-c C-r") 'window-resizer)            ; ウィンドウサイズ調整
-(global-set-key (kbd "M-p") 'other-window-or-split)         ; 次のウィンドウへ移動
+(global-set-key (kbd "C-c C-r") #'my/window-resizer)        ; ウィンドウサイズ調整
+(global-set-key (kbd "M-p") #'my/other-window-or-split)     ; 次のウィンドウへ移動
 
 (provide '02-keybindings)
 ;;; 02-keybindings.el ends here
