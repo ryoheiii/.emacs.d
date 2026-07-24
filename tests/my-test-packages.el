@@ -9,7 +9,7 @@
 ;;;;; [Group] Packages - 削除済み feature ;;;;;
 ;; 今後の削除フェーズでは、削除したパッケージをこの表へ追記する。
 (defconst my-test-packages--banned-features
-  '(paradox)
+  '(paradox amx)
   "起動直後にロードされていてはならない削除済み feature。")
 
 (ert-deftest my-test-packages-banned-features ()
