@@ -49,18 +49,38 @@
 (add-hook 'markdown-mode-hook 'my-toggle-delete-trailing-whitespace)
 (add-hook 'after-change-major-mode-hook 'my-toggle-delete-trailing-whitespace)
 
-;;; フォーカスアウト時に全バッファを保存
-(defun my/save-all-buffers ()
-  (save-some-buffers "!"))
+;;; 全フレームのフォーカスアウト時に全バッファを保存して GC
+;; after-focus-change-function は短時間の状態揺れを伴い反復呼び出しされ得る上、
+;; read-event 内など任意のコンテキストから呼ばれる (Emacs 30.1 の説明どおり)。
+;; そのため idle timer でデバウンスし、安定後の状態で「全フレームがフォーカスを
+;; 失った」遷移エッジのみ保存・GC を実行する
+(defvar my/all-frames-unfocused-p nil
+  "直前の判定時点で全フレームがフォーカスを失っていたなら non-nil.")
+(defvar my/focus-change-timer nil
+  "フォーカス変化のデバウンス用 idle timer.")
+(defun my/handle-focus-change ()
+  "安定後のフォーカス状態を確認し、全フレーム喪失への遷移時のみ保存・GC を行う."
+  (setq my/focus-change-timer nil)
+  (let ((unfocused (not (seq-some #'frame-focus-state (frame-list)))))
+    (when (and unfocused (not my/all-frames-unfocused-p))
+      (save-some-buffers "!")
+      (garbage-collect))
+    (setq my/all-frames-unfocused-p unfocused)))
+(defun my/after-focus-change ()
+  "フォーカス変化をデバウンスし、状態が安定してから my/handle-focus-change を実行する."
+  (when (timerp my/focus-change-timer)
+    (cancel-timer my/focus-change-timer))
+  (setq my/focus-change-timer
+        (run-with-idle-timer 0.2 nil #'my/handle-focus-change)))
 
-(add-hook 'focus-out-hook #'my/save-all-buffers)
+(add-function :after after-focus-change-function #'my/after-focus-change)
 
 ;;;;;; [Group] Completion - 補完設定 ;;;;;;
 (setq completion-ignore-case t
       read-file-name-completion-ignore-case t)
 
 ;;;;;; [Group] Clipboard - クリップボード設定 ;;;;;;
-(setq x-select-enable-clipboard t) ;; クリップボードをシステムと共有
+(setq select-enable-clipboard t) ;; クリップボードをシステムと共有
 
 ;;;;;; [Group] Functionality - 機能拡張 ;;;;;;
 ;; narrowing 禁止
@@ -83,7 +103,6 @@
           (lambda ()
             (setq gc-cons-threshold (* 100 1024 1024)
                   gc-cons-percentage 0.2)))
-(add-hook 'focus-out-hook #'garbage-collect)
 (add-to-list 'warning-suppress-types '(undo discard-info))
 
 ;;;;;; [Group] Misc - その他 ;;;;;;
@@ -112,8 +131,8 @@
 ;; ドメインにpingを送信しない
 (setq ffap-machine-p-known 'reject)
 
-;; UIの更新頻度を下げる
-(setq idle-update-delay 1.0)
+;; `idle-update-delay' は Emacs 30.1 で obsolete のため後継変数を使用
+(setq which-func-update-delay 1.0)
 ;; 不要なフォント表示化を抑制
 (setq redisplay-skip-fontification-on-input t)
 ;; Windowsの最適化
