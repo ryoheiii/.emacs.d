@@ -58,7 +58,7 @@
   )
 
 ;;; 表示設定
-(use-package display-time
+(use-package time
   :straight nil
   :if window-system
   :hook (after-init . display-time-mode)
