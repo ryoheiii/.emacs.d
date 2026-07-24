@@ -129,6 +129,25 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 - `main`／`master` への直コミットと force push を行わない。
 - 検証中に生成された意図しないファイルをコミット対象へ含めない。
 
+## エージェントスキル
+
+開発ワークフロー用の共通スキルを `.claude/skills/<name>/SKILL.md` に置く。
+このファイルが Claude Code / Codex 共通の正本であり、`.codex/skills` は
+`.claude/skills` への symlink である（内容を複製しない）。
+
+| スキル | 用途 |
+|---|---|
+| `/x-deep-plan` | 多観点深堀りによる決定完全な実装計画の作成 |
+| `/x-codex-review-plan` | Codex CLI による実装前の計画レビュー |
+| `/x-codex-review-impl` | Codex CLI による実装レビュー（step / final） |
+| `/x-ship` | コミット → 検証 → 最終レビューゲート → `--no-ff` マージ → push・CI 確認 |
+| `/x-preflight` | 実装開始前の環境チェック |
+| `/x-rewrite-docs` | ドキュメントと実装の乖離検証・修正 |
+| `/x-tidy-settings` | `.claude/settings*.json` の分類・整理 |
+
+- スキルは本書と `.claude/rules/*.md` の規約に従う。矛盾する場合は本書と rules を優先する。
+- Codex 側のスラッシュコマンド解決は `.codex/README.md` を参照する。
+
 ## エージェント別設定
 
 - `.claude/` は Claude Code 固有の設定と詳細ルールを置く。
