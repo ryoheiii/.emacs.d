@@ -39,6 +39,19 @@
   (when (executable-find "rg")
     (should (eq xref-search-program 'ripgrep))))
 
+(ert-deftest my-test-cpp-config-cc-file-mode ()
+  "\".cc\" は c++-mode に割り当てる (c-mode 割当の回帰を検知する)."
+  :tags '(:cpp-config)
+  (should (eq (alist-get "\\.cc\\'" auto-mode-alist nil nil #'equal)
+              'c++-mode)))
+
+(ert-deftest my-test-cpp-config-grep-command ()
+  "C-c g の grep 初期入力は文字列 + grep-command-position で構成する.
+cons 形式は組み込み grep-default-command が型エラーになるため禁止."
+  :tags '(:cpp-config)
+  (should (equal grep-command "grep -nr -e  ."))
+  (should (= grep-command-position 13)))
+
 (ert-deftest my-test-cpp-config-process-output-size ()
   :tags '(:cpp-config)
   (should (= read-process-output-max 1048576)))

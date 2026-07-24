@@ -9,7 +9,8 @@
 ;;;;; [Group] Packages - 削除済み feature ;;;;;
 ;; 今後の削除フェーズでは、削除したパッケージをこの表へ追記する。
 (defconst my-test-packages--banned-features
-  '(paradox amx smooth-scroll)
+  '(paradox amx smooth-scroll
+    diminish smart-mode-line volatile-highlights highlight-symbol)
   "起動直後にロードされていてはならない削除済み feature。")
 
 (ert-deftest my-test-packages-banned-features ()
@@ -24,7 +25,6 @@
     magit
     org
     tramp
-    smart-mode-line
     consult
     which-key
     undo-fu
