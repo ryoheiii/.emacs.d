@@ -8,6 +8,8 @@
 ;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
 (use-package pulsar
   :straight t
+  ;; tty ではパルスアニメーションが再描画のカクつきを生むため GUI 限定
+  :if (display-graphic-p)
   :defer 0.5
   :config
   (pulsar-global-mode 1)

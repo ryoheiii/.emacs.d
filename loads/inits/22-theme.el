@@ -43,7 +43,9 @@
   :straight t
   :custom
   (doom-modeline-buffer-file-name-style 'truncate-with-project)
-  (doom-modeline-icon t)
+  ;; tty では Nerd Font グリフが幅計算を狂わせレイアウトが崩れるため GUI のみ有効化
+  ;; (daemon 起動時は nil に倒れる。GUI クライアントで必要なら明示的に t を設定する)
+  (doom-modeline-icon (display-graphic-p))
   ;; (doom-modeline-major-mode-icon nil)
   ;; (doom-modeline-minor-modes nil)
   :hook
