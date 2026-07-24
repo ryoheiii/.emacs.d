@@ -23,15 +23,8 @@
   (org-adapt-indentation nil)            ; インデントの自動調整をオフにする
   (org-cycle-separator-lines 2)          ; 見出しの間隔
   (org-ellipsis " ▼")                   ; 折りたたみ表示の記号変更
-  ;; (org-agenda-files '("~/org/agenda/"))  ; アジェンダファイルのディレクトリ
   (org-todo-keywords
    '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
-  )
-
-;;; org-indent - インデントを自動調整
-(use-package org-indent
-  :straight nil
-  :hook (org-mode . org-indent-mode)
   )
 
 (provide '24-org)
