@@ -30,12 +30,14 @@
 
 (global-set-key (kbd "<f6>") #'my/toggle-doom-theme)
 (defun my/toggle-doom-theme ()
-  "Doomテーマを light/dark で切り替える."
+  "Doomテーマを doom-dracula と doom-nord-light の間で切り替える。"
   (interactive)
-  (if (eq (car custom-enabled-themes) 'doom-one)
-      (progn (disable-theme 'doom-one) (load-theme 'doom-nord-light t))
-    (disable-theme 'doom-nord-light)
-    (load-theme 'doom-one t)))
+  (let ((next-theme (if (memq 'doom-dracula custom-enabled-themes)
+                        'doom-nord-light
+                      'doom-dracula)))
+    ;; 重ね掛けを防ぐため、有効なテーマをすべて解除してから切り替える。
+    (mapc #'disable-theme custom-enabled-themes)
+    (load-theme next-theme t)))
 
 ;;; doom-modeline - モードラインのテーマ設定
 (use-package doom-modeline
