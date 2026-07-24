@@ -44,6 +44,7 @@
 ;;; undo-fu - undo と redo を強化
 (use-package undo-fu
   :straight t
+  :defer t
   )
 
 ;;; undo-fu-session - undo 情報を Emacs 終了後も保持

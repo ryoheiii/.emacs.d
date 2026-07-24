@@ -18,7 +18,6 @@
     (should-not (featurep feature))))
 
 ;;;;; [Group] Packages - eager-load 回帰検知 ;;;;;
-;; undo-fu は現状 eager ロードのため含めず、後続フェーズで遅延化後に追加する。
 (defconst my-test-packages--deferred-features
   '(irony
     yasnippet
