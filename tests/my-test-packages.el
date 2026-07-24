@@ -45,6 +45,10 @@
 
 (ert-deftest my-test-packages-which-key-built-in ()
   :tags '(:invariant)
+  ;; 存在しない場合も straight-build-p は nil を返すため、実在を先に検証する
+  (should (locate-library "which-key"))
+  (require 'package)
+  (should (package-built-in-p 'which-key))
   (should-not (my-test-packages--straight-build-p "which-key")))
 
 (provide 'my-test-packages)
