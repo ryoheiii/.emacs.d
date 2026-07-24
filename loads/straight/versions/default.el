@@ -1,5 +1,4 @@
-(("affe" . "295e2fb26a2de66e13c0f8414d1ada5b090a1011")
- ("aggressive-indent-mode" . "a437a45868f94b77362c6b913c5ee8e67b273c42")
+(("aggressive-indent-mode" . "a437a45868f94b77362c6b913c5ee8e67b273c42")
  ("anzu" . "21cb5ab2295614372cb9f1a21429381e49a6255f")
  ("bind-key" . "e9ead409b17d8cf7c221f6c28e115a8c051be9e3")
  ("cape" . "2b2a5c5bef16eddcce507d9b5804e5a0cc9481ae")
