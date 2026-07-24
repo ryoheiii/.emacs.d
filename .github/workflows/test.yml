@@ -41,7 +41,6 @@ jobs:
           key: straight-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
           restore-keys: |
             straight-${{ matrix.emacs-version }}-
-            straight-
 
       - name: lockfile のリビジョンを適用
         run: make straight-thaw
