@@ -38,9 +38,10 @@ jobs:
           path: |
             loads/straight/repos
             loads/straight/build
-          key: straight-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
+            loads/straight/build-cache.el
+          key: straight-v3-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
           restore-keys: |
-            straight-${{ matrix.emacs-version }}-
+            straight-v3-${{ matrix.emacs-version }}-
 
       - name: lockfile のリビジョンを適用
         run: make straight-thaw
