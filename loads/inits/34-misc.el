@@ -18,7 +18,7 @@
 
 ;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
-  :straight t
+  :straight nil
   :custom
   (which-key-max-description-length 40) ; 説明の最大長
   (which-key-use-C-h-commands t)        ; C-h コマンドを使用
@@ -44,6 +44,7 @@
 ;;; undo-fu - undo と redo を強化
 (use-package undo-fu
   :straight t
+  :defer t
   )
 
 ;;; undo-fu-session - undo 情報を Emacs 終了後も保持

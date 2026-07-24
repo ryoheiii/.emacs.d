@@ -18,7 +18,6 @@
     (should-not (featurep feature))))
 
 ;;;;; [Group] Packages - eager-load 回帰検知 ;;;;;
-;; undo-fu は現状 eager ロードのため含めず、後続フェーズで遅延化後に追加する。
 (defconst my-test-packages--deferred-features
   '(irony
     yasnippet
@@ -28,6 +27,7 @@
     smart-mode-line
     consult
     which-key
+    undo-fu
     doom-modeline)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 
@@ -42,6 +42,14 @@
   (let ((path (locate-library library)))
     (and path
          (file-in-directory-p path (my-set-straight "build/")))))
+
+(ert-deftest my-test-packages-which-key-built-in ()
+  :tags '(:invariant)
+  ;; 存在しない場合も straight-build-p は nil を返すため、実在を先に検証する
+  (should (locate-library "which-key"))
+  (require 'package)
+  (should (package-built-in-p 'which-key))
+  (should-not (my-test-packages--straight-build-p "which-key")))
 
 (provide 'my-test-packages)
 ;;; my-test-packages.el ends here
