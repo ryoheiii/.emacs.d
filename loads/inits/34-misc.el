@@ -5,17 +5,6 @@
 ;;; Code:
 
 ;;;;; [Group] Misc-utilities - その他のユーティリティ ;;;;;
-;;; Paradox - パッケージ管理 UI の強化
-(use-package paradox
-  :straight t
-  :defer t
-  :commands (paradox-list-packages paradox-upgrade-packages)
-  :custom
-  (paradox-github-token t)
-  :config
-  (paradox-enable)
-  )
-
 ;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
   :straight nil
