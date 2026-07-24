@@ -87,8 +87,7 @@
 ;;; Cape - `corfu` の補完バックエンド
 (use-package cape
   :straight t
-  :hook (;; ((prog-mode text-mode conf-mode lsp-completion-mode) . my/set-super-capf)
-         (emacs-lisp-mode . my/set-elisp-capf)
+  :hook ((emacs-lisp-mode . my/set-elisp-capf)
          (after-init . my/global-capf))
   :config
   ;; 全モード共通の補完関数
@@ -108,13 +107,6 @@
     (add-hook 'completion-at-point-functions #'cape-keyword)
     (add-hook 'completion-at-point-functions #'cape-file)
     )
-
-  ;; ;; プログラミング系モードの補完
-  ;; (defun my/set-super-capf ()
-  ;;   "Set up `completion-at-point-functions` with `cape`."
-  ;;   (setq-local completion-at-point-functions
-  ;;               (list (cape-capf-super
-  ;;                      )))) ;; 現状何もなし
 
   ;; Emacs Lisp の補完
   (defun my/set-elisp-capf ()

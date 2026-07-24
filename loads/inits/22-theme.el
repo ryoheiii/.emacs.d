@@ -5,35 +5,6 @@
 ;;; Code:
 
 ;;;; [Group] Themes - テーマ関連 ;;;;;;
-;;; color-theme-modern - モダンなカラーテーマの適用
-;; (use-package color-theme-modern
-;;   :straight t
-;;   :config
-;;   ;; 選択可能なテーマの幅を広げる
-;;   ;; 参考: https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
-;;   (load-theme 'hober t t)
-;;   (enable-theme 'hober)
-;;   )
-
-;; (use-package modus-themes
-;;   :straight t
-;;   :custom
-;;   (modus-themes-italic-constructs nil) ;; イタリックを有効化
-;;   (modus-themes-bold-constructs nil)   ;; 強調を有効化
-;;   (modus-themes-mixed-fonts t)       ;; 等幅フォントとプロポーショナルフォントを混在
-;;   (modus-themes-subtle-line-numbers t) ;; `display-line-numbers` の背景を控えめに
-;;   (modus-themes-region '(bg-only no-extend))   ;; 選択範囲の背景を変更
-;;   (modus-themes-completions
-;;    '((matches . (extrabold background))
-;;      (selection . (semibold accented))))
-;;   :config
-;;   ;; デフォルトのテーマを設定
-;;   (load-theme 'modus-vivendi t) ;; ダークテーマを適用
-;;   ;; (load-theme 'modus-operandi t) ;; ライトテーマを適用したい場合はこちら
-;;   )
-;; ;; `modus-themes-toggle` をキーバインドに割り当て
-;; (global-set-key (kbd "<f6>") #'modus-themes-toggle)
-
 ;;; doom-themes - テーマ設定
 (use-package doom-themes
   :straight t
