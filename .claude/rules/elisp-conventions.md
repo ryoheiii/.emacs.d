@@ -10,7 +10,7 @@ globs: ["**/*.el"]
 - 外部パッケージは `use-package` で宣言する。`straight-use-package-by-default t` により `:straight t` は暗黙に適用される。
 - 組み込みパッケージには必ず `:straight nil` を指定する。
 - 設定値は `:custom`、フックは `:hook`、キーバインドは `:bind` にグループ化する。
-- 外部パッケージ宣言は 20 番台へ集約する。現行の対象は `loads/inits/20-library.el` である。
+- 外部パッケージ宣言は `loads/inits/` の 20〜34 番台へ機能別に配置する。基盤ライブラリ（dash、s、diminish）は `loads/inits/20-library.el` へ置く。
 - `package.el` をパッケージ管理へ使用しない。
 
 ## 命名と配置
