@@ -28,6 +28,7 @@
     smart-mode-line
     consult
     which-key
+    undo-fu
     doom-modeline)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 
@@ -42,6 +43,10 @@
   (let ((path (locate-library library)))
     (and path
          (file-in-directory-p path (my-set-straight "build/")))))
+
+(ert-deftest my-test-packages-which-key-built-in ()
+  :tags '(:invariant)
+  (should-not (my-test-packages--straight-build-p "which-key")))
 
 (provide 'my-test-packages)
 ;;; my-test-packages.el ends here
