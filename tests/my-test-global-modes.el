@@ -7,12 +7,11 @@
 (require 'ert)
 
 ;;;;; [Group] Global Modes - after-init-hook ;;;;;
-;; GUI 限定ガード付きの宣言（doom-modeline-mode、display-time-mode 等）は
-;; バッチでは評価されないため対象外とする。
+;; GUI 限定ガード付きの宣言（doom-modeline-mode、display-time-mode、
+;; pixel-scroll-precision-mode 等）はバッチでは評価されないため対象外とする。
 (defconst my-test-global-modes--after-init-functions
   '(which-key-mode
     global-anzu-mode
-    smooth-scroll-mode
     recentf-mode
     global-total-lines-mode
     dashboard-setup-startup-hook
