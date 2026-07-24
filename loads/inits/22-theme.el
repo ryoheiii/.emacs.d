@@ -59,6 +59,8 @@
 (use-package smart-mode-line
   :straight t
   :defer t
+  ;; GUI は doom-modeline が担当するため端末に限定し、二重初期化を防ぐ
+  :unless (display-graphic-p)
   :init
   ;; sml/setup は autoload 済み → タイマーでパッケージロード + :config 実行
   (run-with-idle-timer 0.5 nil #'sml/setup)
