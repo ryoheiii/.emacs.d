@@ -120,8 +120,6 @@
 ;;; doomemacs - https://github.com/doomemacs/doomemacs/blob/master/lisp/doom-start.el
 ;; ファイル検索を2回行わないようにする
 (setq auto-mode-case-fold nil)
-;; 双方向の並び替えを抑制する
-(setq-default bidi-display-reordering 'left-to-right)
 ;; 長い行の双方向スキャン
 (setq bidi-inhibit-bpa t)
 ;; フォーカスされていないウィンドウのカーソルを削除

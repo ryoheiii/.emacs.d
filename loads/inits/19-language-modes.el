@@ -35,7 +35,6 @@
 (use-package cc-mode
   :straight nil
   :mode (("\\.C\\'"    . c-mode)
-         ;; ("\\.cc\\'"   . cc-mode)
          ("\\.cc\\'"   . c-mode)  ; cc-mode ではなく c-mode に統一
          ("\\.nut\\'"  . c++-mode)
          ("\\.cpp\\'"  . c++-mode)

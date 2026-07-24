@@ -44,9 +44,6 @@
 ;;; undo-fu - undo と redo を強化
 (use-package undo-fu
   :straight t
-  :config
-  (with-eval-after-load 'evil
-    (setq evil-undo-system 'undo-fu))
   )
 
 ;;; undo-fu-session - undo 情報を Emacs 終了後も保持
