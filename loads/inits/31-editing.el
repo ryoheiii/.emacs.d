@@ -213,8 +213,6 @@
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :straight t
-  :custom
-  (transient-mark-mode t) ; 明示的に選択範囲を表示
   :bind (("C-," . er/expand-region))
   )
 

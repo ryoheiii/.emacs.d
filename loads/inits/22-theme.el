@@ -26,9 +26,6 @@
   (doom-themes-visual-bell-config)
   (doom-themes-neotree-config)
   (doom-themes-org-config)
-  ;; Treemacs に Doom のスタイルを適用（GUI環境のみ）
-  (when (and (display-graphic-p) (fboundp 'treemacs))
-    (doom-themes-treemacs-config))
   )
 
 (global-set-key (kbd "<f6>") #'my/toggle-doom-theme)

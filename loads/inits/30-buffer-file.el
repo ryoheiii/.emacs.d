@@ -36,7 +36,7 @@
 
 ;;; recentf - 最近使用したファイルの履歴管理
 (use-package recentf
-  :straight t
+  :straight nil
   :hook (after-init . recentf-mode)
   :custom
   (recentf-max-saved-items 2000)                                 ; 保存するファイルの数
