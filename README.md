@@ -160,9 +160,49 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
   -l early-init.el -l init.el -f straight-rebuild-all
 ```
 
+### lockfile の更新
+
+パッケージ更新時は、次の順序で設定と lockfile を同時に検証する。
+
+1. Emacs で `M-x straight-pull-all` を実行する。
+2. `make test` を実行する。
+3. Emacs で `M-x straight-freeze-versions` を実行する。
+4. `loads/straight/versions/default.el` を設定変更と同じコミットへ含める。
+
 ---
 
-## 5. 設定ファイルの命名規則
+## 5. 回帰テスト
+
+Emacs 標準の ERT と Makefile で、設定のユニットテスト、起動検査、
+キーバインド不変条件、セットアップスクリプトを検証する。
+
+``` sh
+# lint から既存 shell テストまでを順番に実行
+make test
+```
+
+| ターゲット | 検証内容 |
+|---|---|
+| `make test` | lint からセットアップスクリプトまでを fail-fast で一括実行 |
+| `make lint` | Git 追跡中の設定ファイルを一時ディレクトリへ byte compile（警告は表示、エラーは失敗） |
+| `make test-unit` | early-init.el のパスヘルパー |
+| `make test-startup` | フル起動と init-loader エラーログ |
+| `make test-keybinding` | C-t タグナビゲーションの固定キーバインド |
+| `make test-setup` | 隔離した HOME でのセットアップスクリプト |
+| `make clean-test` | tests/ 配下の byte compile 生成物を削除 |
+
+起動検査とキーバインド検査は、Git 追跡ファイルだけを展開した一時ルートで
+実行する。実行時データは一時ルートへ隔離され、ローカル専用の未追跡設定は
+読み込まれない。
+
+GitHub Actions は push と pull request で Emacs 30.1 の安定レーンと
+snapshot のカナリアレーンを実行する。snapshot の失敗は non-blocking とする。
+実測時間（2026-07 時点）: キャッシュミス時（全パッケージ clone）は
+30.1 レーンで約 4 分 30 秒、キャッシュヒット時は約 1 分 20 秒。
+
+---
+
+## 6. 設定ファイルの命名規則
 
 設定ファイル（`loads/inits/*.el`）の命名規則:
 
@@ -174,13 +214,12 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 
 ---
 
-## 6. トラブルシューティング
+## 7. トラブルシューティング
 
 - ターミナル利用時は `xterm-256color` を設定
 - straight.el の不整合時: `M-x straight-rebuild-all` または `--clean-all` で再構築
-- バッチモードでの起動検証:
+- バッチモードでの起動検証: `make test-startup`
 
 ``` sh
-emacs --batch -l early-init.el -l init.el \
-  --eval '(message "Init: %s" (emacs-init-time))'
+make test-startup
 ```

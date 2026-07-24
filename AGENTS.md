@@ -57,6 +57,9 @@
 ./emacs-setup.sh --packing-package
 ./emacs-setup.sh --extract-package
 
+# 回帰テストを一括実行
+make test
+
 # バッチモードで全パッケージをリビルド
 emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
   -l early-init.el -l init.el -f straight-rebuild-all
