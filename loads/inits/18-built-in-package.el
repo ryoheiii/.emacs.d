@@ -58,7 +58,7 @@
   )
 
 ;;; 表示設定
-(use-package display-time
+(use-package time
   :straight nil
   :if window-system
   :hook (after-init . display-time-mode)
@@ -66,6 +66,53 @@
   (display-time-day-and-date t)
   (display-time-string-forms '((format "%s/%s (%s) %s:%s"
                                        month day dayname 24-hours minutes)))
+  )
+
+;;;;;; [Group] LSP - Language Server ;;;;;;
+(use-package eglot
+  :straight nil
+  :hook ((c-mode . my/eglot-cc-maybe-ensure)
+         (c++-mode . my/eglot-cc-maybe-ensure))
+  :init
+  (defconst my/eglot-cc-file-regexp "\\.\\(c\\|cc\\|C\\|cpp\\|cxx\\|h\\|hh\\|hpp\\|hxx\\)\\'"
+    "eglot を自動起動してよい C/C++ 実ソースの拡張子。.log/.cfg (c-mode 割当) を除外する.")
+  (defun my/eglot-cc-project-p ()
+    "compile_commands.json または .clangd を持つプロジェクトなら non-nil."
+    (and buffer-file-name
+         (or (locate-dominating-file default-directory "compile_commands.json")
+             (locate-dominating-file default-directory ".clangd")
+             (locate-dominating-file
+              default-directory
+              (lambda (dir)
+                (file-exists-p
+                 (expand-file-name "build/compile_commands.json" dir)))))))
+  (defun my/eglot-cc-maybe-ensure ()
+    "clangd があり CDB または .clangd を持つ C/C++ 実ソースのみ eglot を自動起動する.
+.clangd 単独 (CDB なし) のプロジェクトも意図的に自動起動対象とする."
+    (when (and buffer-file-name
+               (string-match-p my/eglot-cc-file-regexp buffer-file-name)
+               (executable-find "clangd")
+               (my/eglot-cc-project-p))
+      (eglot-ensure)))
+  :custom
+  (eglot-autoshutdown t)
+  (eglot-events-buffer-config '(:size 0 :format full))
+  (eglot-ignored-server-capabilities '(:inlayHintProvider :documentHighlightProvider))
+  (eglot-stay-out-of '(flymake))       ; 使用感維持。診断が欲しくなったらここから外す
+  (eldoc-echo-area-use-multiline-p nil)
+  :config
+  ;; clangd 起動引数 (Doom :lang cc 準拠)。--header-insertion=never は補完確定時の
+  ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用
+  (add-to-list 'eglot-server-programs
+               '((c-mode c++-mode)
+                 . ("clangd" "--background-index" "--header-insertion=never"
+                    "--header-insertion-decorators=0")))
+  ;; eglot 管理バッファでは irony を止める (CAPF 競合防止)。
+  ;; eglot-ensure は post-command-hook で遅延接続するため、モードフックでの判定は不可
+  (defun my/eglot-cc-suppress-irony ()
+    (when (and (eglot-managed-p) (bound-and-true-p irony-mode))
+      (irony-mode -1)))
+  (add-hook 'eglot-managed-mode-hook #'my/eglot-cc-suppress-irony)
   )
 
 ;;;;;; [Group] Search - 検索 ;;;;;;

@@ -23,6 +23,7 @@ EMACS_TEST_OPTIONS = \
 	--eval "(setq straight-use-symlinks nil)"
 
 .PHONY: all prepare-straight lint test-unit test-startup test-keybinding
+.PHONY: test-cpp-config
 .PHONY: test-setup test clean-test straight-thaw
 
 all: test
@@ -89,6 +90,16 @@ test-keybinding: | prepare-straight
 		-l "$(TESTS_DIR)/my-test-keybindings.el" \
 		--eval "(ert-run-tests-batch-and-exit '(tag :keybinding))"
 
+test-cpp-config: | prepare-straight
+	@set -eu; \
+	$(prepare_test_root) \
+	$(EMACS) $(EMACS_TEST_OPTIONS) \
+		-l "$$test_root/early-init.el" \
+		-l "$$test_root/init.el" \
+		-l "$(TESTS_DIR)/my-test-startup.el" \
+		-l "$(TESTS_DIR)/my-test-cpp-config.el" \
+		--eval "(ert-run-tests-batch-and-exit '(tag :cpp-config))"
+
 test-setup:
 	@set -eu; \
 	test_home="$$(mktemp -d)"; \
@@ -101,6 +112,7 @@ test:
 	+@$(MAKE) test-unit
 	+@$(MAKE) test-startup
 	+@$(MAKE) test-keybinding
+	+@$(MAKE) test-cpp-config
 	+@$(MAKE) test-setup
 
 # CI の部分一致キャッシュを lockfile のリビジョンへ揃える。

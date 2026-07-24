@@ -1,7 +1,8 @@
 ;;; my-gtags.el --- ggtags カスタム関数群 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; ggtags の xref バックエンドを経由せず、global コマンドを call-process で直接実行し
-;; 結果を consult-xref → vertico で高速表示する関数群
+;; C/C++ タグ検索関数群。eglot 管理バッファでは at-point 検索を xref (LSP) へ委譲し、
+;; 見つからない場合や非 LSP 環境では global コマンドを call-process で直接実行して
+;; 結果を consult-xref → vertico で高速表示する
 
 ;;; Code:
 
@@ -53,6 +54,19 @@
              (lambda () xrefs)
              `((window . ,(selected-window)))))))
 
+(defun my/gtags--lsp-p ()
+  "現在のバッファが eglot 管理下なら non-nil を返す."
+  (and (fboundp 'eglot-managed-p) (eglot-managed-p)))
+
+(defun my/gtags--find-via-global (flag symbol)
+  "GNU Global の FLAG で SYMBOL を検索して結果を表示する."
+  (let ((xrefs (my/gtags--run flag symbol)))
+    (if xrefs
+        (progn
+          (xref-push-marker-stack)
+          (my/gtags--show xrefs symbol))
+      (message "見つかりません: %s" symbol))))
+
 ;; ── 検索コマンド ─────────────────────────────────────────
 
 (defun my/gtags-find-definition (&optional prompt)
@@ -60,34 +74,36 @@
 C-u 付きで呼ぶとシンボルを手動入力できる。"
   (interactive "P")
   (let* ((default (thing-at-point 'symbol t))
-         (symbol (if prompt
-                     (read-string
-                      (if default (format "Find definition (default %s): " default)
-                        "Find definition: ")
-                      nil nil default)
-                   (or default (read-string "Find definition: "))))
-         (xrefs (my/gtags--run "-d" symbol)))
-    (if xrefs
-        (progn (xref-push-marker-stack)
-               (my/gtags--show xrefs symbol))
-      (message "見つかりません: %s" symbol))))
+         (symbol
+          (if prompt
+              (read-string
+               (if default (format "Find definition (default %s): " default)
+                 "Find definition: ")
+               nil nil default)
+            (or default (read-string "Find definition: ")))))
+    (if (and (not prompt) default (my/gtags--lsp-p))
+        (condition-case nil
+            (xref-find-definitions symbol)
+          (user-error (my/gtags--find-via-global "-d" symbol)))
+      (my/gtags--find-via-global "-d" symbol))))
 
 (defun my/gtags-find-references (&optional prompt)
   "カーソル位置のシンボルの参照を検索.
 C-u 付きで呼ぶとシンボルを手動入力できる。"
   (interactive "P")
   (let* ((default (thing-at-point 'symbol t))
-         (symbol (if prompt
-                     (read-string
-                      (if default (format "Find references (default %s): " default)
-                        "Find references: ")
-                      nil nil default)
-                   (or default (read-string "Find references: "))))
-         (xrefs (my/gtags--run "-r" symbol)))
-    (if xrefs
-        (progn (xref-push-marker-stack)
-               (my/gtags--show xrefs symbol))
-      (message "見つかりません: %s" symbol))))
+         (symbol
+          (if prompt
+              (read-string
+               (if default (format "Find references (default %s): " default)
+                 "Find references: ")
+               nil nil default)
+            (or default (read-string "Find references: ")))))
+    (if (and (not prompt) default (my/gtags--lsp-p))
+        (condition-case nil
+            (xref-find-references symbol)
+          (user-error (my/gtags--find-via-global "-r" symbol)))
+      (my/gtags--find-via-global "-r" symbol))))
 
 (defun my/gtags-find-symbol ()
   "シンボル検索（定義・参照以外の出現箇所）."
