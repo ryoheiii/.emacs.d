@@ -9,8 +9,14 @@
 ;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style
   :straight t
-  :hook ((c-mode-common . google-set-c-style)
-         (c-mode-common . google-make-newline-indent))
+  :hook (c-mode-common . my/google-c-style-setup)
+  :config
+  (defun my/google-c-style-setup ()
+    "Google C スタイルを適用し、プロジェクト標準の offset 4 を明示する.
+19-language-modes.el の my/cc-mode-setup とのフック実行順に依存しないための再明示."
+    (google-set-c-style)
+    (google-make-newline-indent)
+    (setq c-basic-offset 4))
   )
 
 ;;; Aggressive Indent - コード編集時の自動インデント調整
