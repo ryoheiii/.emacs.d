@@ -20,7 +20,7 @@ EMACS_TEST_OPTIONS = \
 	--eval "(setq native-comp-jit-compilation nil)" \
 	--eval "(setq use-package-expand-minimally t)" \
 	--eval "(setq use-package-verbose 'errors)" \
-	--eval "(setq straight-use-symlinks nil)"
+	--eval "(setq my-straight-base-dir-override \"$(STRAIGHT_DIR)/../\")"
 
 .PHONY: all prepare-straight lint test-unit test-startup test-keybinding
 .PHONY: test-cpp-config test-invariants

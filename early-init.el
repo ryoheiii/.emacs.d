@@ -99,7 +99,10 @@
 ;;;;; [Group] Package Management - パッケージ管理 ;;;;;
 ;;; 'straight.el' の設定
 ;; ベースディレクトリの指定
-(setq straight-base-dir (my-set-loads ""))
+;; テストハーネスは my-straight-base-dir-override で実体の loads/ を指定する
+;; (一時テストルート経由のビルドで実キャッシュに dangling symlink を作らないため)
+(setq straight-base-dir (or (bound-and-true-p my-straight-base-dir-override)
+                            (my-set-loads "")))
 ;; 'package.el' を無効化
 (setq package-enable-at-startup nil)
 ;; 'straight.el' のインストール
