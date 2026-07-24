@@ -48,30 +48,12 @@
   (add-hook 'c-mode-hook #'my/corfu-remap-tab-command)
   (add-hook 'c++-mode-hook #'my/corfu-remap-tab-command)
   (add-hook 'java-mode-hook #'my/corfu-remap-tab-command)
-
-  (with-eval-after-load 'meow
-    (define-key corfu-map (kbd "<escape>")
-                (lambda ()
-                  (interactive)
-                  (corfu-quit)
-                  (meow-normal-mode))))
-
-  ;; lsp-modeでcorfuが起動するように設定する
-  (with-eval-after-load 'lsp-mode
-    (setq lsp-completion-provider :none))
-
-  (with-eval-after-load 'orderless
-    (defun my/orderless-for-corfu ()
-      (setq-local orderless-matching-styles '(orderless-flex)))
-
-    (add-hook 'corfu-mode-hook #'my/orderless-for-corfu))
   )
 
-;;; Corfu-terminal - 端末 (`-nw`) で `corfu` を有効化
+;;; Corfu-terminal - 端末 (`-nw`) で `corfu` を有効化(非 GUI 表示時のみ介入するため無条件で有効化)
 (use-package corfu-terminal
   :straight (:type git :repo "https://codeberg.org/akib/emacs-corfu-terminal.git")
   :after corfu
-  :unless (display-graphic-p)
   :config
   (corfu-terminal-mode +1)
   )
@@ -97,12 +79,6 @@
       (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster))
     (unless (advice-member-p #'cape-wrap-nonexclusive 'eglot-completion-at-point)
       (advice-add 'eglot-completion-at-point :around #'cape-wrap-nonexclusive))
-    (unless (advice-member-p #'cape-wrap-buster 'lsp-completion-at-point)
-      (advice-add 'lsp-completion-at-point :around #'cape-wrap-buster))
-    (unless (advice-member-p #'cape-wrap-nonexclusive 'lsp-completion-at-point)
-      (advice-add 'lsp-completion-at-point :around #'cape-wrap-nonexclusive))
-    (unless (advice-member-p #'cape-wrap-noninterruptible 'lsp-completion-at-point)
-      (advice-add 'lsp-completion-at-point :around #'cape-wrap-noninterruptible))
     (add-hook 'completion-at-point-functions #'cape-dabbrev)
     (add-hook 'completion-at-point-functions #'cape-keyword)
     (add-hook 'completion-at-point-functions #'cape-file)
@@ -120,11 +96,6 @@
   (add-hook 'eval-expression-minibuffer-setup-hook
             (lambda ()
               (add-hook 'completion-at-point-functions #'cape-elisp-symbol nil t)))
-
-  ;; `yas-minor-mode` 有効時のみ cape-yasnippet を補完関数に追加
-  (add-hook 'yas-minor-mode-hook
-            (lambda ()
-              (add-to-list 'completion-at-point-functions #'cape-yasnippet t)))
 
   ;; dabbrevのサイズを制限
   (setq dabbrev-friend-buffer-function (lambda (other-buffer)
