@@ -190,9 +190,16 @@
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :straight t
+  ;; 遅延ロードする。本体を起動時にロードすると初回描画までに約 170ms を要し、
+  ;; これは外部パッケージが起動経路で消費する時間の 82% を占めていた
+  ;; （docs/eval/7-elpaca-ceiling/ の実測）。
+  ;; mc/* は autoload されるため、実際にコマンドを使うまでロードされない。
+  :defer t
   :custom
   (mc/list-file (my-set-history "mc-lists.el"))
-  :config
+  ;; repeat-map と C-q プレフィックスは本体をロードせずに使える必要があるため
+  ;; :config ではなく :init で定義する（束縛はシンボル参照のみで本体を要求しない）。
+  :init
   ;; `repeat-mode` 用の `repeat-map` を作成
   (defvar-keymap my/mc-repeat-map
     :doc "Keymap for repeating multiple-cursors commands"

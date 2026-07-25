@@ -60,5 +60,17 @@
     (let ((key (if (stringp (car binding)) (kbd (car binding)) (car binding))))
       (should (eq (lookup-key global-map key) (cdr binding))))))
 
+;;;;; [Group] Keybinding - 複数カーソル ;;;;;
+;; multiple-cursors は遅延ロードするため、repeat-map と C-q プレフィックスは
+;; パッケージ本体をロードせずに使える状態でなければならない。
+;; mc/* は autoload 経由で解決されるので、束縛の存在だけを固定する。
+(ert-deftest my-test-keybindings-mc-repeat-map ()
+  :tags '(:keybinding)
+  (should (boundp 'my/mc-repeat-map))
+  (should (keymapp my/mc-repeat-map))
+  (should (eq (lookup-key global-map (kbd "C-q")) my/mc-repeat-map))
+  (dolist (key '("n" "p" "a" "d" "u" "s" "i" "l" "o"))
+    (should (commandp (lookup-key my/mc-repeat-map (kbd key))))))
+
 (provide 'my-test-keybindings)
 ;;; my-test-keybindings.el ends here
