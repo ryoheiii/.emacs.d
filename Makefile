@@ -6,7 +6,13 @@ GIT ?= git
 TESTS_DIR := $(CURDIR)/tests
 STRAIGHT_DIR ?= $(CURDIR)/loads/straight
 STRAIGHT_REPOS ?= $(STRAIGHT_DIR)/repos
-STRAIGHT_BUILD ?= $(STRAIGHT_DIR)/build
+# straight のビルドディレクトリ名。elisp 側の straight-build-dir と一致させる必要が
+# あるが、Make からは straight を起動せずに参照できない（prepare-straight は
+# bootstrap より前に走る）ため、明示的な上書き可能変数として持つ。
+# straight-use-version-specific-build-dir を有効にした場合は
+# make test STRAIGHT_BUILD_NAME=build-30.2 のように上書きする。
+STRAIGHT_BUILD_NAME ?= build
+STRAIGHT_BUILD ?= $(STRAIGHT_DIR)/$(STRAIGHT_BUILD_NAME)
 STRAIGHT_VERSIONS ?= $(STRAIGHT_DIR)/versions
 TEST_STRAIGHT_DIR ?= $(STRAIGHT_DIR)
 
