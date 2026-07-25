@@ -105,7 +105,8 @@ MY_BARE_RUNNER
 #### 1 試行 ####
 # 成功時は経過ミリ秒を stdout へ出す。無効試行なら空を返して非ゼロ終了。
 run_trial() {
-  local idx="$1" log="$OUT_DIR/raw/${MODE}-${1}.log"
+  local idx="$1"
+  local log="$OUT_DIR/raw/${MODE}-${idx}.log"
   local load start end
 
   load="$(awk '{print $1}' /proc/loadavg)"
