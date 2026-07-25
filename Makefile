@@ -48,7 +48,8 @@ endef
 define MY_TTY_LIVE_SETUP_BODY
 mv "$$test_root/early-init.el" "$$test_root/my-tty-early-init-real.el"
 cat > "$$test_root/early-init.el" <<'MY_TTY_EARLY_INIT'
-;; tty テスト専用 shim(テスト実行時の一時生成物)
+;;; early-init.el --- tty テスト専用 shim  -*- lexical-binding: t; -*-
+;; テスト実行時の一時生成物(Emacs 31 は lexical-binding クッキー欠如を警告するため明示)
 ;; MY_TTY_TEST_STRAIGHT_BASE_DIR は straight-base-dir に入れる値
 ;; = 既存ハーネス(EMACS_TEST_OPTIONS)と同じ loads/ ディレクトリ。
 ;; straight は内部で straight/ を付加するため loads/straight を渡してはならない。
