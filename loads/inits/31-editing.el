@@ -43,19 +43,44 @@
   )
 
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
+;; C/C++ 補完の三段フォールバックの 2 段目。
+;;   1. clangd + compile_commands.json/.clangd あり → eglot (18-built-in-package.el)
+;;   2. irony-server 実体あり                        → irony (ここ)
+;;   3. どちらも無い                                  → cape + ggtags (28-corfu.el / 本ファイル)
+;; irony-server が未導入の環境では irony 自体をロードせず 3 段目へ落とす。
+;; 導入するには M-x irony-install-server（cmake と libclang が必要）。
+;; eglot 管理下では 18-built-in-package.el の my/eglot-cc-suppress-irony が irony を止める。
 (use-package irony
   :straight t
   :defer t
-  :after cc-mode
-  :hook ((c-mode . irony-mode)
-         (c++-mode . irony-mode)
-         (irony-mode . irony-cdb-autosetup-compile-options))
+  :preface
+  ;; :custom より前に評価される節。導入先を 1 箇所で決めて可用性判定と共有する
+  (defconst my/irony-server-prefix (my-set-history "irony")
+    "irony-server の導入先。`irony-server-install-prefix' と一致させる。")
+  :hook ((c-mode      . my/irony-maybe-enable)
+         (c++-mode    . my/irony-maybe-enable)
+         (c-ts-mode   . my/irony-maybe-enable)
+         (c++-ts-mode . my/irony-maybe-enable)
+         (irony-mode  . irony-cdb-autosetup-compile-options))
   :custom
-  ;; Irony モードのインストール場所とオプションファイルの設定
-  (irony-server-install-prefix    (my-set-history "irony"))
-  (irony-server-options-directory (my-set-history "irony"))
+  ;; irony-server の導入先 (実体は <prefix>/bin/irony-server)
+  (irony-server-install-prefix my/irony-server-prefix)
+  :init
+  (defun my/irony-server-available-p ()
+    "irony-server の実体が導入済みなら non-nil."
+    (file-executable-p (expand-file-name "bin/irony-server" my/irony-server-prefix)))
+
+  (defun my/irony-maybe-enable ()
+    "irony-server が導入済みの環境でだけ `irony-mode' を有効にする.
+未導入の環境では irony をロードせず、cape + ggtags のフォールバックに任せる。"
+    (when (my/irony-server-available-p)
+      (irony-mode 1)))
   :config
-  ;; irony-server 未インストール時に CAPF エラーを抑制する
+  ;; ts モードでも irony を使えるようにする（既定は cc-mode 系のみ）
+  (dolist (mode '(c-ts-mode c++-ts-mode))
+    (add-to-list 'irony-supported-major-modes mode))
+
+  ;; irony-server が壊れている場合に CAPF エラーを抑制する
   (defvar my/irony-capf-warned nil
     "Non-nil なら irony CAPF エラー警告は表示済み.")
 
