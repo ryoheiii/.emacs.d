@@ -70,14 +70,30 @@
     (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point))
   )
 
+;;; Yasnippet Snippets - 追加スニペット集
+;; yasnippet の :config 内で宣言すると straight の登録とビルドが :defer 1 まで遅れ、
+;; フレーム表示後に同期処理が走って入力がブロックされる。トップレベルへ出して起動中に済ませる。
+;; ロード自体は :after で yasnippet に追随させる。yasnippet-snippets.el は冒頭で
+;; yasnippet を require するため、無条件ロードにすると yasnippet の遅延が壊れる
+;; (tests/my-test-packages.el の deferred-features 検査が検出する)。
+(use-package yasnippet-snippets
+  :straight t
+  :after yasnippet
+  :demand t
+  )
+
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :straight t
   :defer 1
   :custom
   (yas-prompt-functions '(yas-completing-read-prompt yas-no-prompt)) ; スニペット選択は completing-read (vertico) を使用
-  :config
+  :init
   ;; ロードスニペットの設定
+  ;; yasnippet ロード時に yasnippet-snippets-initialize (autoload の eval-after-load) が
+  ;; 'yasnippet-snippets-dir を yas-snippet-dirs へ追記する。この setq を :config へ置くと
+  ;; その追記より後に走って上書きし、追加スニペット集を失うため :init で設定する。
+  ;; :custom を使わないのは yas-snippet-dirs の :set が yas-reload-all を呼ぶため。
   (setq yas-snippet-dirs
         (seq-filter #'file-exists-p
                     (list (my-set-custom "snippets")
@@ -116,9 +132,7 @@
                           (my-set-straight "build/yasnippet-snippets/snippets/python-ts-mode")
                           (my-set-straight "build/yasnippet-snippets/snippets/text-mode")
                           )))
-
-  ;; Yasnippet Snippets - 追加スニペット集
-  (use-package yasnippet-snippets :straight t)
+  :config
   (yas-global-mode 1)
   )
 

@@ -28,5 +28,15 @@
     (require (car entry))
     (should (default-value (cdr entry)))))
 
+;;;;; [Group] Deferred - yasnippet-snippets の登録順 ;;;;;
+;; yasnippet-snippets-initialize (autoload の eval-after-load) は yasnippet の
+;; ロード時に 'yasnippet-snippets-dir を yas-snippet-dirs へ追記する。
+;; yas-snippet-dirs の setq をこの追記より後で実行すると追記を上書きして失うため、
+;; 宣言位置を動かした際の退行をここで検出する。
+(ert-deftest my-test-deferred-yasnippet-snippets-dir-registered ()
+  :tags '(:deferred)
+  (require 'yasnippet)
+  (should (memq 'yasnippet-snippets-dir yas-snippet-dirs)))
+
 (provide 'my-test-deferred)
 ;;; my-test-deferred.el ends here
