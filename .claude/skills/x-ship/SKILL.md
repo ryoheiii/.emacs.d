@@ -110,7 +110,11 @@ push 起動の CI（Emacs 回帰テスト）を `gh run watch <run-id> --exit-st
 
 ### 8. 後片付け
 
+`.claude/rules/git-workflow.md`「マージ後の後片付け」に従い、必ず実施する。
+
 - マージ済みブランチを削除する: `git -C "$MAIN_ROOT" branch -d <ブランチ名>`
+  （`-D` は使わない。拒否されたら未マージとして報告する）
+- ブランチを push 済みならリモートも削除する: `git push origin --delete <ブランチ名>`
 - タスク用 worktree を削除する: `git worktree remove <worktree パス>` → `git worktree prune`
   - セッションが対象 worktree 内にいる場合は、先に ExitWorktree（remove）で抜ける。
     ExitWorktree がブランチも削除した場合、ブランチ削除はスキップする。
