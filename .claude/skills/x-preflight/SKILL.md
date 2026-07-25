@@ -29,8 +29,10 @@ fast-forward できない場合は BLOCKED として理由を報告する（履�
 `.claude/rules/git-workflow.md` に従う:
 
 - ブランチ名は `feat/`・`fix/`・`refactor/`・`chore/`・`docs/` + 英小文字とハイフン。
-- 原則 1 タスク = 1 worktree + 1 ブランチ。
-  例: `git worktree add .claude/worktrees/<name> -b <prefix>/<name> main`
+- **1 タスク = 1 worktree = 1 ブランチは必須**（複数セッション同時運用のため）。
+  例: `git worktree add .claude/worktrees/<name> -b <prefix>/<name> origin/main`
+- メインチェックアウトで実装しない。`git worktree list` と `git branch -vv` で
+  他セッションの作業状況を確認し、想定外のブランチや差分があれば BLOCKED として報告する。
 - タスク内容が未定でブランチ名を決められない場合は、この手順を保留として報告する。
 
 ### 4. ツールチェーン確認
