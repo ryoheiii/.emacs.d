@@ -719,6 +719,48 @@ else
 fi
 
 echo ""
+echo "=== --setup --gui ==="
+
+setup_calls_for_gui() {
+    local dir="$1"; shift
+    make_setup_stubs "$dir" yes
+    PATH="$dir:$PATH" "$SCRIPT" --setup "$@" >/dev/null 2>&1
+    cat "$dir/calls.log" 2>/dev/null
+}
+
+SETUP_DEFAULT_LOG="$(setup_calls_for_gui "$(harness_mktemp)")"
+SETUP_NOGUI_LOG="$(setup_calls_for_gui "$(harness_mktemp)" --gui no)"
+SETUP_GTK3_LOG="$(setup_calls_for_gui "$(harness_mktemp)" --gui gtk3)"
+
+gui_problems=""
+echo "$SETUP_DEFAULT_LOG" | grep -q 'xorg-dev' || gui_problems="$gui_problems 既定でGUI未導入"
+echo "$SETUP_NOGUI_LOG" | grep -q 'xorg-dev' && gui_problems="$gui_problems gui=noでGUI導入"
+echo "$SETUP_NOGUI_LOG" | grep -q 'libncurses-dev' || gui_problems="$gui_problems gui=noでTUI未導入"
+echo "$SETUP_NOGUI_LOG" | grep -q 'pandoc' || gui_problems="$gui_problems gui=noでツール未導入"
+if [ -z "$gui_problems" ]; then
+    record_pass "setup --gui no excludes only GUI packages"
+else
+    record_fail "setup --gui no excludes only GUI packages —$gui_problems"
+fi
+
+# tty 退行の防止。libgnutls28-dev は GUI 非依存なので --gui no でも入らなければならない。
+if echo "$SETUP_NOGUI_LOG" | grep -q 'libgnutls28-dev'; then
+    record_pass "setup --gui no keeps TLS support"
+else
+    record_fail "setup --gui no keeps TLS support"
+fi
+
+if [ "$SETUP_DEFAULT_LOG" = "$SETUP_GTK3_LOG" ]; then
+    record_pass "setup --gui gtk3 matches the default"
+else
+    record_fail "setup --gui gtk3 matches the default"
+fi
+
+assert_exit "setup rejects a missing gui value" 1 --setup --gui
+assert_exit "setup rejects an invalid gui value" 1 --setup --gui bogus
+assert_exit "setup rejects unknown options" 1 --setup --unknown
+
+echo ""
 echo "=== 基本オプション ==="
 assert_exit "help returns 0"           0  --help
 assert_exit "no args returns 1"        1

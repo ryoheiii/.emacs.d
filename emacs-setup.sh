@@ -65,8 +65,26 @@ EOF
     exit "${1:-1}"
 }
 
+##### GUI オプションの検証 #####
+# --install と --setup で同じ語彙・同じ既定値を使う。
+validate_gui_toolkit() {
+    case "$1" in
+        gtk3|lucid|pgtk|no) return 0 ;;
+        *)
+            echo "Unsupported GUI type: $1" >&2
+            echo "Supported GUI types: gtk3 (default), lucid, pgtk, no" >&2
+            exit 1
+            ;;
+    esac
+}
+
 ##### 関連パッケージインストール #####
+# GUI_PACKAGES を入れるかどうかだけが分岐点になる。gtk3 / lucid / pgtk の間に
+# パッケージの差は無いため、実質は no かそれ以外かの二値である。
 setup_env() {
+    local gui="${1:-gtk3}"
+    validate_gui_toolkit "$gui"
+
     echo "Setting up Emacs environment..."
 
     export DEBIAN_FRONTEND=noninteractive # Set non-interactive mode for apt-get
@@ -102,6 +120,7 @@ setup_env() {
     local COMMON_PACKAGES=(
         pkg-config                      # C/C++ プロジェクトのライブラリ依存管理ツール
         "libgccjit-${GCC_VERSION}-dev"  # ネイティブコンパイル用 (Emacs29以降)
+        libgnutls28-dev                 # TLS (HTTPS/SSL) サポート。GUI 非依存
         libsqlite3-dev                  # SQLite バックエンド (Org-roam など)
         libtree-sitter-dev              # Tree-sitter (シンタックスハイライト)
         libxml2-dev                     # XML パース (shr.el, EWW)
@@ -115,7 +134,6 @@ setup_env() {
     local GUI_PACKAGES=(
         ## 必須
         libgtk-3-dev                    # GTK3 ベースの GUI サポート
-        libgnutls28-dev                 # TLS (HTTPS/SSL) サポート
         libfreetype6-dev                # フォントサポート
         libotf-dev                      # Opentype フォント処理のサポート
         adwaita-icon-theme              # Icon
@@ -172,7 +190,11 @@ setup_env() {
     )
 
     sudo apt-get install -y "${COMMON_PACKAGES[@]}"
-    sudo apt-get install -y "${GUI_PACKAGES[@]}"
+    if [ "$gui" = no ]; then
+        echo "GUI パッケージをスキップします (--gui no)。"
+    else
+        sudo apt-get install -y "${GUI_PACKAGES[@]}"
+    fi
     sudo apt-get install -y "${TUI_PACKAGES[@]}"
     sudo apt-get install -y "${EMACS_TOOL_PACKAGES[@]}"
 
@@ -295,9 +317,7 @@ install_emacs() {
             CONFIG_OPTS+=("--without-x")
             ;;
         *)
-            echo "Unsupported GUI type: $GUI"
-            echo "Supported GUI types: gtk3 (default), lucid, pgtk, no"
-            exit 1
+            validate_gui_toolkit "$GUI"  # ここへは来ないが、値の集合を一箇所に保つ
             ;;
     esac
     ./configure "${CONFIG_OPTS[@]}"
@@ -537,7 +557,26 @@ extract_package() {
 [ $# -eq 0 ] && { echo "Error: No action specified."; usage; }
 ACTION="$1"; shift
 case "$ACTION" in
-    -s|--setup)           setup_env ;;
+    -s|--setup)
+        SETUP_GUI="gtk3"  # 既定は現状どおり GUI パッケージも入れる
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                -g|--gui)
+                    if [[ $# -lt 2 || "$2" == -* ]]; then
+                        echo "Error: --gui requires a value (gtk3, lucid, pgtk, no)." >&2
+                        exit 1
+                    fi
+                    SETUP_GUI="$2"
+                    shift 2
+                    ;;
+                *)
+                    echo "Error: Unknown option '$1' for --setup." >&2
+                    usage
+                    ;;
+            esac
+        done
+        setup_env "$SETUP_GUI"
+        ;;
     -l|--list)            list_emacs_versions ;;
     -i|--install)
         EMACS_VERSION=""
