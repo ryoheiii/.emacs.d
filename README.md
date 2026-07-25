@@ -183,9 +183,12 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
     （`kill-ring` は使わない）。リージョン選択中は選択範囲を削除する。
   - 未再現: `c-cleanup-list` の `list-close-comma` / `scope-operator`、
     ブレース初期化リストの `{` 前改行。
-- **既知の使用感差分**: 波括弧が 2 段以上開いている入力途中は tree-sitter が木全体を
-  `ERROR` に落とすため、インデントが概算になる（直前の行を基準にした近似で、
-  既定の桁 0 よりは近い）。構文が揃えば cc-mode + google-c-style と完全に一致する。
+- 波括弧が 2 段以上開いている入力途中は tree-sitter が木全体を `ERROR` に落とし、
+  既定の規則が桁 0 へ倒す。この間の桁は括弧の深さから算出して補う
+  （`namespace` の波括弧は `(innamespace . 0)` に合わせて段数へ数えない）。
+- **既知の使用感差分**: 上記 `ERROR` 状態の間だけ、`case` ラベル配下の文が
+  `case` と同じ桁になる（cc-mode は `case` から 1 段下げる）。構文が揃えば
+  cc-mode + google-c-style と完全に一致する。
 
 **補完バックエンド**
 
@@ -301,6 +304,8 @@ tree-sitter 文法は通常「未導入」になる（システムの共有ラ�
 文法の可用性で排他になっており、未導入なら cc-mode 側
 （`my-test-cpp-config-google-style`）、導入済みなら ts 側
 （`my-test-cpp-config-c-ts-indent-google-equivalent`）が走る。
+入力途中（`ERROR` 状態）の桁を固定する `my-test-cpp-config-c-ts-error-indent` も
+文法が必要なため、未導入環境では skip される。
 ts 側を明示的に走らせる場合は、文法を置いたディレクトリを
 `treesit-extra-load-path` へ加えた状態で ERT を実行する。
 
