@@ -29,7 +29,9 @@
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :straight t
-  :hook ((c++-mode c-mode cc-mode emacs-lisp-mode lisp-mode) . smart-newline-mode)
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  :hook ((c++-mode c-mode cc-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
+         . smart-newline-mode)
   :bind (("C-m" . smart-newline))
   )
 
@@ -143,8 +145,12 @@
 (use-package ggtags
   :straight t
   :defer t
-  :hook ((c-mode   . ggtags-mode)
-         (c++-mode . ggtags-mode))
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  ;; （C-t タグナビゲーションの不変条件を ts モードでも維持するために必須）
+  :hook ((c-mode      . ggtags-mode)
+         (c++-mode    . ggtags-mode)
+         (c-ts-mode   . ggtags-mode)
+         (c++-ts-mode . ggtags-mode))
   :bind (:map ggtags-mode-map
               ("C-t d"   . my/gtags-find-definition)     ; 関数の定義場所の検索 (define)
               ("C-t C-d" . my/gtags-find-definition)
@@ -267,13 +273,20 @@
     (interactive)
     (let* ((symbol (symbol-overlay-get-symbol))
            (new-name (read-string (format "Rename '%s' to: " symbol)))
+           ;; ts モードは derived-mode-p 上は c-mode/c++-mode の派生だが cc-mode の
+           ;; 内部状態を持たない。c-beginning-of-defun が使えないため先に振り分け、
+           ;; treesit が設定する beginning-of-defun-function 経由の汎用関数を使う。
            (start (cond
+                   ((derived-mode-p 'c-ts-mode 'c++-ts-mode)
+                    (save-excursion (beginning-of-defun) (point)))
                    ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
                     (save-excursion (c-beginning-of-defun) (point)))
                    ((derived-mode-p 'python-mode)
                     (save-excursion (python-nav-beginning-of-defun) (point)))
                    (t (point-min)))) ;; その他のモードではファイル全体
            (end (cond
+                 ((derived-mode-p 'c-ts-mode 'c++-ts-mode)
+                  (save-excursion (end-of-defun) (point)))
                  ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
                   (save-excursion (c-end-of-defun) (point)))
                  ((derived-mode-p 'python-mode)

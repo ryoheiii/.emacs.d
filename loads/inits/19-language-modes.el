@@ -9,8 +9,12 @@
   :straight nil
   :bind (("C-\\" . hs-toggle-hiding)
          ("<f5>" . hs-toggle-hiding))
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  ;; (hs-special-modes-alist は c-ts-mode / c++-ts-mode のエントリを持つ)
   :hook ((c-mode          . hs-minor-mode)
          (c++-mode        . hs-minor-mode)
+         (c-ts-mode       . hs-minor-mode)
+         (c++-ts-mode     . hs-minor-mode)
          (emacs-lisp-mode . hs-minor-mode)
          (lisp-mode       . hs-minor-mode))
   )
@@ -48,6 +52,92 @@
     (c-toggle-auto-hungry-state 1)         ; 自動改行 & 連続スペース一括削除
     (setq indent-tabs-mode nil
           c-basic-offset 4))
+  )
+
+;;; C-ts-mode - tree-sitter 版 C/C++ モード (段階移行)
+;; 文法が導入済みなら c-ts-mode / c++-ts-mode、無ければ従来の cc-mode を使う。
+;; 文法をビルドできない環境では何も起きず cc-mode のまま動作する（フォールバック）。
+;; 文法の導入は 18-built-in-package.el の M-x my/treesit-install-c-grammars で行う。
+;;
+;; 既知の使用感差分: c-toggle-auto-hungry-state 相当が ts モードには存在しないため、
+;; 自動改行と連続スペース一括削除は ts モードでは無効になる。
+(defvar my/use-treesit-for-cc t
+  "Non-nil なら文法が揃っている C/C++ で ts モードを使う。
+nil にすると文法があっても cc-mode を使い続ける。")
+
+(defconst my/cc-non-source-regexp "\\.\\(log\\|cfg\\|nut\\)\\'"
+  "cc-mode を流用しているだけで C/C++ ではないファイル。
+.log/.cfg はログ閲覧用の流用、.nut は Squirrel である。ts モードへ回すと
+バッファ全体が ERROR ノードになりフォントロックを失うため remap 対象から除外する。")
+
+(defun my/cc-real-source-p ()
+  "現在のバッファが ts モードへ回してよい実 C/C++ ソースなら non-nil."
+  (and buffer-file-name
+       (not (string-match-p my/cc-non-source-regexp buffer-file-name))))
+
+;; auto-mode から呼ばれる振り分け関数（組み込みの c-or-c++-mode と同じ形）
+(defun my/c-mode-dispatch ()
+  "実 C ソースなら `c-ts-mode'、流用ファイルなら `c-mode' を有効にする."
+  (interactive)
+  (if (my/cc-real-source-p) (c-ts-mode) (c-mode)))
+
+(defun my/c++-mode-dispatch ()
+  "実 C++ ソースなら `c++-ts-mode'、流用ファイルなら `c++-mode' を有効にする."
+  (interactive)
+  (if (my/cc-real-source-p) (c++-ts-mode) (c++-mode)))
+
+(defun my/treesit-cc-ready-p (lang)
+  "LANG の文法が揃い ts モードを使ってよいなら non-nil.
+treesit-language-available-p は treesit.el をロードせず警告も出さない."
+  (and my/use-treesit-for-cc
+       (fboundp 'treesit-available-p)
+       (treesit-available-p)
+       (treesit-language-available-p lang)))
+
+;; c-ts-mode.el はロード時に major-mode-remap-defaults を書き換えるが、
+;; major-mode-remap-alist の方が優先されるため、ここでの指定が常に勝つ。
+;; C と C++ は独立に判定する（片方の文法だけある環境でも壊さない）。
+(when (my/treesit-cc-ready-p 'c)
+  (add-to-list 'major-mode-remap-alist '(c-mode . my/c-mode-dispatch)))
+(when (my/treesit-cc-ready-p 'cpp)
+  (add-to-list 'major-mode-remap-alist '(c++-mode . my/c++-mode-dispatch)))
+
+(use-package c-ts-mode
+  :straight nil
+  ;; 起動経路で require しない（文法不在時に treesit の警告が出るため）
+  :defer t
+  ;; use-package はバイトコンパイル時にパッケージを先読みする。c-ts-mode.el は
+  ;; ロード時に treesit-ready-p を呼ぶため、先読みすると make lint が警告で汚れる。
+  :no-require t
+  :hook ((c-ts-mode   . my/c-ts-mode-setup)
+         (c++-ts-mode . my/c-ts-mode-setup))
+  :custom
+  (c-ts-mode-indent-offset 4)
+  (c-ts-mode-indent-style #'my/c-ts-mode-indent-style)
+  :init
+  (defun my/c-ts-mode-setup ()
+    "C/C++ ts モード共通の設定（cc-mode 側の `my/cc-mode-setup' と対応）."
+    (local-set-key (kbd "C-c c") 'compile) ; コンパイル
+    (setq indent-tabs-mode nil))
+
+  (defun my/c-ts-mode-indent-style ()
+    "k&r をベースに google-c-style 相当の差分を前置した indent 規則を返す.
+前置した規則が先に照合されるためベース側の同種規則を上書きできる。
+ベース取得に使う `c-ts-mode--indent-styles' は内部関数のため、
+失われた場合でも差分規則だけで動作を継続する（エラーにしない）。"
+    (let* ((offset (if (boundp 'c-ts-mode-indent-offset) c-ts-mode-indent-offset 4))
+           (half (/ offset 2))
+           (base (when (fboundp 'c-ts-mode--indent-styles)
+                   (alist-get 'k&r (c-ts-mode--indent-styles
+                                    (if (derived-mode-p 'c++-ts-mode) 'cpp 'c))))))
+      (append
+       `(;; google-c-style の (innamespace . 0): namespace 本体をインデントしない
+         ((n-p-gp nil "declaration_list" "namespace_definition") parent-bol 0)
+         ;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く
+         ((node-is "access_specifier") parent-bol ,half)
+         ;; google-c-style の (case-label . +): case を switch から 1 段下げる
+         ((node-is "case_statement") standalone-parent ,offset))
+       base)))
   )
 
 ;;;;;; [Group] Text Editing - テキスト編集 ;;;;;;
