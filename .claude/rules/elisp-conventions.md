@@ -10,7 +10,7 @@ globs: ["**/*.el"]
 - 外部パッケージは `use-package` で宣言する。`straight-use-package-by-default t` により `:straight t` は暗黙に適用される。
 - 組み込みパッケージには必ず `:straight nil` を指定する。
 - 設定値は `:custom`、フックは `:hook`、キーバインドは `:bind` にグループ化する。
-- 外部パッケージ宣言は `loads/inits/` の 20〜34 番台へ機能別に配置する。
+- 外部パッケージ宣言は `loads/inits/` の 20〜35 番台へ機能別に配置する。
 - `package.el` をパッケージ管理へ使用しない。
 
 ## tty (`emacs -nw`) 対応

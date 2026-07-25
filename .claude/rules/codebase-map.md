@@ -15,7 +15,7 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 
 | パス | 用途 |
 |---|---|
-| `loads/inits/` | 番号付き設定モジュール。00=コア、01=UI、02=キーバインド、10=関数、18=組み込み、19=言語モード、20〜34=外部パッケージ（機能別）、99=プライベート |
+| `loads/inits/` | 番号付き設定モジュール。00=コア、01=UI、02=キーバインド、10=関数、18=組み込み、19=言語モード、20〜35=外部パッケージ（機能別）、99=プライベート |
 | `loads/site-elisp/` | ユーザー作成の Elisp ライブラリ。`load-path` に含まれる |
 | `loads/straight/` | straight.el のリポジトリとビルド成果物 |
 | `custom/` | `custom.el`、YASnippet、Markdown 表示用 CSS／JS などのカスタムデータ |

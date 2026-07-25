@@ -1009,11 +1009,117 @@ echo "$HELP_TEXT" | grep -q -- '-g|--gui' || help_problems="$help_problems -g未
 echo "$HELP_TEXT" | grep -q -- '--setup \[-g' || help_problems="$help_problems setup--gui未記載"
 echo "$HELP_TEXT" | grep -qi 'undo' || help_problems="$help_problems clean説明が不十分"
 echo "$HELP_TEXT" | grep -q 'EMACS_SETUP_MIRROR_URL' || help_problems="$help_problems 環境変数未記載"
+echo "$HELP_TEXT" | grep -q -- '--setup-node' || help_problems="$help_problems setup-node未記載"
+echo "$HELP_TEXT" | grep -q -- '--uninstall-node' || help_problems="$help_problems uninstall-node未記載"
 if [ -z "$help_problems" ]; then
     record_pass "help documents the actual interface"
 else
     record_fail "help documents the actual interface —$help_problems"
 fi
+
+echo ""
+echo "=== Node.js (--setup-node / --uninstall-node) ==="
+
+# オフライン導入を実 tarball で通しで検査する。
+# エントリ数を多くするのは意図的である。実装が tarball のトップレベル名を
+# head や sed q のような早期終了で読むと、set -o pipefail 下で tar が SIGPIPE
+# により 141 で落ち、「小さな tarball では通るが実物では失敗する」状態になる。
+NODE_ARCH=""
+case "$(uname -m)" in
+    x86_64)  NODE_ARCH=x64 ;;
+    aarch64) NODE_ARCH=arm64 ;;
+    armv7l)  NODE_ARCH=armv7l ;;
+esac
+
+if [ -z "$NODE_ARCH" ]; then
+    echo "SKIP: オフライン導入非対応アーキテクチャのため検査を省略"
+elif ! command -v xz >/dev/null 2>&1; then
+    echo "SKIP: xz が無いため tarball 検査を省略"
+else
+    NODE_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+    make_fake_home "$NODE_HOME"
+    NODE_STAGE="$NODE_HOME/stage/node-v22.0.0-linux-$NODE_ARCH"
+    mkdir -p "$NODE_STAGE/bin" "$NODE_HOME/.local/downloads/node" \
+        || harness_fatal "tarball 用ディレクトリを作成できません。"
+    # node / npm は実行可能でなければ実装の検証に引っかかる
+    printf '#!/bin/sh\necho v22.0.0\n' > "$NODE_STAGE/bin/node"
+    printf '#!/bin/sh\necho 10.0.0\n'  > "$NODE_STAGE/bin/npm"
+    chmod +x "$NODE_STAGE/bin/node" "$NODE_STAGE/bin/npm"
+    # SIGPIPE を再現させるための水増し（tar の出力を 1 行で打ち切らせない）
+    for i in $(seq 1 3000); do
+        printf 'x\n' > "$NODE_STAGE/bin/pad$i"
+    done
+    if tar -cJf "$NODE_HOME/.local/downloads/node/node-v22.0.0-linux-$NODE_ARCH.tar.xz" \
+        -C "$NODE_HOME/stage" "node-v22.0.0-linux-$NODE_ARCH" 2>/dev/null; then
+        NODE_OUT="$(HOME="$NODE_HOME" "$SCRIPT" --setup-node 2>&1)"
+        NODE_RC=$?
+        node_problems=""
+        [ "$NODE_RC" -eq 0 ] || node_problems="$node_problems exit=$NODE_RC"
+        echo "$NODE_OUT" | grep -qi "fnm" \
+            && node_problems="$node_problems オフライン tarball があるのに fnm へ落ちた"
+        [ -x "$NODE_HOME/.local/node/bin/node" ] \
+            || node_problems="$node_problems アクティブリンクが張られていない"
+        [ -d "$NODE_HOME/.local/share/nodejs/node-v22.0.0-linux-$NODE_ARCH" ] \
+            || node_problems="$node_problems 展開先が作られていない"
+        if [ -z "$node_problems" ]; then
+            record_pass "setup-node installs from an offline tarball"
+        else
+            record_fail "setup-node installs from an offline tarball —$node_problems"
+        fi
+
+        # 同じ tarball で再実行しても壊れない（既存ディレクトリの入れ替え経路）
+        if HOME="$NODE_HOME" "$SCRIPT" --setup-node >/dev/null 2>&1 \
+            && [ -x "$NODE_HOME/.local/node/bin/node" ]; then
+            record_pass "setup-node is idempotent for the same tarball"
+        else
+            record_fail "setup-node is idempotent for the same tarball"
+        fi
+
+        # 導入したものは --uninstall-node で消える
+        HOME="$NODE_HOME" "$SCRIPT" --uninstall-node >/dev/null 2>&1
+        if [ ! -e "$NODE_HOME/.local/node" ] \
+            && [ ! -d "$NODE_HOME/.local/share/nodejs/node-v22.0.0-linux-$NODE_ARCH" ]; then
+            record_pass "uninstall-node removes the offline install"
+        else
+            record_fail "uninstall-node removes the offline install"
+        fi
+    else
+        echo "SKIP: xz 圧縮の tar を作成できないため tarball 検査を省略"
+    fi
+fi
+
+# --uninstall-node は、このスクリプトが導入していない fnm を消してはならない
+# （利用者の全 Node バージョンと設定が失われる）。印の有無で挙動が変わることを検査する。
+assert_uninstall_node_fnm() {
+    local desc="$1" marker="$2" expect_removed="$3"
+    local home
+    home="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+    make_fake_home "$home"
+    mkdir -p "$home/.local/share/fnm/node-versions/v20" \
+        || harness_fatal "fnm ディレクトリを作成できません。"
+    printf '#!/bin/sh\n' > "$home/.local/share/fnm/fnm"
+    chmod +x "$home/.local/share/fnm/fnm"
+    [ "$marker" = yes ] && : > "$home/.local/share/fnm/.installed-by-emacs-setup"
+
+    HOME="$home" "$SCRIPT" --uninstall-node >/dev/null 2>&1
+
+    if [ "$expect_removed" = yes ]; then
+        if [ -d "$home/.local/share/fnm" ]; then
+            record_fail "$desc — fnm ディレクトリが残っている"
+        else
+            record_pass "$desc"
+        fi
+    else
+        if [ -d "$home/.local/share/fnm/node-versions/v20" ]; then
+            record_pass "$desc"
+        else
+            record_fail "$desc — 既存 fnm の資産を削除した"
+        fi
+    fi
+}
+
+assert_uninstall_node_fnm "uninstall-node removes fnm it installed"     yes yes
+assert_uninstall_node_fnm "uninstall-node keeps a pre-existing fnm"     no  no
 
 echo ""
 echo "=== 構文チェック ==="
