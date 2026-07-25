@@ -68,14 +68,34 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 
 Emacs 内からは `M-x straight-rebuild-all`。
 
-## Copilot を有効にしたときの依存
+## 組み込みパッケージの上書きを避ける
 
-`copilot-chat` は org / jsonrpc / polymode / shell-maker / request / aio などを
-依存として引き込む。このうち **`org` と `jsonrpc` は Emacs 組み込み版より
-straight のビルドが優先される**（`load-path` の順による）。
+straight の依存解決は、**組み込みで足りるパッケージでもレシピリポジトリに
+存在すればそちらをクローンする**。`straight--convert-recipe` が `:type built-in`
+へ落ちるのは、どのレシピリポジトリにも見つからなかったときだけである。
 
-- どちらも ELPA 版のほうが新しく、eglot・org の通常利用に支障は確認されていない。
-- `my/copilot-enabled` を `nil` にすると `copilot-chat` 自体が登録されないため、
-  `org` と `jsonrpc` は組み込み版に戻る。
+クローンされた版は `load-path` 上で組み込み版を覆い隠すため、`:straight nil`
+で組み込みを使うつもりの宣言（`24-org.el` の org など）が実際には ELPA 版を
+設定していた、という食い違いが起きる。
 
-Copilot の切り替え方法は [../README.md](../README.md) の「環境ごとの切り替え」を参照。
+そのため `35-copilot.el` は、copilot / copilot-chat の依存のうち
+**Emacs 30.2 の組み込み版で要件を満たすものだけ** built-in へ固定する。
+
+```elisp
+(dolist (pkg '(org jsonrpc))
+  (straight-override-recipe (list pkg :type 'built-in)))
+```
+
+| パッケージ | 要求 | Emacs 30.2 組み込み | 扱い |
+|---|---|---|---|
+| `org` | 9.4.6 (copilot-chat) | 9.7.11 | built-in へ固定 |
+| `jsonrpc` | 1.0.14 (copilot) | 1.0.25 | built-in へ固定 |
+| `track-changes` | 1.4 (copilot) | 1.2 | 要件未満のため straight から導入 |
+| `transient` | 0.8.3 (copilot-chat) | 0.7.2.2 | 要件未満のため straight から導入 |
+
+固定した 2 つは lockfile にも載らない。組み込み版の要件を満たさなくなる
+パッケージを追加した場合は、この表とオーバーライドを見直す。
+
+Copilot の残りの依存（polymode / shell-maker / request / aio / mcp など）は
+組み込みに無いため通常どおり straight が管理する。
+切り替え方法は [../README.md](../README.md) の「環境ごとの切り替え」を参照。

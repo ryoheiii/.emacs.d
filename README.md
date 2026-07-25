@@ -117,6 +117,10 @@ M-x copilot-login             ; GitHub アカウントを認証
 操作は `C-c j`（補完）と `C-c J`（Chat）。詳細は
 [キーバインド一覧](docs/keybindings.md#github-copilot) を参照。
 
+Node.js を戻すときは `./emacs-setup.sh --uninstall-node`。
+このスクリプトが入れた fnm だけを削除し、**もともと入っていた fnm には触れない**
+（利用者の他の Node バージョンを消さないため）。その場合はスキップした旨を表示する。
+
 Copilot を使えない環境での止め方は「[4. 環境ごとの切り替え](#4-環境ごとの切り替え)」を参照。
 
 ---
