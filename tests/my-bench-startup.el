@@ -48,13 +48,19 @@
 それ以外で解決できれば `builtin'、解決できなければ `unknown' を返す。
 `:straight nil' でも親パッケージのビルド配下に同梱される拡張
 （vertico-repeat 等）は external として数える。非同期化で遅延しうる
-コストはビルド配下にあるかどうかで決まるためである。"
+コストはビルド配下にあるかどうかで決まるためである。
+
+ディレクトリ名は公開変数 `straight-build-dir' から取る。既定値 \"build\" を
+文字列で仮定すると、`straight-use-version-specific-build-dir' 有効時に
+すべて builtin へ化ける。"
   (let* ((name (symbol-name package))
          (lib (ignore-errors (locate-library name))))
     (cond
      ((null lib) 'unknown)
      ((and (fboundp 'my-set-straight)
-           (ignore-errors (file-in-directory-p lib (my-set-straight "build/"))))
+           (bound-and-true-p straight-build-dir)
+           (ignore-errors
+             (file-in-directory-p lib (my-set-straight straight-build-dir "/"))))
       'external)
      (t 'builtin))))
 
