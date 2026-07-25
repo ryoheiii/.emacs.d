@@ -376,7 +376,40 @@ install_emacs() {
     make -j"$(nproc)"
     make install
 
-    echo "Emacs $VERSION installation complete."
+    verify_installed_emacs "$VERSION"
+}
+
+##### インストール結果の検証 #####
+# configure / make / make install が成功しても、生成物が起動しない、
+# native-comp が無効、といった状態はあり得る。使えないインストールを
+# 成功と報告しないため、検証に失敗したら非ゼロで終了する。
+#
+# ソースツリーは残す。調査と再ビルドができるようにするためだが、
+# install_emacs は [ -d "$EMACS_SRC_DIR" ] で拒否するので、
+# 再インストールには --uninstall が要る旨を案内する。
+verify_installed_emacs() {
+    local version="$1"
+    local emacs_bin="$EMACS_INSTALL_PREFIX/bin/emacs"
+    local failed=no
+
+    if ! "$emacs_bin" --version >/dev/null 2>&1; then
+        echo "Error: インストールした Emacs を起動できません ($emacs_bin)。" >&2
+        failed=yes
+    # (princ (native-comp-available-p)) は nil でも終了コード 0 になるため、
+    # elisp 側で終了コードを立てる。
+    elif ! "$emacs_bin" --batch \
+            --eval '(kill-emacs (if (native-comp-available-p) 0 1))' >/dev/null 2>&1; then
+        echo "Error: native-comp が有効になっていません。" >&2
+        failed=yes
+    fi
+
+    if [ "$failed" = yes ]; then
+        echo "       ビルドツリーは $EMACS_SRC_DIR に残してあります。" >&2
+        echo "       再インストールするには先に $0 --uninstall を実行してください。" >&2
+        exit 1
+    fi
+
+    echo "Emacs $version installation complete."
 }
 
 ##### Emacs アンインストール #####

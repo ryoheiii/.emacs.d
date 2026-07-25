@@ -833,6 +833,74 @@ else
 fi
 
 echo ""
+echo "=== インストール後の検証 ==="
+
+# 検証対象は "$EMACS_INSTALL_PREFIX/bin/emacs" という絶対パスで呼ばれるため、
+# PATH スタブでは横取りできない。HOME を差し替えて prefix ごと隔離し、
+# make スタブがその絶対パスへ実行可能なスタブを生成する形にする。
+make_install_stubs() {
+    local dir="$1"
+    make_wget_stub "$dir"
+    cat > "$dir/tar" <<'TARSTUB'
+#!/bin/bash
+mkdir -p emacs
+printf '#!/bin/bash\nexit 0\n' > emacs/autogen.sh
+printf '#!/bin/bash\nexit 0\n' > emacs/configure
+chmod +x emacs/autogen.sh emacs/configure
+exit 0
+TARSTUB
+    cat > "$dir/make" <<'MAKESTUB'
+#!/bin/bash
+if [ "$1" = install ]; then
+    mkdir -p "$HOME/.local/bin"
+    cat > "$HOME/.local/bin/emacs" <<'INNER'
+#!/bin/bash
+case "${FAKE_EMACS_MODE:-ok}" in
+    version-fail) exit 1 ;;
+    native-nil)
+        for a in "$@"; do
+            [ "$a" = --version ] && exit 0
+        done
+        exit 1
+        ;;
+    *) exit 0 ;;
+esac
+INNER
+    chmod +x "$HOME/.local/bin/emacs"
+fi
+exit 0
+MAKESTUB
+    chmod +x "$dir/tar" "$dir/make"
+}
+
+assert_install_verify() {
+    local desc="$1" mode="$2" expected_exit="$3" expect_msg="$4"
+    local dir err rc problems=""
+    dir="$(harness_mktemp)"
+    make_install_stubs "$dir"
+    rm -rf "$HOME/.local"
+    err="$(PATH="$dir:$PATH" FAKE_EMACS_MODE="$mode" \
+        "$SCRIPT" --install 30.2 2>&1 >/dev/null)"
+    rc=$?
+    [ "$rc" -eq "$expected_exit" ] || problems="$problems exit=$rc(期待 $expected_exit)"
+    if [ -n "$expect_msg" ]; then
+        echo "$err" | grep -q "$expect_msg" || problems="$problems 文言なし"
+        [ -d "$HOME/.local/downloads/emacs" ] || problems="$problems ソース未保持"
+        echo "$err" | grep -q -- '--uninstall' || problems="$problems 復旧手順なし"
+    fi
+    if [ -z "$problems" ]; then
+        record_pass "$desc"
+    else
+        record_fail "$desc —$problems"
+    fi
+    rm -rf "$HOME/.local"
+}
+
+assert_install_verify "install verifies a working emacs" ok 0 ""
+assert_install_verify "install fails when emacs cannot start" version-fail 1 "起動できません"
+assert_install_verify "install fails when native-comp is missing" native-nil 1 "native-comp"
+
+echo ""
 echo "=== 実行前チェックとヘルプ ==="
 
 # macOS を模擬しても、コマンドを必要としないアクションは動き続ける
