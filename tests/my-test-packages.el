@@ -28,7 +28,8 @@
     tramp
     consult
     which-key
-    doom-modeline)
+    doom-modeline
+    multiple-cursors)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 
 (ert-deftest my-test-packages-deferred-features ()

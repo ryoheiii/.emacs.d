@@ -1,0 +1,38 @@
+# 起動コスト計測結果
+
+計測日時: 2026-07-26T02:25:45+09:00
+ホスト: Linux 6.18.33.2-microsoft-standard-WSL2
+Emacs: GNU Emacs 30.2
+
+## wall time (ms, プロセス外側)
+
+now   n=15 min=2678.0000 q1=2689.0000 median=2711.0000 q3=2766.0000 max=4459.0000 iqr=77.0000
+
+## Emacs 内部の観測点 (秒)
+
+t1_window_setup  now   n=15 min=0.4551 q1=0.4634 median=0.4773 q3=0.5118 max=0.5899 iqr=0.0485
+t3_ready         now   n=15 min=2.1446 q1=2.1542 median=2.1697 q3=2.2344 max=3.9255 iqr=0.0802
+emacs_init_time  now   n=15 min=0.2316 q1=0.2369 median=0.2512 q3=0.2786 max=0.3604 iqr=0.0417
+
+## 初回描画までに払った use-package コスト (秒)
+
+external   eager n=15 min=0.1559 q1=0.1591 median=0.1737 q3=0.1991 max=0.2824 iqr=0.0400
+builtin    eager n=15 min=0.0249 q1=0.0255 median=0.0269 q3=0.0278 max=0.0292 iqr=0.0023
+
+## 健全性検査 (eager 総和 <= t1)
+     15 yes
+
+## eager コスト上位パッケージ (全試行の中央値, 秒)
+
+0.226845 init-loader external
+0.138220 multiple-cursors external
+0.014302 grep builtin
+0.013666 doom-themes external
+0.007219 ediff builtin
+0.004866 prescient external
+0.004242 ispell builtin
+0.001810 corfu external
+0.001740 mozc external
+0.001638 vertico external
+0.001137 marginalia external
+0.000831 corfu-terminal external
