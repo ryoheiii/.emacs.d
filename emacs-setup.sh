@@ -16,6 +16,8 @@ readonly EMACS_INSTALL_PREFIX="$HOME/.local"
 readonly NODE_DL_DIR="$DL_DIR/node"
 readonly NODE_INSTALL_BASE="$HOME/.local/share/nodejs"
 readonly NODE_ACTIVE_LINK="$HOME/.local/node"
+# fnm をこのスクリプトが導入したことを示す印。--uninstall-node の削除判定に使う。
+readonly FNM_OWNED_MARKER=".installed-by-emacs-setup"
 # clean
 readonly VAR_DIR="$EMACS_DIR/var"
 # packing/extract_package
@@ -172,8 +174,10 @@ setup_node_offline() {
     mkdir -p "$NODE_INSTALL_BASE"
 
     # tarball 内のトップレベルディレクトリ名を取得・検証
+    # awk は入力を最後まで読む。head や sed q のような早期終了を使うと、
+    # tar が SIGPIPE で落ちて pipefail により exit 141 になる（実測）。
     local topdir
-    topdir="$(tar -tf "$tarball" | head -n 1 | cut -d/ -f1)"
+    topdir="$(tar -tf "$tarball" | awk -F/ 'NR==1 {print $1}')"
     if [ -z "$topdir" ]; then
         echo "Error: Failed to read tarball contents: $tarball" >&2
         exit 1
@@ -224,6 +228,10 @@ setup_node_fnm() {
             echo "Error: fnm installation failed." >&2
             exit 1
         fi
+        # このスクリプトが導入したことを記録する。
+        # --uninstall-node は、この印がある場合だけ fnm ディレクトリごと削除する
+        # （既存 fnm を流用したときに、利用者の全 Node バージョンを消さないため）。
+        : > "$FNM_DIR/$FNM_OWNED_MARKER"
     fi
 
     export PATH="$FNM_DIR:$PATH"
@@ -297,11 +305,18 @@ uninstall_node() {
     fi
 
     # fnm インストールの削除
+    # 既存 fnm を流用した場合は利用者の資産（全 Node バージョンと設定）であるため
+    # 削除しない。このスクリプトが導入した印がある場合だけディレクトリごと消す。
     local FNM_DIR="$HOME/.local/share/fnm"
     if [ -d "$FNM_DIR" ]; then
-        rm -rf "$FNM_DIR"
-        echo "Removed fnm directory: $FNM_DIR"
-        found=true
+        if [ -e "$FNM_DIR/$FNM_OWNED_MARKER" ]; then
+            rm -rf "${FNM_DIR:?}"
+            echo "Removed fnm directory: $FNM_DIR"
+            found=true
+        else
+            echo "Skipped $FNM_DIR (not installed by this script)."
+            echo "  このスクリプト導入分の Node だけ消すには: fnm uninstall 22"
+        fi
     fi
 
     if [ "$found" = false ]; then
