@@ -73,13 +73,9 @@
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :straight t
-  :defer t
+  :defer 1
   :custom
-  (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))  ; スニペット展開のプロンプト
-  (yas-trigger-key "TAB")                                 ; トリガーキーを TAB に設定
-  :init
-  ;; yas-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 1 nil #'yas-global-mode 1)
+  (yas-prompt-functions '(yas-completing-read-prompt yas-no-prompt)) ; スニペット選択は completing-read (vertico) を使用
   :config
   ;; ロードスニペットの設定
   (setq yas-snippet-dirs
@@ -123,6 +119,7 @@
 
   ;; Yasnippet Snippets - 追加スニペット集
   (use-package yasnippet-snippets :straight t)
+  (yas-global-mode 1)
   )
 
 ;;;;; [Group] Tags - タグナビゲーション ;;;;;
