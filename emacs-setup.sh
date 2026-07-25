@@ -412,38 +412,38 @@ run_package_build() {
 }
 
 ##### パッケージディレクトリの圧縮 #####
+# 一時ファイルの後始末は EXIT トラップで行う。RETURN トラップは exit や
+# errexit による終了で発火せず、まさに漏れる経路を塞げない。
+# トラップをサブシェルへ閉じ込め、他のアクションのトラップと干渉させない。
 packing_package() {
-    if [ -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
+    if [ ! -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
+        echo "Error: Package directory does not exist. Skipping archive." >&2
+        exit 1
+    fi
+
+    (
         echo "Archiving package directory..."
 
-        # 一時リストファイルの作成
-        local TMP_LIST
-        TMP_LIST=$(mktemp)
+        tmp_list=$(mktemp)
+        trap 'rm -f "$tmp_list"' EXIT
 
         # `PACKAGE_TARGET` はすべて揃っていることを要求する。
         # 一部だけのアーカイブを許すと、展開側が完全性を要求するため
         # 「自分で作ったアーカイブを復元できない」組み合わせが生まれる。
         for target in "${PACKAGE_TARGET[@]}"; do
             if [ ! -e "$LOADS_DIR/$PACKAGE_DIR/$target" ]; then
-                rm -f "$TMP_LIST"
                 echo "Error: $PACKAGE_DIR/$target がありません。アーカイブを作成しません。" >&2
                 exit 1
             fi
-            echo "$PACKAGE_DIR/$target" >> "$TMP_LIST"
+            echo "$PACKAGE_DIR/$target" >> "$tmp_list"
         done
 
-        # 圧縮
-        if ! tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$TMP_LIST"; then
-            rm -f "$TMP_LIST"
-            echo "Error: Archive creation failed."
+        if ! tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$tmp_list"; then
+            echo "Error: Archive creation failed." >&2
             exit 1
         fi
-        rm -f "$TMP_LIST"
         echo "Package directory archived as $PACKAGE_ARCHIVE"
-    else
-        echo "Error: Package directory does not exist. Skipping archive."
-        exit 1
-    fi
+    )
 }
 
 ##### パッケージディレクトリの展開 #####

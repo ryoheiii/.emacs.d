@@ -642,6 +642,22 @@ else
     record_fail "missing emacs aborts before touching packages (exit=$EXTRACT_RC, marker=$(pkg_marker))"
 fi
 
+# 11b. tar が失敗しても一時ファイルを残さない
+build_pkg_tree new
+rm -f "$PKG_ARCHIVE"
+PKG_TAR_STUB="$(harness_mktemp)"
+make_stub_bin "$PKG_TAR_STUB" tar
+PKG_TMPDIR="$(harness_mktemp)"
+TMP_BEFORE="$(find "$PKG_TMPDIR" -type f | wc -l)"
+PATH="$PKG_TAR_STUB:$PATH" TMPDIR="$PKG_TMPDIR" STUB_EXIT_TAR=1 \
+    "$SCRIPT" --packing-package >/dev/null 2>&1
+TMP_AFTER="$(find "$PKG_TMPDIR" -type f | wc -l)"
+if [ "$TMP_BEFORE" -eq "$TMP_AFTER" ]; then
+    record_pass "packing leaves no temp file when tar fails"
+else
+    record_fail "packing leaves no temp file when tar fails ($TMP_BEFORE -> $TMP_AFTER)"
+fi
+
 # 11. pack は PACKAGE_TARGET が欠けていたら作らない
 build_pkg_tree new
 rm -f "$PKG_LIVE/versions/default.el"
