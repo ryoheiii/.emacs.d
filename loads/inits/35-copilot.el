@@ -150,10 +150,28 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
 
 (when (my/copilot-available-p)
 
+  ;; copilot / copilot-chat の依存解決は、組み込みで足りるパッケージでも
+  ;; レシピリポジトリに存在すればそちらを優先してクローンする
+  ;; (straight--convert-recipe が built-in へ落ちるのはレシピが見つからないときだけ)。
+  ;; その結果 straight の build が組み込み版を load-path 上で覆い隠し、
+  ;; 24-org.el の `:straight nil' や eglot が使う jsonrpc の前提が崩れる。
+  ;; Emacs 30.2 の組み込み版が要件を満たすものだけ built-in へ固定する。
+  ;;   org      9.7.11 >= 9.4.6  (copilot-chat の要件)
+  ;;   jsonrpc  1.0.25 >= 1.0.14 (copilot の要件)
+  ;; track-changes (1.2 < 1.4) と transient (0.7.2.2 < 0.8.3) は組み込みでは
+  ;; 要件を満たさないため対象にしない。
+  (dolist (pkg '(org jsonrpc))
+    (straight-override-recipe (list pkg :type 'built-in)))
+
   ;;;;; [Group] Copilot - インライン補完 ;;;;;
   ;;; Copilot - GitHub Copilot によるインライン補完
+  ;; copilot.el リポジトリは独自の copilot-chat.el を同梱しており、そのまま
+  ;; ビルドすると chep/copilot-chat.el と同名 feature (copilot-chat) が二重になる。
+  ;; どちらがロードされるかは load-path 順に依存し、非互換な実装が選ばれ得るため
+  ;; 同梱版を recipe から除外する（Chat は chep 版に一本化する）。
   (use-package copilot
-    :straight (:host github :repo "copilot-emacs/copilot.el" :files ("*.el"))
+    :straight (:host github :repo "copilot-emacs/copilot.el"
+                     :files ("*.el" (:exclude "copilot-chat.el")))
     :hook (prog-mode . my/copilot-maybe-enable)
     :bind (;; copilot-mode OFF 時もトグルできるようグローバルに配置
            ("C-c j m" . copilot-mode)                             ; モード ON/OFF
@@ -321,9 +339,6 @@ Always respond in Japanese.")
         "C-c J m" "set-model"
         "C-c J c" "cancel"
         "C-c J q" "reset"))
-
-    ;; org-mode は tab-width 8 を要求する（copilot-chat の org フロントエンド等で警告抑止）
-    (add-hook 'org-mode-hook (lambda () (setq tab-width 8)))
     )
   )
 
