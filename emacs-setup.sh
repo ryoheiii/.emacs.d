@@ -331,6 +331,9 @@ install_emacs() {
     local VERSION="$1"
     local GUI="${2:-gtk3}"  # GUIオプション、デフォルトは gtk3
     [ -z "$VERSION" ] && { echo "Error: No Emacs version specified." >&2; usage; }
+    # ダウンロードや展開より前に検証する。後段で弾くと、ソースツリーが残った状態で
+    # 失敗し、次回の正しい install まで「already installed」で拒否されてしまう。
+    validate_gui_toolkit "$GUI"
     [ -d "$EMACS_SRC_DIR" ] && { echo "Emacs is already installed. Run 'uninstall' first." >&2; exit 1; }
 
     echo "Installing Emacs $VERSION ..."
@@ -533,6 +536,31 @@ packing_package() {
     )
 }
 
+##### 展開の補助 #####
+# 宛先が既存ディレクトリのとき、その中へ移動せず失敗させる。
+# GNU mv の -T が使えるならそれを、無ければ事前確認で代替する。
+mv_replace() {
+    if mv --version >/dev/null 2>&1; then
+        mv -T "$1" "$2"
+    else
+        if [ -e "$2" ] || [ -L "$2" ]; then
+            return 1
+        fi
+        mv "$1" "$2"
+    fi
+}
+
+# 退避したツリーを元へ戻す。退避していなければ何もしない。
+extract_rollback() {
+    local backup="$1" live="$2" had_live="$3"
+    [ "$had_live" = yes ] || return 0
+    if mv_replace "$backup" "$live"; then
+        echo "       既存のパッケージを復元しました。" >&2
+    else
+        echo "       復元にも失敗しました。$backup を手動で $live へ戻してください。" >&2
+    fi
+}
+
 ##### パッケージディレクトリの展開 #####
 # 展開はトランザクションとして扱う。旧実装は既存ツリーを消してから展開しており、
 # アーカイブが壊れていると tar の失敗時点でパッケージツリーだけが失われ、
@@ -563,7 +591,8 @@ extract_package() {
         exit 1
     fi
 
-    if [ -e "$backup" ]; then
+    # 壊れた symlink は -e が偽になるため -L も見る。
+    if [ -e "$backup" ] || [ -L "$backup" ]; then
         echo "Error: $backup が残っています。前回の復元が完了していない可能性があります。" >&2
         echo "       内容を確認し、手動で退避または削除してから再実行してください。" >&2
         exit 1
@@ -595,23 +624,28 @@ extract_package() {
     done
 
     ##### フェーズ B: 入れ替え #####
-    if [ -e "$live" ]; then
+    if [ -e "$live" ] || [ -L "$live" ]; then
         had_live=yes
-        if ! mv "$live" "$backup"; then
+        if ! mv_replace "$live" "$backup"; then
             echo "Error: 既存パッケージの退避に失敗しました。既存のパッケージは変更していません。" >&2
             exit 1
         fi
     fi
 
-    if ! mv "$staged" "$live"; then
+    if ! mv_replace "$staged" "$live"; then
         echo "Error: パッケージの配置に失敗しました。" >&2
-        if [ "$had_live" = yes ]; then
-            if mv "$backup" "$live"; then
-                echo "       既存のパッケージを復元しました。" >&2
-            else
-                echo "       復元にも失敗しました。$backup を手動で $live へ戻してください。" >&2
-            fi
-        fi
+        extract_rollback "$backup" "$live" "$had_live"
+        exit 1
+    fi
+
+    # mv は宛先が既存ディレクトリだとその中へ移動する。退避後に別プロセスが
+    # $live を作り直していると入れ子になったまま「成功」してしまい、
+    # 最後に .bak（元ツリー）を消してデータを失う。配置結果を検査する。
+    if [ -e "$live/$PACKAGE_DIR" ]; then
+        echo "Error: 配置結果が入れ子になっています（$live/$PACKAGE_DIR）。" >&2
+        echo "       別プロセスが同時に $live を操作した可能性があります。" >&2
+        rm -rf "${live:?}/${PACKAGE_DIR:?}"
+        extract_rollback "$backup" "$live" "$had_live"
         exit 1
     fi
     echo "Package directory extracted to $live"

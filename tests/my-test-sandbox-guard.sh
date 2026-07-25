@@ -20,11 +20,13 @@ my_test_guard__reject() {
 # 現在のユーザーの登録済みホームディレクトリを stdout へ出す。
 # 取得できなければ何も出さずに非ゼロを返す。
 my_test_guard__real_home() {
-    local uid uname_ passwd_line home_dir
+    local uid uname_ passwd_line dscl_out home_dir
 
     uid="$(id -u 2>/dev/null)" || return 1
     [ -n "$uid" ] || return 1
 
+    # 取得と解析は必ず分ける。パイプで繋ぐと pipefail の無い呼び出し元では
+    # 前段が非ゼロ終了しても後段の成功で全体が成功扱いになる。
     if command -v getent >/dev/null 2>&1; then
         passwd_line="$(getent passwd "$uid" 2>/dev/null)" || return 1
         [ -n "$passwd_line" ] || return 1
@@ -33,8 +35,9 @@ my_test_guard__real_home() {
         # macOS には getent が無い。出力は "NFSHomeDirectory: /Users/foo" 形式。
         uname_="$(id -un 2>/dev/null)" || return 1
         [ -n "$uname_" ] || return 1
-        home_dir="$(dscl . -read "/Users/$uname_" NFSHomeDirectory 2>/dev/null \
-            | awk '/^NFSHomeDirectory:/ {print $2}')" || return 1
+        dscl_out="$(dscl . -read "/Users/$uname_" NFSHomeDirectory 2>/dev/null)" || return 1
+        [ -n "$dscl_out" ] || return 1
+        home_dir="$(printf '%s\n' "$dscl_out" | awk '/^NFSHomeDirectory:/ {print $2}')" || return 1
     else
         return 1
     fi
@@ -55,7 +58,7 @@ my_test_guard__realpath() {
 # マーカーと実ホーム判定は独立した AND 条件であり、
 # マーカーを立てても実ホーム上での実行は許可しない。
 require_test_sandbox() {
-    local real_home home_real real_home_real emacsd_real
+    local real_home home_real real_home_real sub sub_real
 
     if [ "${EMACS_SETUP_TEST_SANDBOX:-}" != "1" ]; then
         my_test_guard__reject \
@@ -90,21 +93,25 @@ require_test_sandbox() {
         return 1
     fi
 
-    # サンドボックス内の .emacs.d が実ホーム配下を指していると、
+    # サンドボックス内のディレクトリが実ホーム配下を指していると、
     # HOME 差し替えを迂回して実データへ到達してしまう。
-    if [ -e "$HOME/.emacs.d" ]; then
-        if ! emacsd_real="$(my_test_guard__realpath "$HOME/.emacs.d")"; then
-            my_test_guard__reject "$HOME/.emacs.d を正規化できません。"
-            return 1
-        fi
-        case "$emacsd_real" in
-            "$real_home_real"|"$real_home_real"/*)
-                my_test_guard__reject \
-                    "$HOME/.emacs.d が実ホーム配下 ($emacsd_real) を指しています。"
+    # テストは .emacs.d だけでなく .local（$EMACS_INSTALL_PREFIX の親）も削除するため、
+    # 両方を検査する。
+    for sub in .emacs.d .local; do
+        if [ -e "$HOME/$sub" ] || [ -L "$HOME/$sub" ]; then
+            if ! sub_real="$(my_test_guard__realpath "$HOME/$sub")"; then
+                my_test_guard__reject "$HOME/$sub を正規化できません。"
                 return 1
-                ;;
-        esac
-    fi
+            fi
+            case "$sub_real" in
+                "$real_home_real"|"$real_home_real"/*)
+                    my_test_guard__reject \
+                        "$HOME/$sub が実ホーム配下 ($sub_real) を指しています。"
+                    return 1
+                    ;;
+            esac
+        fi
+    done
 
     return 0
 }

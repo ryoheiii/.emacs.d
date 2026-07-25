@@ -20,21 +20,33 @@ FAIL=0
 
 #### テスト基盤 ####
 
-# 一時ディレクトリをまとめて後始末する。
-HARNESS_TMPDIRS=()
-harness_cleanup() {
-    local dir
-    for dir in "${HARNESS_TMPDIRS[@]:-}"; do
-        [ -n "$dir" ] && [ -d "$dir" ] && rm -rf "$dir"
-    done
+# スタブ生成の失敗を握り潰すと PATH が実コマンドへフォールバックし、
+# 本物の sudo / apt-get / wget を起動しかねない。失敗したら即座に中止する。
+harness_fatal() {
+    printf 'FATAL: %s\n' "$1" >&2
+    exit 1
 }
-trap harness_cleanup EXIT
+
+# 一時ディレクトリは単一のルート配下へ作り、EXIT トラップでまとめて消す。
+# 配列に貯める方式は使えない。呼び出しがすべて $(harness_mktemp) という
+# コマンド置換（サブシェル）の中で行われるため、親シェルの配列へ反映されない。
+HARNESS_ROOT="$(mktemp -d)" || harness_fatal "一時ディレクトリを作成できません。"
+trap 'rm -rf "$HARNESS_ROOT"' EXIT
 
 harness_mktemp() {
     local dir
-    dir="$(mktemp -d)" || return 1
-    HARNESS_TMPDIRS+=("$dir")
+    dir="$(mktemp -d "$HARNESS_ROOT/h-XXXXXX")" || return 1
     printf '%s\n' "$dir"
+}
+
+# スタブが実際に生成され実行可能であることを確認する。
+assert_stubs_executable() {
+    local dir="$1"; shift
+    local cmd
+    for cmd in "$@"; do
+        [ -x "$dir/$cmd" ] \
+            || harness_fatal "スタブ $dir/$cmd を作成できませんでした。実コマンドへフォールバックする危険があるため中止します。"
+    done
 }
 
 # make_stub_bin <dir> <cmd>...
@@ -53,6 +65,7 @@ exit "\${STUB_EXIT_$upper:-0}"
 STUB
         chmod +x "$dir/$cmd" || return 1
     done
+    assert_stubs_executable "$dir" "$@"
 }
 
 # make_isolated_bin <dir> <name>...
@@ -66,6 +79,12 @@ make_isolated_bin() {
         src="$(command -v "$name" 2>/dev/null)" || continue
         ln -sf "$src" "$dir/$name" || return 1
     done
+}
+
+# make_isolated_bin で必須のコマンドが揃ったことを確認する。
+assert_isolated_bin() {
+    local dir="$1"; shift
+    assert_stubs_executable "$dir" "$@"
 }
 
 # make_fake_home <dir> — 使い捨ての HOME を組み立てる。
@@ -167,12 +186,14 @@ cat > "$GUARD_BIN_DSCL/dscl" <<DSCL
 printf 'NFSHomeDirectory: %s\n' "$GUARD_REAL_HOME"
 DSCL
 chmod +x "$GUARD_BIN_DSCL/dscl"
+assert_stubs_executable "$GUARD_BIN_DSCL" dscl bash id cut awk
 assert_guard "guard falls back to dscl when getent is absent" 0 "$GUARD_BIN_DSCL" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SANDBOX"
 
 # 5. getent も dscl も不在 → 拒否（fail-closed）
 GUARD_BIN_NONE="$(harness_mktemp)"
 make_isolated_bin "$GUARD_BIN_NONE" bash id cut awk
+assert_isolated_bin "$GUARD_BIN_NONE" bash id cut awk
 assert_guard "guard rejects when home lookup is unavailable" 1 "$GUARD_BIN_NONE" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SANDBOX"
 
@@ -273,6 +294,7 @@ fi
 exit 0
 WGETSTUB
     chmod +x "$dir/wget" || return 1
+    assert_stubs_executable "$dir" wget
 }
 
 # --install は download の後に tar/configure/make へ進んで失敗する。
@@ -566,13 +588,17 @@ prepare_archive_and_old_tree
 PKG_MV_STUB="$(harness_mktemp)"
 cat > "$PKG_MV_STUB/mv" <<'MVSTUB'
 #!/bin/bash
-if printf '%s' "$1" | grep -q '\.extract-'; then
-    exit 1
-fi
+# 全引数を走査する。mv_replace は -T を前置するため $1 だけを見ると判定が外れる。
+for a in "$@"; do
+    if printf '%s' "$a" | grep -q '\.extract-'; then
+        exit 1
+    fi
+done
 exec /bin/mv "$@"
 MVSTUB
 chmod +x "$PKG_MV_STUB/mv"
 cp "$PKG_STUB/emacs" "$PKG_MV_STUB/emacs"
+assert_stubs_executable "$PKG_MV_STUB" mv emacs
 PATH="$PKG_MV_STUB:$PATH" "$SCRIPT" --extract-package >/dev/null 2>&1
 EXTRACT_RC=$?
 pkg_problems=""
@@ -633,7 +659,8 @@ rm -rf "$PKG_BAK"
 # 10. emacs 不在 → 既存ツリーを消す前に中止
 prepare_archive_and_old_tree
 PKG_NO_EMACS="$(harness_mktemp)"
-make_isolated_bin "$PKG_NO_EMACS" bash tar mktemp mkdir rm mv command grep basename dirname
+make_isolated_bin "$PKG_NO_EMACS" bash tar mktemp mkdir rm mv grep basename dirname
+assert_isolated_bin "$PKG_NO_EMACS" bash tar mktemp mv
 PATH="$PKG_NO_EMACS" "$SCRIPT" --extract-package >/dev/null 2>&1
 EXTRACT_RC=$?
 if [ "$EXTRACT_RC" -ne 0 ] && [ "$(pkg_marker)" = old ]; then
@@ -705,6 +732,7 @@ esac
 APTCACHE
     fi
     chmod +x "$dir/apt-cache"
+    assert_stubs_executable "$dir" sudo apt-get gcc apt-cache
 }
 
 # libgccjit あり: 正しい cairo パッケージが渡り、誤記のものは渡らない
@@ -775,6 +803,22 @@ fi
 assert_exit "setup rejects a missing gui value" 1 --setup --gui
 assert_exit "setup rejects an invalid gui value" 1 --setup --gui bogus
 assert_exit "setup rejects unknown options" 1 --setup --unknown
+
+# 不正な GUI 値は副作用より前に弾く。後段で弾くとソースツリーが残り、
+# 次回の正しい install まで「already installed」で拒否されてしまう。
+GUI_EARLY_STUB="$(harness_mktemp)"
+make_wget_stub "$GUI_EARLY_STUB"
+rm -rf "$HOME/.local"
+PATH="$GUI_EARLY_STUB:$PATH" "$SCRIPT" --install 30.2 --gui bogus >/dev/null 2>&1
+gui_early_problems=""
+[ -s "$GUI_EARLY_STUB/calls.log" ] && gui_early_problems="$gui_early_problems wget呼び出し"
+[ -d "$HOME/.local/downloads/emacs" ] && gui_early_problems="$gui_early_problems ソースツリー残存"
+if [ -z "$gui_early_problems" ]; then
+    record_pass "invalid install gui value is rejected before any side effect"
+else
+    record_fail "invalid install gui value is rejected before any side effect —$gui_early_problems"
+fi
+rm -rf "$HOME/.local"
 
 echo ""
 echo "=== 基本オプション ==="
@@ -871,6 +915,7 @@ fi
 exit 0
 MAKESTUB
     chmod +x "$dir/tar" "$dir/make"
+    assert_stubs_executable "$dir" wget tar make
 }
 
 assert_install_verify() {
@@ -910,6 +955,7 @@ cat > "$MACOS_STUB/uname" <<'UNAMESTUB'
 printf 'Darwin\n'
 UNAMESTUB
 chmod +x "$MACOS_STUB/uname"
+assert_stubs_executable "$MACOS_STUB" uname
 
 macos_problems=""
 PATH="$MACOS_STUB:$PATH" "$SCRIPT" --setup >/dev/null 2>&1 \
