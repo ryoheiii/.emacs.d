@@ -325,6 +325,67 @@ else
 fi
 rm -rf "$HOME/.local/downloads"
 
+# 原子性: .part を経由し、失敗時も残骸を残さない
+DL_DIR_PATH="$HOME/.local/downloads"
+
+assert_no_part_left() {
+    local desc="$1" fail_pattern="$2" expect_tarball="$3"
+    local stub_dir problems=""
+    stub_dir="$(harness_mktemp)"
+    make_wget_stub "$stub_dir"
+    rm -rf "$DL_DIR_PATH"
+    PATH="$stub_dir:$PATH" WGET_FAIL_PATTERN="$fail_pattern" \
+        "$SCRIPT" --install 30.2 >/dev/null 2>&1
+    if compgen -G "$DL_DIR_PATH/*.part" >/dev/null 2>&1; then
+        problems="$problems .part残存"
+    fi
+    if [ "$expect_tarball" = yes ]; then
+        [ -f "$DL_DIR_PATH/emacs-30.2.tar.gz" ] || problems="$problems 本体未確定"
+    else
+        [ -f "$DL_DIR_PATH/emacs-30.2.tar.gz" ] && problems="$problems 本体が誤って確定"
+    fi
+    if [ -z "$problems" ]; then
+        record_pass "$desc"
+    else
+        record_fail "$desc — $problems"
+    fi
+    rm -rf "$DL_DIR_PATH"
+}
+
+assert_no_part_left "download leaves no .part on success" "" yes
+assert_no_part_left "download cleans .part when all sources fail" "." no
+
+# 壊れた .part が残っていても再利用されない
+DL_STALE_STUB="$(harness_mktemp)"
+make_wget_stub "$DL_STALE_STUB"
+rm -rf "$DL_DIR_PATH"
+mkdir -p "$DL_DIR_PATH"
+printf 'CORRUPT' > "$DL_DIR_PATH/emacs-30.2.tar.gz.part"
+PATH="$DL_STALE_STUB:$PATH" "$SCRIPT" --install 30.2 >/dev/null 2>&1
+if [ -f "$DL_DIR_PATH/emacs-30.2.tar.gz" ] \
+    && ! grep -q CORRUPT "$DL_DIR_PATH/emacs-30.2.tar.gz" 2>/dev/null; then
+    record_pass "download does not reuse a stale .part"
+else
+    record_fail "download does not reuse a stale .part"
+fi
+rm -rf "$DL_DIR_PATH"
+
+# mv の失敗は mv スタブで再現する。
+# 確定先を既存ディレクトリにする方法は使えない（mv はその中へ移動して成功する）。
+DL_MV_STUB="$(harness_mktemp)"
+make_wget_stub "$DL_MV_STUB"
+make_stub_bin "$DL_MV_STUB" mv
+rm -rf "$DL_DIR_PATH"
+DL_MV_ERR="$(PATH="$DL_MV_STUB:$PATH" STUB_EXIT_MV=1 \
+    "$SCRIPT" --install 30.2 2>&1 >/dev/null)"
+if echo "$DL_MV_ERR" | grep -q "確定に失敗" \
+    && ! compgen -G "$DL_DIR_PATH/*.part" >/dev/null 2>&1; then
+    record_pass "download cleans .part when mv fails"
+else
+    record_fail "download cleans .part when mv fails — $DL_MV_ERR"
+fi
+rm -rf "$DL_DIR_PATH"
+
 echo ""
 echo "=== --uninstall の契約 ==="
 

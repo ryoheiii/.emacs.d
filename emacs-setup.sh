@@ -205,24 +205,37 @@ list_emacs_versions() {
 ##### tarball の取得 #####
 # ミラーで失敗したら upstream へ 1 回だけフォールバックする。
 # 404 は「そのホストに存在しない」ことを意味するため同一ホストへは再試行しない。
+#
+# ダウンロードは .part へ書いてから mv で確定させる。中断すると途中まで
+# 書かれたファイルが残り、次回以降の [ -f "$tar_file" ] がそれを完全な
+# アーカイブとみなして展開に失敗し続けるため。
+#
+# wget と mv はいずれも if で明示的に分岐させる。A && B 形式にすると
+# A の失敗が errexit の免除対象になり、失敗が素通りしてしまう。
 download_emacs_tarball() {
     local tar_file="$1"
+    local part="$tar_file.part"
 
     if [ -f "$tar_file" ]; then
         return 0
     fi
 
-    if wget --timeout=30 --tries=2 "$EMACS_SETUP_MIRROR_URL/$tar_file"; then
-        return 0
+    rm -f "$part"
+    if ! wget --timeout=30 --tries=2 -O "$part" "$EMACS_SETUP_MIRROR_URL/$tar_file"; then
+        echo "Warning: ミラーからの取得に失敗しました。upstream へフォールバックします。" >&2
+        rm -f "$part"
+        if ! wget --timeout=30 --tries=2 -O "$part" "$EMACS_SETUP_UPSTREAM_URL/$tar_file"; then
+            rm -f "$part"
+            echo "Error: ダウンロードに失敗しました（ミラー・upstream 共に失敗）。" >&2
+            exit 1
+        fi
     fi
 
-    echo "Warning: ミラーからの取得に失敗しました。upstream へフォールバックします。" >&2
-    if wget --timeout=30 --tries=2 "$EMACS_SETUP_UPSTREAM_URL/$tar_file"; then
-        return 0
+    if ! mv "$part" "$tar_file"; then
+        rm -f "$part"
+        echo "Error: ダウンロード結果の確定に失敗しました。" >&2
+        exit 1
     fi
-
-    echo "Error: ダウンロードに失敗しました（ミラー・upstream 共に失敗）。" >&2
-    exit 1
 }
 
 ##### Emacs インストール #####
