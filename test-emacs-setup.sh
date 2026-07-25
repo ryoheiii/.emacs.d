@@ -187,6 +187,54 @@ assert_guard "guard rejects .emacs.d symlinked into real home" 1 "" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SYMLINKED"
 
 echo ""
+echo "=== --uninstall の契約 ==="
+
+# ダミーのソースツリーと prefix 成果物を用意し、make uninstall の成否ごとに
+# 終了コード・ソースツリーの消滅・prefix の残存物を検査する。
+setup_uninstall_fixture() {
+    local uninstall_rc="$1"
+    local src="$HOME/.local/downloads/emacs"
+    rm -rf "$HOME/.local"
+    mkdir -p "$src/info" "$HOME/.local/bin" "$HOME/.local/share/man/man1" \
+             "$HOME/.local/share/info"
+    printf 'uninstall:\n\t@exit %s\n' "$uninstall_rc" > "$src/Makefile"
+    : > "$src/info/emacs.info"
+    : > "$HOME/.local/bin/emacs"
+    : > "$HOME/.local/bin/emacs-30.2"
+    : > "$HOME/.local/bin/emacsclient"
+    : > "$HOME/.local/bin/etags"
+    : > "$HOME/.local/share/man/man1/emacsclient.1.gz"
+    : > "$HOME/.local/share/info/emacs.info"
+}
+
+assert_uninstall() {
+    local desc="$1" uninstall_rc="$2" expected_exit="$3" expect_binaries_gone="$4"
+    setup_uninstall_fixture "$uninstall_rc"
+    "$SCRIPT" --uninstall >/dev/null 2>&1
+    local actual=$?
+    local problems=""
+    [ "$actual" -eq "$expected_exit" ] || problems="exit=$actual(期待 $expected_exit)"
+    [ -d "$HOME/.local/downloads/emacs" ] && problems="$problems src残存"
+    if [ "$expect_binaries_gone" = yes ]; then
+        [ -e "$HOME/.local/bin/emacsclient" ] && problems="$problems emacsclient残存"
+        [ -e "$HOME/.local/bin/emacs-30.2" ] && problems="$problems versioned残存"
+        [ -e "$HOME/.local/share/man/man1/emacsclient.1.gz" ] && problems="$problems man残存"
+        [ -e "$HOME/.local/share/info/emacs.info" ] && problems="$problems info残存"
+    fi
+    if [ -z "$problems" ]; then
+        record_pass "$desc"
+    else
+        record_fail "$desc — $problems"
+    fi
+}
+
+# 成功時: 終了コード 0、ソースツリーは消える
+assert_uninstall "uninstall succeeds and removes source tree" 0 0 no
+# 失敗時: フォールバック削除が走り、ソースツリーも消え、終了コードは非 0
+assert_uninstall "uninstall failure still clears source tree and reports" 1 1 yes
+rm -rf "$HOME/.local"
+
+echo ""
 echo "=== 基本オプション ==="
 assert_exit "help returns 0"           0  --help
 assert_exit "no args returns 1"        1

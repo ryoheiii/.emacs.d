@@ -97,7 +97,7 @@ lint: | prepare-straight
 	@set -eu -o pipefail; \
 	mapfile -t sh_sources < <($(GIT) ls-files -- '*.sh'); \
 	test "$${#sh_sources[@]}" -gt 0; \
-	shellcheck "$${sh_sources[@]}"
+	shellcheck -x "$${sh_sources[@]}"
 	@set -eu -o pipefail; \
 	$(prepare_test_root) \
 	lint_dir="$$(mktemp -d)"; \

@@ -227,17 +227,55 @@ install_emacs() {
 }
 
 ##### Emacs アンインストール #####
+# make uninstall が失敗したときに削除する既知のインストール成果物。
+# ディレクトリ削除だけでは emacsclient / etags / ctags / ebrowse や
+# man・info が残るため、名前を列挙して掃除する。
+uninstall_fallback_cleanup() {
+    local prefix="$EMACS_INSTALL_PREFIX"
+    local name info_name
+
+    for name in emacs emacsclient etags ctags ebrowse; do
+        rm -f "$prefix/bin/$name"
+        rm -f "$prefix/share/man/man1/$name.1" "$prefix/share/man/man1/$name.1.gz"
+    done
+    # emacs-30.2 のようなバージョン付きバイナリ
+    rm -f "$prefix"/bin/emacs-[0-9]*
+
+    # info は他のソフトウェアの成果物と同居しうるため、
+    # ソースツリーが持つファイル名だけを対象にする。
+    if [ -d "$EMACS_SRC_DIR/info" ]; then
+        for info_name in "$EMACS_SRC_DIR"/info/*; do
+            [ -e "$info_name" ] || continue
+            info_name="$(basename "$info_name")"
+            rm -f "$prefix/share/info/$info_name" "$prefix/share/info/$info_name.gz"
+        done
+    fi
+}
+
 uninstall_emacs() {
     echo "Uninstalling Emacs..."
     [ ! -d "$EMACS_SRC_DIR" ] && { echo "No Emacs installation found."; exit 0; }
 
-    cd "$EMACS_SRC_DIR"
-    make uninstall
-    cd ..
-    rm -rf "$EMACS_SRC_DIR"
+    # make uninstall の失敗で処理を止めない。止めるとソースツリーが残り、
+    # install_emacs の [ -d "$EMACS_SRC_DIR" ] に阻まれて install も uninstall も
+    # 通らない状態になる。失敗は終了コードで伝える。
+    local rc=0
+    ( cd "$EMACS_SRC_DIR" && make uninstall ) || rc=$?
+
+    if [ "$rc" -ne 0 ]; then
+        echo "Warning: make uninstall が失敗しました (exit=$rc)。既知の成果物を削除します。" >&2
+        uninstall_fallback_cleanup
+    fi
 
     # make uninstall で削除されないディレクトリの手動削除
-    rm -rf "$EMACS_INSTALL_PREFIX"/{bin,share,libexec,lib,include}/emacs
+    rm -rf "${EMACS_INSTALL_PREFIX:?}"/{bin,share,libexec,lib,include}/emacs
+
+    rm -rf "${EMACS_SRC_DIR:?}"
+
+    if [ "$rc" -ne 0 ]; then
+        echo "Error: アンインストールは不完全な可能性があります。$EMACS_INSTALL_PREFIX 配下を手動で確認してください。" >&2
+        exit 1
+    fi
 
     echo "Emacs uninstallation complete."
 }
