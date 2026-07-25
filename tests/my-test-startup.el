@@ -30,7 +30,9 @@
 ;;;;; [Group] Startup - 起動時警告検査 ;;;;;
 ;; 許容項目を追加する場合は、テスト環境固有で警告を除去できない理由を直前に記載する。
 (defconst my-test-startup--warning-allowlist
-  '()
+  ;; Emacs 31(CI の snapshot)では corfu が corfu-terminal の不要を警告するが、
+  ;; 本設定のサポート対象は Emacs 30 系であり、31 系での宣言整理は別タスクで行う。
+  '((corfu . "`corfu-terminal' is not needed on Emacs 31"))
   "起動時に許容する警告の (TYPE . MESSAGE-REGEXP) リスト。")
 
 (defun my-test-startup--warning-allowed-p (warning)

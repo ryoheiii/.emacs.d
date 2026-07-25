@@ -39,7 +39,35 @@
     (should (featurep (car entry)))
     (should (default-value (cdr entry)))))
 
+;; GUI 限定宣言(:if (display-graphic-p))が tty で誤って有効化されないことの検査。
+;; :defer/:hook 遅延のためバッチでは検出できず、全タイマー発火後の実 tty でのみ
+;; ガード削除(例: 40d6d93 での pulsar ガード除去)を観測できる。
+;; nerd-icons は doom-modeline-core が無条件 require するため対象外(既知の例外)。
+(defconst my-test-tty-live--gui-only-features
+  '(pulsar
+    spacious-padding
+    nerd-icons-completion
+    nerd-icons-dired
+    nyan-mode
+    corfu-popupinfo)
+  "全タイマー発火後の tty セッションでロードされてはならない feature。")
+
+(ert-deftest my-test-tty-live-gui-only-features-not-loaded ()
+  :tags '(:tty-live)
+  (dolist (feature my-test-tty-live--gui-only-features)
+    (should-not (featurep feature))))
+
 ;;;;; [Group] TTY Live - モードライン ;;;;;
+;; doom-modeline-icon の :custom (display-graphic-p) は doom-modeline ロード後に
+;; 初めて値へ反映されるため、ロード済みの実 tty でのみ検証できる
+;; (バッチでは unbound のままで revert しても緑になることを実証済み)。
+;; tty でアイコンが有効だと Nerd Font グリフが幅計算を狂わせモードラインが崩れる
+;; (560da6d の回帰検出の本体)。
+(ert-deftest my-test-tty-live-doom-modeline-icon-disabled ()
+  :tags '(:tty-live)
+  (should (featurep 'doom-modeline))
+  (should-not (default-value 'doom-modeline-icon)))
+
 (defconst my-test-tty-live--total-lines-mode-line-entry
   '(:eval (when (bound-and-true-p total-lines)
             (format " (%d)" (- total-lines 1))))

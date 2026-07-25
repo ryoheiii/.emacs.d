@@ -1,9 +1,15 @@
 ;;; my-test-tty.el --- tty ロード条件の回帰テスト  -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; バッチ起動時の非 GUI 分岐と tty 向けロード条件を検証する。
-;; GUI 限定 feature の未ロード検査は、after-init 未発火の純ロード状態に限定する。
+;; GUI 限定 feature の未ロード検査は、after-init 未発火の純ロード状態に限定した
+;; eager 化(:demand 追加や無条件 require の混入)へのカナリアである。
+;; :if ガードの削除自体は :defer/:hook 遅延によりバッチでは観測できないため、
+;; その検出は実 pty で全タイマーを発火させる my-test-tty-live.el 側が担う。
+;; 同様に、遅延パッケージの :custom(doom-modeline-icon 等)は未ロードのバッチでは
+;; unbound のままで検査が空振りするため、値の検証も my-test-tty-live.el で行う
+;; (560da6d の revert 実証でバッチ側検査が緑のままになることを確認済み)。
 ;; nerd-icons は after-init 発火後に doom-modeline-core から無条件に require されるため、
-;; この検査を実 tty（将来の :tty-live）へ転用してはならない。
+;; 本ファイルの未ロード検査を実 tty(:tty-live)へそのまま転用してはならない。
 ;; pixel-scroll は組み込みで他経路からロードされ得るため、検査対象外とする。
 
 ;;; Code:
@@ -31,11 +37,6 @@
   :tags '(:tty)
   (dolist (feature my-test-tty--gui-only-features)
     (should-not (featurep feature))))
-
-;;;;; [Group] TTY - モードラインのアイコン ;;;;;
-(ert-deftest my-test-tty-doom-modeline-icon-disabled ()
-  :tags '(:tty)
-  (should-not (bound-and-true-p doom-modeline-icon)))
 
 ;;;;; [Group] TTY - xclip の遅延ロード ;;;;;
 (ert-deftest my-test-tty-xclip-deferred ()
