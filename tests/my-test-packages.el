@@ -30,6 +30,8 @@
     which-key
     doom-modeline
     multiple-cursors
+    copilot
+    copilot-chat
     ;; c-ts-mode.el はロード時に treesit-ready-p を呼び、文法不在の環境で
     ;; 起動時警告を出す。起動経路では絶対にロードしない。
     c-ts-mode)
@@ -60,6 +62,61 @@
     (should (boundp hook))
     (dolist (fn my-test-packages--ts-mode-hook-entries)
       (should (memq fn (default-value hook))))))
+
+;;;;; [Group] Packages - Copilot のロードゲート ;;;;;
+;; straight.el の use-package 統合は :straight を :if より先に処理する
+;; (use-package-keywords 上で :ensure/:straight は 2 番目、:if は 9 番目)。
+;; そのため :if で無効化しても straight-use-package は実行され、GitHub からの
+;; クローンが走る。Copilot を用意できない環境 (Node.js を入れられない、
+;; GitHub へ到達できない) を壊さないため、宣言はトップレベルへ置かず
+;; (when (my/copilot-available-p) ...) の内側へ入れなければならない。
+(defun my-test-packages--top-level-forms (file)
+  "FILE のトップレベルフォームをリストで返す。"
+  (with-temp-buffer
+    (insert-file-contents file)
+    (goto-char (point-min))
+    (let (forms)
+      (condition-case nil
+          (while t (push (read (current-buffer)) forms))
+        (end-of-file nil))
+      (nreverse forms))))
+
+(defun my-test-packages--use-package-forms (forms)
+  "FORMS のうち `use-package' 宣言だけを返す。"
+  (seq-filter (lambda (form) (eq (car-safe form) 'use-package)) forms))
+
+(ert-deftest my-test-packages-copilot-declarations-guarded ()
+  :tags '(:invariant)
+  (let* ((forms (my-test-packages--top-level-forms
+                 (my-set-loads "inits/35-copilot.el")))
+         (guard (seq-find (lambda (form)
+                            (and (eq (car-safe form) 'when)
+                                 (equal (cadr form) '(my/copilot-available-p))))
+                          forms)))
+    ;; トップレベルに use-package があると :if を迂回してクローンが走る
+    (should-not (my-test-packages--use-package-forms forms))
+    (should guard)
+    (should (my-test-packages--use-package-forms (cddr guard)))))
+
+(ert-deftest my-test-packages-copilot-available-p-contract ()
+  :tags '(:invariant)
+  (should (fboundp 'my/copilot-available-p))
+  (let ((my/copilot-enabled nil))
+    (should-not (my/copilot-available-p)))
+  (let ((my/copilot-enabled t))
+    (should (my/copilot-available-p)))
+  (let ((my/copilot-enabled 'auto))
+    (should (eq (and (executable-find "node") t)
+                (my/copilot-available-p)))))
+
+;; language server 未導入のまま copilot-mode を有効化すると
+;; copilot--start-server が user-error を送出し、prog-mode のバッファを
+;; 開くたびに失敗する。irony と同じくゲート関数を経由させる。
+(ert-deftest my-test-packages-copilot-mode-gated ()
+  :tags '(:invariant)
+  (skip-unless (my/copilot-available-p))
+  (should (memq 'my/copilot-maybe-enable (default-value 'prog-mode-hook)))
+  (should-not (memq 'copilot-mode (default-value 'prog-mode-hook))))
 
 ;;;;; [Group] Packages - 起動時ブロッキング ;;;;;
 ;; find-at-startup は loads/straight/repos 配下を同期走査するため、起動が
