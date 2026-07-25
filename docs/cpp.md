@@ -21,8 +21,22 @@
   フォントロックを失うためである。
 - ts モードのインデントは google-c-style 相当（offset 4、namespace 非インデント、
   アクセス指定子は半段、case は 1 段）へ揃えてある。
-- **既知の使用感差分**: `c-toggle-auto-hungry-state` 相当が ts モードには存在しないため、
-  自動改行と連続スペースの一括削除は ts モードでは効かない。
+- `c-toggle-auto-hungry-state` は ts モードに存在しないため、組み込み機能で再現している。
+  - 自動改行: `electric-layout-mode` で
+    `{` の後 / `}` の前後 / 文末の `;` の後 / アクセス指定子の `:` の後 に改行する。
+    行途中（後ろに空白以外が残る）と `(` の内側（`for` の区切り）では改行しない
+    （`c-hanging-semi&comma-criteria` 相当）。
+    `}` の次行が `;` / `else` / `while` / `catch` のとき、および `{}` が空のときは
+    1 行へ戻す（`c-cleanup-list` の `defun-close-semi` / `brace-else-brace` /
+    `brace-elseif-brace` / `brace-catch-brace` / `empty-defun-braces` 相当）。
+  - hungry delete: DEL を `backward-delete-char-untabify`（`'all`）へ差し替える。
+    コメント・文字列の中と前置引数付きでは cc-mode と同じ通常削除に戻る
+    （`kill-ring` は使わない）。リージョン選択中は選択範囲を削除する。
+  - 未再現: `c-cleanup-list` の `list-close-comma` / `scope-operator`、
+    ブレース初期化リストの `{` 前改行。
+- **既知の使用感差分**: 波括弧が 2 段以上開いている入力途中は tree-sitter が木全体を
+  `ERROR` に落とすため、インデントが概算になる（直前の行を基準にした近似で、
+  既定の桁 0 よりは近い）。構文が揃えば cc-mode + google-c-style と完全に一致する。
 
 文法の導入は `M-x my/treesit-install-c-grammars`（`git` と C コンパイラが必要）。
 導入先は `var/package/tree-sitter/` で、`~/.emacs.d/tree-sitter/` は使わない。
