@@ -40,7 +40,6 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 | `(my-set-emacs "subdir/")` | `~/.emacs.d/subdir/` |
 | `(my-set-loads "subdir/")` | `~/.emacs.d/loads/subdir/` |
 | `(my-set-straight "subdir/")` | `~/.emacs.d/loads/straight/subdir/` |
-| `(my-set-elisp "subdir/")` | `~/.emacs.d/loads/elisp/subdir/`（基底ディレクトリは現状存在しない） |
 | `(my-set-custom "subdir/")` | `~/.emacs.d/custom/subdir/` |
 | `(my-set-history "filename")` | `~/.emacs.d/var/hist/filename` |
 | `(my-set-backup "filename")` | `~/.emacs.d/var/backup/filename` |

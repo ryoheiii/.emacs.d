@@ -20,8 +20,6 @@
                    ("nested/" "multiple.el") "var/backup/nested/multiple.el")
     (my-set-db "var/database/" ("single.el") "var/database/single.el"
                ("nested/" "multiple.el") "var/database/nested/multiple.el")
-    (my-set-elisp "loads/elisp/" ("single.el") "loads/elisp/single.el"
-                  ("nested/" "multiple.el") "loads/elisp/nested/multiple.el")
     (my-set-straight "loads/straight/" ("single.el") "loads/straight/single.el"
                      ("nested/" "multiple.el") "loads/straight/nested/multiple.el")
     (my-set-package "var/package/" ("single.el") "var/package/single.el"
