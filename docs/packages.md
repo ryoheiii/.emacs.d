@@ -57,7 +57,8 @@ lockfile は CI の `make straight-thaw` がリビジョンを固定するため
 ```
 
 `--extract-package` は既存の `loads/straight/` を削除してから展開し、
-続けて `--clean` 相当の後始末とリビルドを行う。
+`var/package/`（ネイティブコンパイルキャッシュ等）を消してリビルドする。
+`--clean` とは異なり、**`var/hist/` と `var/backup/` のユーザーデータは残す**。
 
 ## 手動リビルド
 

@@ -55,8 +55,7 @@
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-s` | `consult-line` | バッファ内をインクリメンタル検索 |
-| `C-S` | `my/consult-line-multi` | 全バッファ横断検索（1 文字から開始） |
+| `C-s` | `my/consult-line-multi` | 全バッファ横断検索（1 文字から開始）。下記の注意を参照 |
 | `C-.` | `consult-goto-line` | 指定行へ移動 |
 | `C-x g` | `my/consult-ripgrep-or-grep` | プロジェクト検索（`rg` があれば ripgrep。`.gitignore` を尊重） |
 | `C-c g` | `grep` | 生の `grep -nr`（ignore されたファイルも検索する） |
@@ -71,6 +70,17 @@
 | `C-c y` | `consult-yasnippet` | スニペットを一覧から挿入 |
 
 補完候補が出ている間（corfu）は `TAB` で確定、`C-n` / `C-p` で候補移動、`C-s` でスクロール。
+
+> **`C-s` / `C-S` の衝突**: `loads/inits/27-consult.el` は `C-s` に `consult-line`、
+> `C-S` に `my/consult-line-multi` を割り当てているが、Emacs では `C-S` は `C-s` と
+> 同一のキーイベントである（`(equal (kbd "C-s") (kbd "C-S"))` は `t`）。
+> `:bind` は後勝ちのため、**実際に `C-s` で起動するのは `my/consult-line-multi`**
+> であり、`consult-line` を呼ぶキーは存在しない。
+> バッファ内に絞った検索が必要なときは `M-x consult-line` を使う。
+> （[issue #10](https://github.com/ryoheiii/.emacs.d/issues/10)）
+
+Migemo はミニバッファ補完の絞り込み（Orderless の matching style）で有効になる。
+`C-x g` / `C-c g` は外部プロセスへ正規表現を渡すため Migemo は効かない。
 
 ## C/C++ タグナビゲーション
 
@@ -87,7 +97,15 @@
 | `C-t n` / `C-t C-n` | `xref-go-forward` | ジャンプ履歴を進む |
 
 C/C++ バッファでは `C-c c` が `compile` に割り当てられる。
-GTAGS の手動更新は C/C++ バッファで `M-x update-gtags`。
+
+GTAGS は初回だけ作成が必要である。`update-gtags` は `global -uv`（既存 DB の更新）
+しか行わないため、GTAGS が無い状態では何も作られない。
+
+| 状況 | 操作 |
+|---|---|
+| GTAGS 未作成 | C/C++ バッファで `M-x ggtags-create-tags`（またはシェルで `gtags`） |
+| 作成済み・全体を更新 | C/C++ バッファで `M-x update-gtags` |
+| 作成済み・保存時 | 自動更新（`ggtags-update-on-save`） |
 
 ## 複数カーソル（`C-q`）
 
@@ -166,7 +184,7 @@ Copilot が有効な環境でのみ有効になる。設定は [../README.md](..
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-c j m` | `copilot-mode` | Copilot の ON/OFF（グローバル。OFF 時も押せる） |
+| `C-c j m` | `copilot-mode` | Copilot の ON/OFF。キー自体はグローバルに置いてあり OFF 時も押せるが、`copilot-mode` はバッファローカルなので効果は押したバッファだけ |
 | `C-c j j` | `copilot-accept-completion` | 補完を確定 |
 | `C-c j w` | `copilot-accept-completion-by-word` | 単語単位で確定 |
 | `C-c j l` | `copilot-accept-completion-by-line` | 行単位で確定 |

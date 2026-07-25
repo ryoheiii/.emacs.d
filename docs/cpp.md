@@ -88,17 +88,25 @@
 `global` の結果は `consult-xref` → vertico で表示する。候補が 1 件なら直接ジャンプする。
 ggtags の xref バックエンド・プロセス管理は経由しない（最短パスで結果を得るため）。
 
-GTAGS はファイル保存時に更新される（`ggtags-update-on-save`）。
-全体を作り直すときは、C/C++ バッファで `M-x update-gtags`
-（`update-gtags` は ggtags のロード後に定義されるため、C/C++ バッファ以外からは呼べない）。
+GTAGS は初回だけ作成が必要である。`update-gtags` は `global -uv` を実行するだけで、
+GTAGS が無い状態では何も作られない（`global` が終了コード 3 で失敗する）。
+`ggtags-mode` の有効化も自動生成は行わない。
+
+| 状況 | 操作 |
+|---|---|
+| GTAGS 未作成 | C/C++ バッファで `M-x ggtags-create-tags`（またはシェルで `gtags`） |
+| 作成済み・全体を更新 | C/C++ バッファで `M-x update-gtags` |
+| 作成済み・保存時 | 自動更新（`ggtags-update-on-save`） |
+
+`update-gtags` は ggtags のロード後に定義されるため、C/C++ バッファ以外からは呼べない。
 
 ## 環境ごとの必要物
 
 | 段 | 必要なもの | 導入方法 |
 |---|---|---|
 | tree-sitter モード | `git`、C コンパイラ | `M-x my/treesit-install-c-grammars` |
-| eglot | `clangd`、CDB か `.clangd` | `./emacs-setup.sh --setup` で clang を導入。CDB はビルド系で生成する |
-| irony | `cmake`、libclang | `./emacs-setup.sh --setup` の後 `M-x irony-install-server` |
+| eglot | `clangd`、CDB か `.clangd` | **`clangd` は `--setup` に含まれない**（入るのは `clang` と `llvm`）。`sudo apt install clangd`。CDB はビルド系で生成する |
+| irony | `cmake`、libclang | `./emacs-setup.sh --setup` の後、上記の手順で `M-x irony-install-server` |
 | ggtags | GNU Global | `./emacs-setup.sh --setup`（`global` パッケージ） |
 
 ## テスト

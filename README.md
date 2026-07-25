@@ -26,10 +26,16 @@ cd ~/.emacs.d
 
 ./emacs-setup.sh --setup          # 依存パッケージを導入
 ./emacs-setup.sh --install 30.2   # Emacs をビルドして ~/.local へ導入
+
+# ~/.local/bin は PATH へ追加されない。シェル設定へ追記するか、フルパスで起動する
+export PATH="$HOME/.local/bin:$PATH"
 emacs -nw                         # 初回起動（straight が全パッケージを取得する）
 ```
 
 初回起動はパッケージの clone とビルドで数分かかる。2 回目以降は 2 秒程度で立ち上がる。
+
+`--install` は `~/.local` へ入れるだけで PATH を変更しない。追記しないと
+コマンドが見つからないか、既存の古い `/usr/bin/emacs` が起動する。
 
 すでに Emacs 30.x が入っているなら `--install` は不要。
 
@@ -95,6 +101,13 @@ TLS など GUI に依存しない依存は `--gui no` でも導入される。
 | irony サーバー（非 LSP 環境の補完） | `M-x load-library RET irony` の後に `M-x irony-install-server`（`cmake` と libclang が必要） | cape + ggtags へフォールバックする |
 | Nerd Font | `M-x nerd-icons-install-fonts` | GUI のアイコン表示のみ影響。tty では既定で無効 |
 | Migemo 辞書 | `--setup` の `cmigemo` に同梱。パスは `/usr/share/cmigemo/utf-8/migemo-dict` | ローマ字での日本語検索が無効になる |
+| clangd（C/C++ の LSP） | `sudo apt install clangd` | irony、無ければ cape + ggtags へフォールバックする |
+| ripgrep（`C-x g`） | `sudo apt install ripgrep` | `consult-grep` へフォールバックする |
+| Mozc（日本語入力） | `sudo apt install mozc-server emacs-mozc-bin` | 日本語入力が使えない |
+
+`--setup` は Emacs のビルド依存と、`clang` / `global` / `cmigemo` / `hunspell` /
+`aspell` / `cmake` / `pandoc` / Ricty Diminished フォントを導入する。
+上表の下 3 つ（`clangd` / `ripgrep` / Mozc）は**含まれない**ため、必要なら個別に入れる。
 
 #### GitHub Copilot を使う場合
 
@@ -137,9 +150,8 @@ which-key が候補を出す。
 
 | キー | 動作 |
 |---|---|
-| `C-s` | バッファ内検索（consult-line。Migemo があればローマ字で日本語も引ける） |
-| `C-S` | 全バッファ横断検索 |
-| `C-x g` | プロジェクト検索（ripgrep。`.gitignore` を尊重する） |
+| `C-s` | 全バッファ横断検索（Migemo があればローマ字で日本語も引ける） |
+| `C-x g` | プロジェクト検索（`rg` があれば ripgrep で `.gitignore` を尊重、無ければ `grep`） |
 | `C-c g` | 生の `grep -nr`（ignore されたファイルも対象） |
 | `C-x b` / `C-x C-r` | バッファ切り替え / 最近使ったファイル |
 | `C-.` | 指定行へジャンプ |
@@ -147,11 +159,22 @@ which-key が候補を出す。
 
 `C-h` は BackSpace に割り当てているので、ヘルプは `M-?` を使う。
 
+> **注意**: 設定は `C-s` を `consult-line`（バッファ内検索）、`C-S` を
+> `my/consult-line-multi`（横断検索）へ割り当てているが、Emacs では
+> `C-S` は `C-s` と同一のキーイベントである。後から評価される `C-S` の
+> 束縛が勝つため、**実際には `C-s` で横断検索が動き、バッファ内検索だけを
+> 呼ぶキーは無い**。バッファ内に絞りたい場合は `M-x consult-line`。
+> （[issue #10](https://github.com/ryoheiii/.emacs.d/issues/10)）
+
+`rg` は `--setup` では導入されない。ripgrep を使いたい場合は
+`sudo apt install ripgrep` を別途実行する。
+
 ### 3.2 補完
 
 - **ミニバッファ**は Vertico が縦に候補を出す。絞り込みは Orderless
   （スペース区切りで複数条件、Migemo によるローマ字検索対応）。
-- **バッファ内**は Corfu が 2 文字目から自動で出る。`TAB` で確定、`C-n` / `C-p` で候補移動。
+- **バッファ内**は Corfu が 1 文字目から自動で出る（`corfu-auto-prefix` の既定値は 2 だが、
+  Orderless 連携が Corfu バッファで 1 へ上書きする）。`TAB` で確定、`C-n` / `C-p` で候補移動。
   端末では corfu-terminal がポップアップを描画する。
 - 補完候補の供給元は状況で切り替わる（C/C++ は eglot → irony → cape の順）。
   詳細は [C/C++ の段階構成](docs/cpp.md)。
@@ -211,7 +234,16 @@ undo 履歴は Emacs を終了しても保持される（undo-fu-session）。
 Linux では Mozc、Windows では TR-IME を使う。
 `変換` キーで ON、`無変換` キーで OFF、`半角/全角` でトグルする。
 
-検索時は Migemo によりローマ字のまま日本語を引ける（`C-s`、`C-x g` など）。
+**Mozc は `--setup` に含まれない。** straight が導入するのは `mozc.el`（Emacs 側）だけで、
+変換エンジンと helper は別途必要になる。
+
+```sh
+sudo apt install mozc-server emacs-mozc-bin
+```
+
+検索の絞り込みでは Migemo によりローマ字のまま日本語を引ける
+（`C-s` や `M-x` などの補完で有効）。`C-x g` の ripgrep / grep は外部プロセスへ
+正規表現を渡すため Migemo は効かない。
 
 ### 3.8 Markdown / Org
 
@@ -230,7 +262,7 @@ Org は TODO を `TODO` / `IN-PROGRESS` / `WAITING` / `DONE` / `CANCELLED` の
 | キー | 動作 |
 |---|---|
 | `C-c j j` | 表示中の補完を確定 |
-| `C-c j m` | Copilot の ON/OFF（このセッションのみ） |
+| `C-c j m` | Copilot の ON/OFF（`copilot-mode` はバッファローカル。押したバッファだけ切り替わる） |
 | `C-c J J` | Chat を開く |
 | `C-c J e` | 選択範囲を説明させる |
 
@@ -341,8 +373,8 @@ make test-startup  # 起動だけを素早く確認
 | パッケージが壊れた | `M-x straight-rebuild-all`。直らなければ `./emacs-setup.sh --clean-all` で再構築する |
 | Emacs 外でパッケージを書き換えた後、古いビルドのままになる | `M-x straight-check-all`（[docs/packages.md](docs/packages.md) の変更検出の方式を参照） |
 | Copilot がつながらない | `M-x copilot-diagnose`。`node` が PATH にあるか、`M-x copilot-login` 済みかを確認する |
-| C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd` の導入を確認する。無い環境では `M-x irony-install-server` |
-| 定義ジャンプが見つからない | `M-x update-gtags` で GTAGS を作り直す |
+| C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd` の導入を確認する（`clangd` は `--setup` に含まれない。`sudo apt install clangd`） |
+| 定義ジャンプが見つからない | GTAGS が未作成なら C/C++ バッファで `M-x ggtags-create-tags`。作成済みなら `M-x update-gtags` で更新する |
 | `make lint` が失敗する | shellcheck を導入する（`sudo apt install shellcheck`） |
 
 ---
