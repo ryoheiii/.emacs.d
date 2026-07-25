@@ -215,6 +215,12 @@ test:
 # thaw 中の対話プロンプト（例: straight.el 自身のブランチ正規化確認）は
 # batch では表示できず error になるため、「c: この repo の処理をキャンセルして
 # 先へ進む」を自動応答する。スキップ内容はログの message で確認できる。
+# thaw 後に straight-check-all を続ける理由: straight-vc-git-check-out-commit は
+# チェックアウト成功時 (cl-return) に straight-register-repo-modification を通らず、
+# 変更が記録されない。early-init.el で find-at-startup を外しているため、
+# 部分キャッシュ復元時に古い .elc とチェックアウト後のソースが食い違う。
+# straight-check-all は find-when-checking 経路 (only-once に影響されない) で
+# 変更を検出して必要な分だけリビルドする。
 straight-thaw: | prepare-straight
 	@set -eu; \
 	test "$${CI:-}" = "true"; \
@@ -228,7 +234,8 @@ straight-thaw: | prepare-straight
 			(lambda (prompt actions) \
 			  (message \"thaw prompt を自動キャンセル: %s\" prompt) \
 			  (funcall (nth 2 (assoc \"c\" actions)))))" \
-		-f straight-thaw-versions
+		-f straight-thaw-versions \
+		-f straight-check-all
 
 clean-test:
 	@find "$(TESTS_DIR)" -type f -name '*.elc' -delete

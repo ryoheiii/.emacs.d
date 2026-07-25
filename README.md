@@ -155,14 +155,19 @@ straight.el による Git ベースのパッケージ管理。`use-package` と 
 `(check-on-save find-when-checking only-once)` に設定している。既定の `find-at-startup` は
 毎起動で `loads/straight/repos` 配下を `find(1)` で全走査するため、これを外している。
 
-Emacs 内で完結する操作（ファイル保存、`M-x straight-pull-all`、`M-x straight-freeze-versions`、
-`M-x straight-thaw-versions`）は変更が自動記録されるため、通常の運用に影響はない。
+変更が自動記録されるのは次の場合で、通常の編集と更新はこれで足りる。
 
-一方、**Emacs の外**からパッケージを書き換えた場合は自動検出されない。次のときは
-`M-x straight-check-all` を実行してから利用する。
+- Emacs でパッケージのファイルを保存した（`before-save-hook`）
+- `M-x straight-pull-all` / `M-x straight-pull-package` で実際にマージが発生した
 
+一方、次の場合は**自動検出されない**。`M-x straight-check-all` を実行してから利用する。
+
+- `M-x straight-thaw-versions` でリビジョンを戻した
+  （`straight-vc-git-check-out-commit` はチェックアウト成功時に変更記録を通らない）
 - シェルから `loads/straight/repos/` 配下を直接 `git` 操作した
 - `./emacs-setup.sh --extract-package` でアーカイブを展開した
+
+CI の `make straight-thaw` は、この理由からターゲット内で `straight-check-all` まで実行する。
 
 ``` sh
 # パッケージのアーカイブ（バックアップ）
