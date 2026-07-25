@@ -143,6 +143,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `(my-set-custom "sub/")` | `~/.emacs.d/custom/sub/` |
 | `(my-set-history "file")` | `~/.emacs.d/var/hist/file` |
 | `(my-set-backup "file")` | `~/.emacs.d/var/backup/file` |
+| `(my-set-package "file")` | `~/.emacs.d/var/package/file` |
 | `(my-set-db "file")` | `~/.emacs.d/var/database/file` |
 
 ---
@@ -278,7 +279,7 @@ snapshot のカナリアレーンを実行する。snapshot の失敗は non-blo
 - **`NN-name.el`**: 2 桁の数字プレフィックスで読み込み順を制御（`00` が最初、`99` が最後）
 - **環境プレフィックス**: プラットフォーム固有設定用
   - `linux-`, `windows-`, `nw-`（ターミナル）, `cocoa-emacs-`
-  - 例: `linux-clipboard.el`
+  - 現在このプレフィックスを使うファイルは無い。新規に分離する場合に用いる
 - **外部パッケージは 20〜34 番台に記述**
 
 ---
