@@ -13,6 +13,11 @@ disable-model-invocation: true
 | 文書 | 真実源 |
 |---|---|
 | `README.md` | `early-init.el` / `init.el` / `loads/inits/` の実ファイル / `Makefile` / `emacs-setup.sh` |
+| `docs/architecture.md` | 起動シーケンス実装・実ディレクトリ構成・`loads/inits/` の実ファイル・パスヘルパー定義 |
+| `docs/keybindings.md` | `loads/inits/*.el` と `loads/site-elisp/my-*.el` の実バインド定義 |
+| `docs/cpp.md` | `18-built-in-package.el` / `19-language-modes.el` / `31-editing.el` / `my-gtags.el` |
+| `docs/packages.md` | `early-init.el` の straight 設定 / `emacs-setup.sh` / `loads/straight/versions/default.el` |
+| `docs/testing.md` | `Makefile` のターゲット定義 / `tests/` の実ファイル / `.github/workflows/` |
 | `AGENTS.md` | 実在ファイル・実在コマンド・`.claude/rules/*.md` |
 | `.claude/rules/codebase-map.md` | 起動シーケンス実装・実ディレクトリ構成・パスヘルパー定義 |
 | `.claude/rules/verification.md` | `Makefile` のターゲット定義 |
