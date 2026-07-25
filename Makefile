@@ -208,7 +208,7 @@ test-setup:
 	test_home="$$(mktemp -d)"; \
 	test -n "$$test_home"; \
 	trap 'find "$$test_home" -depth -delete' EXIT; \
-	HOME="$$test_home" ./test-emacs-setup.sh
+	EMACS_SETUP_TEST_SANDBOX=1 HOME="$$test_home" ./test-emacs-setup.sh
 
 test:
 	+@$(MAKE) lint
