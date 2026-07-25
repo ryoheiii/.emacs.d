@@ -86,10 +86,21 @@
 
 ;;;;; [Group] Packages - ライブラリ解決先 ;;;;;
 (defun my-test-packages--straight-build-p (library)
-  "LIBRARY の解決先が straight/build 配下なら non-nil を返す。"
+  "LIBRARY の解決先が straight のビルドディレクトリ配下なら non-nil を返す。
+ディレクトリ名は公開変数 `straight-build-dir' から取る。既定値 \"build\" を
+文字列で仮定すると、`straight-use-version-specific-build-dir' 有効時
+(例 \"build-30.2\") に判定が静かに外れる。"
   (let ((path (locate-library library)))
     (and path
-         (file-in-directory-p path (my-set-straight "build/")))))
+         (file-in-directory-p path (my-set-straight straight-build-dir "/")))))
+
+(ert-deftest my-test-packages-straight-build-p-follows-build-dir ()
+  :tags '(:invariant)
+  ;; straight-build-dir を変更したとき判定が追随することを検証する
+  ;; (ディレクトリ名を文字列でハードコードする実装への退行を検出する)。
+  (should (my-test-packages--straight-build-p "yasnippet"))
+  (let ((straight-build-dir "build-does-not-exist"))
+    (should-not (my-test-packages--straight-build-p "yasnippet"))))
 
 (ert-deftest my-test-packages-which-key-built-in ()
   :tags '(:invariant)

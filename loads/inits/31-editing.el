@@ -118,6 +118,83 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   )
 
 ;;; Yasnippet - コードスニペットの管理と挿入
+(defun my/yas-personal-snippet-dirs (&optional root)
+  "個人スニペットの top-level ディレクトリ一覧を返す。
+ROOT の既定は `custom/snippets/'。
+
+2 つのレイアウトを支える (どちらの環境も実在する)。
+  A: ROOT/<mode>/ に実体のモードディレクトリを直接置く    -> ROOT を返す
+  B: ROOT/snippets を外部ディレクトリへの symlink にする  -> ROOT/snippets を返す
+
+yasnippet は top-level dir 直下のディレクトリ名をメジャーモード名として intern する
+ため、B の構成で ROOT を登録すると架空モード `snippets' が作られ、同じツリーを二重に
+走査する。A と B が同時に成立する構成は yasnippet の契約では表現できないため非対応と
+し、B を優先して警告する (A 側のモードディレクトリはロードしない)。"
+  (let* ((root (or root (my-set-custom "snippets")))
+         (linked (expand-file-name "snippets" root))
+         (linked-p (file-directory-p linked))
+         (root-mode-dirs
+          (and (file-directory-p root)
+               (seq-remove (lambda (dir)
+                             (equal (file-name-nondirectory dir) "snippets"))
+                           (seq-filter #'file-directory-p
+                                       (directory-files root t "\\`[^.]" t))))))
+    ;; `file-directory-p' は壊れた symlink に対して nil を返すため、検出しないと
+    ;; リンク先の消失が無警告で握り潰される。
+    (dolist (path (list root linked))
+      (when (and (file-symlink-p path) (not (file-directory-p path)))
+        (display-warning 'my-config
+                         (format "スニペットディレクトリの symlink が壊れている: %s" path)
+                         :warning)))
+    (cond
+     ((and linked-p root-mode-dirs)
+      (display-warning
+       'my-config
+       (format "個人スニペットの 2 レイアウトが混在している。%s を優先し、%s 直下のモードディレクトリはロードしない"
+               linked root)
+       :warning)
+      (list linked))
+     (linked-p (list linked))
+     (root-mode-dirs (list root))
+     (t nil))))
+
+(defun my/yas-resolve-snippet-dirs (dirs)
+  "DIRS のうち解決できる要素だけを返し、除外した要素を `display-warning' で報告する。
+`yas-snippet-dirs' (関数) は解決できない要素に対して error を送出するため、
+そのままでは `yas-global-mode' ごと失敗する。パス参照ミスを黙って握り潰さない
+よう、除外は必ず可視化する。"
+  (let (kept dropped)
+    (dolist (entry dirs)
+      (let ((path (cond ((stringp entry) entry)
+                        ((and (symbolp entry)
+                              (boundp entry)
+                              (stringp (symbol-value entry)))
+                         (symbol-value entry)))))
+        (if (and path (file-directory-p path))
+            (push entry kept)
+          (push entry dropped))))
+    (dolist (entry (nreverse dropped))
+      (display-warning 'my-config
+                       (format "yas-snippet-dirs から解決できない要素を除外した: %S" entry)
+                       :warning))
+    (nreverse kept)))
+
+(defun my/yas-setup ()
+  "`yas-snippet-dirs' を解決済みの値へ確定し、可能なら `yas-global-mode' を有効にする。
+有効化した場合は non-nil を返す。
+
+全エントリが解決できず `yas-snippet-dirs' が nil になると、`yas--load-snippet-dirs'
+は `(call-interactively \\='yas-load-directory)' を呼び、起動が対話プロンプトで
+停止する。その場合はモードを有効化せず、警告して縮退する。"
+  (setq yas-snippet-dirs (my/yas-resolve-snippet-dirs yas-snippet-dirs))
+  (cond
+   (yas-snippet-dirs (yas-global-mode 1) t)
+   (t (display-warning
+       'my-config
+       "利用できるスニペットディレクトリが無いため yas-global-mode を有効化しない"
+       :warning)
+      nil)))
+
 (use-package yasnippet
   :straight t
   :defer 1
@@ -125,50 +202,18 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   (yas-prompt-functions '(yas-completing-read-prompt yas-no-prompt)) ; スニペット選択は completing-read (vertico) を使用
   :init
   ;; ロードスニペットの設定
-  ;; yasnippet ロード時に yasnippet-snippets-initialize (autoload の eval-after-load) が
-  ;; 'yasnippet-snippets-dir を yas-snippet-dirs へ追記する。この setq を :config へ置くと
-  ;; その追記より後に走って上書きし、追加スニペット集を失うため :init で設定する。
+  ;; 'yasnippet-snippets-dir (パッケージが公開する defconst) をあらかじめ入れておく。
+  ;; yasnippet ロード時に走る yasnippet-snippets-initialize (autoload の eval-after-load)
+  ;; は (member 'yasnippet-snippets-dir yas-snippet-dirs) が真なら何もしない。事前投入に
+  ;; より初期化時の yas--load-snippet-dirs が抑止され、全ディレクトリ走査は :config の
+  ;; yas-global-mode による 1 回だけになる (事前投入なしでは 2 回走る)。
+  ;; straight のビルドパスを自前で組み立てず、パッケージ公開のシンボルで参照する。
   ;; :custom を使わないのは yas-snippet-dirs の :set が yas-reload-all を呼ぶため。
   (setq yas-snippet-dirs
-        (seq-filter #'file-exists-p
-                    (list (my-set-custom "snippets")
-                          ;; シンボリックリンク用
-                          (my-set-custom "snippets/snippets")
-                          ;; yasnippet-snippets パッケージから取得
-                          ;; 注記: 以下の絞り込み指定は現状機能していない。yasnippet-snippets の自動初期化が
-                          ;; snippets/ 全体を登録して全モードを JIT ロード対象にし、リーフディレクトリ指定は
-                          ;; yasnippet の仕様上ロード対象にならないため（恒久対応は別タスク）。
-                          ;; (my-set-straight "build/yasnippet-snippets/snippets") ; 必要最小限に絞る
-                          (my-set-straight "build/yasnippet-snippets/snippets/c++-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/c++-ts-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/c-lang-common")
-                          (my-set-straight "build/yasnippet-snippets/snippets/c-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/c-ts-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/cc-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/cmake-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/css-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/css-ts-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/dockerfile-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/emacs-lisp-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/git-commit-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/html-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/html-ts-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/lisp-interaction-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/lisp-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/makefile-automake-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/makefile-bsdmake-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/makefile-gmake-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/makefile-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/markdown-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/markdown-ts-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/org-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/prog-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/python-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/python-ts-mode")
-                          (my-set-straight "build/yasnippet-snippets/snippets/text-mode")
-                          )))
+        (append (my/yas-personal-snippet-dirs)
+                (list 'yasnippet-snippets-dir)))
   :config
-  (yas-global-mode 1)
+  (my/yas-setup)
   )
 
 ;;;;; [Group] Tags - タグナビゲーション ;;;;;
