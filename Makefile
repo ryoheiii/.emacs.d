@@ -20,10 +20,13 @@ EMACS_TEST_OPTIONS = \
 	--eval "(setq native-comp-jit-compilation nil)" \
 	--eval "(setq use-package-expand-minimally t)" \
 	--eval "(setq use-package-verbose 'errors)" \
-	--eval "(setq my-straight-base-dir-override \"$(STRAIGHT_DIR)/../\")"
+	--eval "(setq my-straight-base-dir-override \"$(STRAIGHT_DIR)/../\")" \
+	--eval "(defvar my-test--recorded-warnings nil)" \
+	--eval "(defun my-test--record-warning (type message &optional level &rest _) (push (list type message level) my-test--recorded-warnings))" \
+	--eval "(advice-add 'display-warning :before 'my-test--record-warning)"
 
 .PHONY: all prepare-straight lint test-unit test-startup test-keybinding
-.PHONY: test-cpp-config test-invariants
+.PHONY: test-cpp-config test-invariants test-tty test-tty-live
 .PHONY: test-setup test clean-test straight-thaw
 
 all: test
@@ -41,6 +44,43 @@ if [[ -e "$$test_root/loads/straight" || -L "$$test_root/loads/straight" ]]; the
 fi; \
 mkdir -p "$$test_root/loads"; \
 ln -s "$(TEST_STRAIGHT_DIR)" "$$test_root/loads/straight";
+endef
+
+define MY_TTY_LIVE_SETUP_BODY
+mv "$$test_root/early-init.el" "$$test_root/my-tty-early-init-real.el"
+cat > "$$test_root/early-init.el" <<'MY_TTY_EARLY_INIT'
+;;; early-init.el --- tty テスト専用 shim  -*- lexical-binding: t; -*-
+;; テスト実行時の一時生成物(Emacs 31 は lexical-binding クッキー欠如を警告するため明示)
+;; MY_TTY_TEST_STRAIGHT_BASE_DIR は straight-base-dir に入れる値
+;; = 既存ハーネス(EMACS_TEST_OPTIONS)と同じ loads/ ディレクトリ。
+;; straight は内部で straight/ を付加するため loads/straight を渡してはならない。
+(setq my-straight-base-dir-override (getenv "MY_TTY_TEST_STRAIGHT_BASE_DIR"))
+;; native-comp 設定は EMACS_TEST_OPTIONS とのパリティ(CI の Nix Emacs 対応)
+(defvar native-comp-eln-load-path nil)
+(setq native-comp-jit-compilation nil)
+;; 起動時警告の構造化レコーダー(my-test-startup-check-warnings が照合する)
+(defvar my-test--recorded-warnings nil)
+(defun my-test--record-warning (type message &optional level &rest _)
+  (push (list type message level) my-test--recorded-warnings))
+(advice-add 'display-warning :before #'my-test--record-warning)
+(load (expand-file-name "my-tty-early-init-real.el" user-emacs-directory) nil t)
+MY_TTY_EARLY_INIT
+mkdir -p "$$test_root/xdg-cache"
+cat > "$$test_root/run-tty-test.sh" <<MY_TTY_TEST_RUNNER
+#!/bin/sh
+set -eu
+stty cols 120 rows 40
+export TERM=xterm-256color
+export HOME="$$test_root"
+export XDG_CACHE_HOME="$$test_root/xdg-cache"
+export MY_TTY_TEST_STRAIGHT_BASE_DIR="$(STRAIGHT_DIR)/../"
+exec $(EMACS) -nw --no-site-file --no-site-lisp \
+  --init-directory="$$test_root" \
+  -L "$(TESTS_DIR)" \
+  -l "$(TESTS_DIR)/my-test-startup.el" \
+  -l "$(TESTS_DIR)/my-test-tty-live.el"
+MY_TTY_TEST_RUNNER
+chmod +x "$$test_root/run-tty-test.sh"
 endef
 
 prepare-straight:
@@ -111,6 +151,37 @@ test-invariants: | prepare-straight
 		-l "$(TESTS_DIR)/my-test-packages.el" \
 		--eval "(ert-run-tests-batch-and-exit '(tag :invariant))"
 
+test-tty: | prepare-straight
+	@set -eu; \
+	$(prepare_test_root) \
+	$(EMACS) $(EMACS_TEST_OPTIONS) \
+		-l "$$test_root/early-init.el" \
+		-l "$$test_root/init.el" \
+		-l "$(TESTS_DIR)/my-test-startup.el" \
+		-l "$(TESTS_DIR)/my-test-tty.el" \
+		--eval "(ert-run-tests-batch-and-exit '(tag :tty))"
+
+test-tty-live: export MY_TTY_LIVE_SETUP = $(MY_TTY_LIVE_SETUP_BODY)
+test-tty-live: | prepare-straight
+	@set -eu; \
+	test "$$(uname)" = Linux || { \
+		printf '%s\n' "test-tty-live: Linux が必要です" >&2; \
+		exit 1; \
+	}; \
+	command -v script >/dev/null || { \
+		printf '%s\n' "test-tty-live: script コマンドが必要です" >&2; \
+		exit 1; \
+	}; \
+	command -v timeout >/dev/null || { \
+		printf '%s\n' "test-tty-live: timeout コマンドが必要です" >&2; \
+		exit 1; \
+	}; \
+	$(prepare_test_root) \
+	export test_root; \
+	$(SHELL) -eu -c "$$MY_TTY_LIVE_SETUP"; \
+	sh -n "$$test_root/run-tty-test.sh"; \
+	timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null
+
 test-cpp-config: | prepare-straight
 	@set -eu; \
 	$(prepare_test_root) \
@@ -136,6 +207,8 @@ test:
 	+@$(MAKE) test-cpp-config
 	+@$(MAKE) test-deferred
 	+@$(MAKE) test-invariants
+	+@$(MAKE) test-tty
+	+@$(MAKE) test-tty-live
 	+@$(MAKE) test-setup
 
 # CI の部分一致キャッシュを lockfile のリビジョンへ揃える。
