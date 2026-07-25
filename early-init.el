@@ -37,7 +37,6 @@
 (defvar my-emacs-dir    (expand-file-name user-emacs-directory))      ;; /path/to/userhome/.emacs.d/
 
 (defvar my-loads-dir    (expand-file-name "loads/"    my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads
-(defvar my-elisp-dir    (expand-file-name "elisp/"    my-loads-dir))  ;; /path/to/userhome/.emacs.d/loads/elisp
 (defvar my-straight-dir (expand-file-name "straight/" my-loads-dir))  ;; /path/to/userhome/.emacs.d/loads/straight
 
 (defvar my-custom-dir   (expand-file-name "custom/"   my-emacs-dir))  ;; /path/to/userhome/.emacs.d/custom
@@ -52,7 +51,6 @@
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))
 
 (defun my-set-loads (&rest args) (expand-file-name (apply 'concat args) my-loads-dir))
-(defun my-set-elisp (&rest args) (expand-file-name (apply 'concat args) my-elisp-dir))
 (defun my-set-straight (&rest args) (expand-file-name (apply 'concat args) my-straight-dir))
 
 (defun my-set-custom (&rest args) (expand-file-name (apply 'concat args) my-custom-dir))
