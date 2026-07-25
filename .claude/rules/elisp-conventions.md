@@ -44,6 +44,33 @@ C/C++ は tree-sitter 文法が導入済みなら `c-ts-mode` / `c++-ts-mode`、
   `use-package c-ts-mode` には `:no-require t` を付けてバイトコンパイル時の先読みも止める。
 - 文法が無い環境で cc-mode へフォールバックする経路を壊さない。
 
+## 【不変条件】yasnippet のスニペットディレクトリ
+
+`yas-snippet-dirs` の各要素は「直下がモード名サブディレクトリである top-level dir」で
+なければならない（`yas-load-directory` の契約）。モード別のリーフディレクトリ
+（`.../snippets/c-mode` など）を直接入れてもスニペットは 1 件も供給されない。
+
+- 個人スニペットは 2 レイアウトを支える。どちらの環境も実在するため、片方だけを
+  前提にした簡略化をしてはならない。
+  - A: `custom/snippets/<mode>/` に実体のモードディレクトリを直接置く
+  - B: `custom/snippets/snippets` を外部ディレクトリへの symlink にする
+- `custom/snippets` を top-level dir として登録してよいのはレイアウト A のときだけ。
+  B の構成で登録すると、直下の `snippets` がモード名として `intern` され、
+  架空メジャーモード `'snippets` が作られて同じツリーを二重に走査する。
+- A と B が同時に成立する構成は `yas-snippet-dirs` の契約では表現できないため
+  **非対応**とする。混在時は B を優先し、`display-warning` で A 側がロードされない
+  ことを通知する。
+- 追加スニペット集はパッケージ公開のシンボル `yasnippet-snippets-dir` で参照し、
+  straight のビルドパスを自前で組み立てない。このシンボルを `:init` で
+  `yas-snippet-dirs` へ事前投入することで `yasnippet-snippets-initialize` が no-op に
+  なり、起動時の全ディレクトリ走査が 2 回から 1 回に減る（実測 464ms → 206ms）。
+- パスの解決失敗を無警告で握り潰さない。`file-directory-p` は壊れた symlink に対して
+  nil を返すため、`file-symlink-p` による破損検出を別途行う。
+- `yas-snippet-dirs` が空になると `yas--load-snippet-dirs` が対話的な
+  `yas-load-directory` を呼び、起動が停止する。全滅時は `yas-global-mode` を
+  有効化しない。
+- 上記は `tests/my-test-deferred.el` の `:deferred` タグのテスト群が固定する。
+
 ## 命名と配置
 
 - 設定ファイルは `NN-name.el` とし、2 桁の番号で読み込み順を制御する。
