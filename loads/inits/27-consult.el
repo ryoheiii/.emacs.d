@@ -10,8 +10,7 @@
   :straight t
   :after vertico
   :bind
-  (("C-x C-f" . find-file)
-   ("C-x f"   . consult-find)
+  (("C-x f"   . consult-find)
    ("C-x C-r" . consult-recent-file)
    ("C-x C-y" . consult-yank-pop)
    ("C-x b"   . consult-buffer)
@@ -20,7 +19,6 @@
    ("C-S"     . my/consult-line-multi)
    ("C-."     . consult-goto-line)
    ("C-x g"   . my/consult-ripgrep-or-grep)
-   ;; ("C-x g"   . affe-grep)
    )
   :init
   ;; consult は遅延ロードのため、起動直後から xref 検索へ反映されるよう
@@ -68,16 +66,6 @@
 (use-package embark-consult
   :straight t
   :hook (embark-collect-mode . consult-preview-at-point-mode)
-  )
-
-;;; Affe - 高速検索（grep 代替）
-(use-package affe
-  :straight t
-  :defer t
-  :commands (affe-grep affe-find)
-  :config
-  (setq affe-regexp-function #'orderless-pattern-compiler)
-  (setq affe-highlight-function #'orderless-highlight-matches)
   )
 
 ;;; Orderless - 高度な補完フィルタ

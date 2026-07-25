@@ -12,18 +12,18 @@
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
   :straight t
-  :defer t
+  :defer 0.5
   :custom
   (popwin:popup-window-position 'bottom) ;; ポップアップの位置を下部に設定
-  :init
-  ;; popwin-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'popwin-mode 1)
+  :config
+  (popwin-mode 1)
   )
 
 ;;; Migemo - 日本語を含む検索時の挙動改善
 (use-package migemo
   :straight t
   :if (executable-find "cmigemo")
+  :defer 1
   :custom
   (migemo-command "cmigemo")
   (migemo-dictionary "/usr/share/cmigemo/utf-8/migemo-dict")
@@ -32,22 +32,21 @@
   (migemo-regex-dictionary nil)
   (migemo-coding-system 'utf-8-unix)
   :config
-  ;; migemo-init は autoload なし → パッケージは即ロード、重い初期化のみ遅延
-  (run-with-idle-timer 1 nil #'migemo-init)
+  (migemo-init)
   )
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :straight t
-  :bind ([f8] . neotree-toggle)
+  :bind ([f8] . my/neotree-project-toggle)
   :custom
   (neo-theme 'ascii)              ;; アイコンを ASCII にする
   (neo-smart-open t)              ;; カレントディレクトリを自動的に開く
   (neo-autorefresh t)             ;; 自動更新を有効化
   (neo-window-width 35)           ;; ウィンドウ幅を 35 に設定
   :config
-  ;; `neotree-toggle` をカスタマイズ
-  (defun neotree-toggle ()
+  ;; プロジェクトルートまたは現在ファイルの位置で開くトグル
+  (defun my/neotree-project-toggle ()
     "Toggle NeoTree, opening at the project root or current file."
     (interactive)
     (let ((project-dir (when-let ((proj (project-current)))
@@ -107,14 +106,22 @@
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
   :straight nil
-  :hook ((prog-mode . (lambda ()
-                        (unless (derived-mode-p 'emacs-lisp-mode)                    ; Emacs Lisp を除外
-                          (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ; 日本語無視
-                          (flyspell-prog-mode))))
-         ((text-mode html-mode markdown-mode) . (lambda () (flyspell-mode -1)))      ; text-mode では無効化
-         (find-file . (lambda ()
-                        (when (> (buffer-size) 3000)                                 ; 3000行以上なら無効
-                          (flyspell-mode -1)))))
+  :init
+  (defun my/flyspell-prog-setup ()
+    "Emacs Lisp を除くプログラムモードで flyspell-prog-mode を有効化する。"
+    (unless (derived-mode-p 'emacs-lisp-mode)
+      (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ; 日本語無視
+      (flyspell-prog-mode)))
+  (defun my/flyspell-disable ()
+    "flyspell を無効化する。"
+    (flyspell-mode -1))
+  (defun my/flyspell-disable-in-large-buffer ()
+    "大きなバッファ (3000 文字超) では flyspell を無効化する。"
+    (when (> (buffer-size) 3000)
+      (flyspell-mode -1)))
+  :hook ((prog-mode . my/flyspell-prog-setup)
+         ((text-mode html-mode markdown-mode) . my/flyspell-disable) ; text 系では無効化
+         (find-file . my/flyspell-disable-in-large-buffer))
   :bind (:map flyspell-mode-map
               ("C-," . nil)
               ("C-." . nil)
@@ -130,14 +137,6 @@
   :after flyspell
   :bind (:map flyspell-mode-map
               ("C-c C-/" . flyspell-correct-wrapper)) ; C-/ で補正メニューを開く
-  )
-
-;;; flyspell-correct-popup - pop-up メニューで修正候補を選べるようにする
-(use-package flyspell-correct-popup
-  :straight t
-  :after flyspell-correct
-  :custom
-  (flyspell-correct-interface #'flyspell-correct-popup)
   )
 
 (provide '32-navigation)

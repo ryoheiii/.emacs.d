@@ -16,7 +16,7 @@
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren
   :straight nil
-  :hook (after-init . show-paren-mode)
+  ;; show-paren-mode は Emacs 28+ でデフォルト有効のため hook 不要
   :custom
   (show-paren-delay 0)      ;; 遅延なしで即時ハイライト
   (show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる
@@ -60,7 +60,6 @@
 ;;; 表示設定
 (use-package time
   :straight nil
-  :if window-system
   :hook (after-init . display-time-mode)
   :custom
   (display-time-day-and-date t)
@@ -117,25 +116,15 @@
 
 ;;;;;; [Group] Search - 検索 ;;;;;;
 ;;; Grep - ファイル内検索機能の設定。特定のパターンに基づいてファイルを検索
+;; consult-ripgrep (C-x g) が .gitignore を尊重するのに対し、C-c g は生 grep
 (use-package grep
   :straight nil
   :bind ("C-c g" . grep)
-  :config
-  (setq grep-command-before-query "grep -nr -e ")
-  (defun grep-default-command ()
-    (if current-prefix-arg
-        (let ((grep-command-before-target
-               (concat grep-command-before-query
-                       (shell-quote-argument (grep-tag-default)))))
-          (cons (if buffer-file-name
-                    (concat grep-command-before-target
-                            " *."
-                            (file-name-extension buffer-file-name))
-                  (concat grep-command-before-target " ."))
-                (+ (length grep-command-before-target) 1)))
-      (car grep-command)))
-  (setq grep-command (cons (concat grep-command-before-query " .")
-                           (+ (length grep-command-before-query) 1)))
+  :custom
+  ;; 初期入力を "grep -nr -e  ." とし、カーソルを -e の直後へ置く
+  ;; (cons 形式は組み込み grep-default-command が string-match で型エラーになるため不可)
+  (grep-command "grep -nr -e  .")
+  (grep-command-position 13)
   )
 
 ;;;;;; [Group] Editing - 編集補助 ;;;;;;
@@ -168,7 +157,6 @@
 (use-package autorevert
   :straight nil
   :hook (after-init . global-auto-revert-mode)
-  :custom (magit-auto-revert-mode t)
   )
 
 ;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存

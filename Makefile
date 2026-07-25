@@ -90,6 +90,16 @@ test-keybinding: | prepare-straight
 		-l "$(TESTS_DIR)/my-test-keybindings.el" \
 		--eval "(ert-run-tests-batch-and-exit '(tag :keybinding))"
 
+test-deferred: | prepare-straight
+	@set -eu; \
+	$(prepare_test_root) \
+	$(EMACS) $(EMACS_TEST_OPTIONS) \
+		-l "$$test_root/early-init.el" \
+		-l "$$test_root/init.el" \
+		-l "$(TESTS_DIR)/my-test-startup.el" \
+		-l "$(TESTS_DIR)/my-test-deferred.el" \
+		--eval "(ert-run-tests-batch-and-exit '(tag :deferred))"
+
 test-invariants: | prepare-straight
 	@set -eu; \
 	$(prepare_test_root) \
@@ -124,6 +134,7 @@ test:
 	+@$(MAKE) test-startup
 	+@$(MAKE) test-keybinding
 	+@$(MAKE) test-cpp-config
+	+@$(MAKE) test-deferred
 	+@$(MAKE) test-invariants
 	+@$(MAKE) test-setup
 

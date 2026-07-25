@@ -11,10 +11,9 @@
            (getenv "DISPLAY")        ; X11 の DISPLAY 変数がある
            (executable-find "xclip")) ; `xclip` がシステムにインストールされている
   :straight t
-  :defer t
-  :init
-  ;; xclip-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'xclip-mode 1)
+  :defer 0.5
+  :config
+  (xclip-mode 1)
   )
 
 ;;; dashboard - Emacs のスタートアップ画面をカスタマイズ
@@ -52,8 +51,8 @@
     `(let ((message-log-max nil))
        (with-temp-message (or (current-message) "") ,@body)))
 
-  ;; 30秒ごとに recentf リストを自動保存
-  (run-with-idle-timer 30 t 'recentf-save-list)
+  ;; 30秒ごとに recentf リストを自動保存(エコーエリアへのメッセージは抑制)
+  (run-with-idle-timer 30 t (lambda () (with-suppressed-message (recentf-save-list))))
   )
 
 ;;; recentf-ext - recentf の拡張機能

@@ -23,7 +23,6 @@
   ;; (load-theme 'doom-gruvbox t)
 
   ;; 各種設定
-  (doom-themes-visual-bell-config)
   (doom-themes-neotree-config)
   (doom-themes-org-config)
   )
@@ -42,10 +41,11 @@
 ;;; doom-modeline - モードラインのテーマ設定
 (use-package doom-modeline
   :straight t
-  :if (display-graphic-p)
   :custom
   (doom-modeline-buffer-file-name-style 'truncate-with-project)
-  (doom-modeline-icon t)
+  ;; tty では Nerd Font グリフが幅計算を狂わせレイアウトが崩れるため GUI のみ有効化
+  ;; (daemon 起動時は nil に倒れる。GUI クライアントで必要なら明示的に t を設定する)
+  (doom-modeline-icon (display-graphic-p))
   ;; (doom-modeline-major-mode-icon nil)
   ;; (doom-modeline-minor-modes nil)
   :hook
@@ -53,21 +53,6 @@
   :config
   ;; (line-number-mode 0)
   ;; (column-number-mode 0)
-  )
-
-;;; smart-mode-line - モードラインの外観と情報表示を最適化
-(use-package smart-mode-line
-  :straight t
-  :defer t
-  ;; GUI は doom-modeline が担当するため端末に限定し、二重初期化を防ぐ
-  :unless (display-graphic-p)
-  :init
-  ;; sml/setup は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'sml/setup)
-  :config
-  (setq sml/no-confirm-load-theme t
-        sml/theme 'dark
-        sml/shorten-directory nil) ; ディレクトリパスはフル表示
   )
 
 ;;; hide-mode-line - 特定のモードでモードラインを非表示

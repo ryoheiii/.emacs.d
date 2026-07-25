@@ -44,5 +44,21 @@
   (dolist (command my-test-keybindings--commands)
     (should (fboundp command))))
 
+;;;;; [Group] Keybinding - シンボル操作 ;;;;;
+;; highlight-symbol 廃止後も symbol-overlay でハイライトと置換が揃っていること
+(defconst my-test-keybindings--symbol-overlay-bindings
+  '(([f3]      . symbol-overlay-put)
+    ([f4]      . symbol-overlay-remove-all)
+    ("C-x C-a" . my-symbol-overlay-rename-visible)
+    ("C-x a"   . my-symbol-overlay-rename-in-function)
+    ("C-x C-g" . symbol-overlay-rename))
+  "固定する symbol-overlay 系のグローバルキーバインド。")
+
+(ert-deftest my-test-keybindings-symbol-overlay-bindings ()
+  :tags '(:keybinding)
+  (dolist (binding my-test-keybindings--symbol-overlay-bindings)
+    (let ((key (if (stringp (car binding)) (kbd (car binding)) (car binding))))
+      (should (eq (lookup-key global-map key) (cdr binding))))))
+
 (provide 'my-test-keybindings)
 ;;; my-test-keybindings.el ends here

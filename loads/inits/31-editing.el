@@ -73,13 +73,9 @@
 ;;; Yasnippet - コードスニペットの管理と挿入
 (use-package yasnippet
   :straight t
-  :defer t
+  :defer 1
   :custom
-  (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))  ; スニペット展開のプロンプト
-  (yas-trigger-key "TAB")                                 ; トリガーキーを TAB に設定
-  :init
-  ;; yas-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 1 nil #'yas-global-mode 1)
+  (yas-prompt-functions '(yas-completing-read-prompt yas-no-prompt)) ; スニペット選択は completing-read (vertico) を使用
   :config
   ;; ロードスニペットの設定
   (setq yas-snippet-dirs
@@ -123,6 +119,7 @@
 
   ;; Yasnippet Snippets - 追加スニペット集
   (use-package yasnippet-snippets :straight t)
+  (yas-global-mode 1)
   )
 
 ;;;;; [Group] Tags - タグナビゲーション ;;;;;
@@ -219,12 +216,14 @@
   :bind (("C-," . er/expand-region))
   )
 
-;;; symbol-overlay - シンボルの置換
+;;; symbol-overlay - シンボルのハイライトと置換
 ;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
 (use-package symbol-overlay
   :straight t
   :hook (prog-mode . symbol-overlay-mode)
-  :bind (("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
+  :bind (([f3]      . symbol-overlay-put)                   ; シンボルの永続ハイライトをトグル
+         ([f4]      . symbol-overlay-remove-all)            ; ハイライトを全解除
+         ("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
          ("C-x a"   . my-symbol-overlay-rename-in-function) ; 関数・メソッド内の置換
          ("C-x C-g" . symbol-overlay-rename))               ; バッファ全体のシンボルを置換
   :config

@@ -42,5 +42,11 @@
                      (directory-file-name
                       (expand-file-name base user-emacs-directory)))))))
 
+;;;;; [Group] Unit - バックアップディレクトリ ;;;;;
+(ert-deftest my-test-unit-backup-directory-exists ()
+  "auto-save の保存先は early-init.el が事前作成する (transforms は作成しない)."
+  :tags '(:unit)
+  (should (file-directory-p my-backup-dir)))
+
 (provide 'my-test-unit)
 ;;; my-test-unit.el ends here

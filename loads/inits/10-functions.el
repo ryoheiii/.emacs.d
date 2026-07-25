@@ -50,43 +50,10 @@
       (my/copy-to-clipboard-and-message file-name
                                         (format "Copied file name: %s" file-name)))))
 
-;;;;;; [Group] Debugging - デバッグ関連 ;;;;;;
-;;; デバッグプリントの挿入
-(defun my/insert-dbgprint (start end)
-  "選択範囲内の変数代入文にデバッグ出力文 (dbgprintf) を挿入する
-
-   この関数は変数宣言と代入の両方にマッチし、各行に対して dbgprintf 文を生成して挿入する。
-   変数名は英字、アンダースコア、数字から成り、出力形式は整数を想定している。
-
-   PARAMETERS:
-     start (int): 選択範囲の開始位置
-     end (int)  : 選択範囲の終了位置
-
-   使用方法:
-     C 言語コード内でデバッグ出力を挿入したい範囲を選択し、この関数を実行する。"
-  (interactive "r")
-  (let ((result "")  ; Initialize result as an empty string
-        name
-        value)
-    (save-excursion
-      (goto-char start)
-      (while (and (< (point) end) (not (eobp)))
-        ;; Match variable declarations with initialization and simple assignments
-        (when (looking-at "^[ \t]*\\(?:[A-Za-z_][A-Za-z0-9_]*[ \t]+\\)?\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]*=[ \t]*\\([^;\n]+\\);")
-          ;; Capture variable name and value from the line
-          (setq name (match-string-no-properties 1)
-                value (match-string-no-properties 2))
-          ;; Construct the debug print statement
-          (setq result (concat result
-                               (format "dbgprintf(\"%s = %%d\\r\\n\", %s);\n" name name))))
-        (forward-line 1)))  ; Move to the next line
-    (goto-char end)
-    (insert result)))  ; Insert the result into the buffer
-
 ;;;;;; [Group] Window Management - ウィンドウ管理 ;;;;;;
 ;;; ウィンドウ関連操作
 ;; 垂直分割
-(defun split-window-vertically-n (num_wins)
+(defun my/split-window-vertically-n (num_wins)
   "ウィンドウを垂直方向に NUM_WINS 分割。"
   (interactive "p")
   (if (= num_wins 2)
@@ -94,10 +61,10 @@
     (progn
       (split-window-vertically
        (- (window-height) (/ (window-height) num_wins)))
-      (split-window-vertically-n (- num_wins 1)))))
+      (my/split-window-vertically-n (- num_wins 1)))))
 
 ;; 水平分割
-(defun split-window-horizontally-n (num_wins)
+(defun my/split-window-horizontally-n (num_wins)
   "ウィンドウを水平方向に NUM_WINS 分割。"
   (interactive "p")
   (if (= num_wins 2)
@@ -105,20 +72,20 @@
     (progn
       (split-window-horizontally
        (- (window-width) (/ (window-width) num_wins)))
-      (split-window-horizontally-n (- num_wins 1)))))
+      (my/split-window-horizontally-n (- num_wins 1)))))
 
 ;; 他のウィンドウへ移動、または新規分割
-(defun other-window-or-split ()
+(defun my/other-window-or-split ()
   "他のウィンドウへ移動、または新規分割。"
   (interactive)
   (when (one-window-p)
     (if (>= (window-body-width) 270)
-        (split-window-horizontally-n 3)
+        (my/split-window-horizontally-n 3)
       (split-window-horizontally)))
   (other-window 1))
 
 ;; ウィンドウリサイズ機能
-(defun window-resizer ()
+(defun my/window-resizer ()
   "Control window size and position.
 [f] → 増加, [b] ← 減少, [n] ↓ 増加, [p] ↑ 減少, 他のキーで終了。"
   (interactive)
