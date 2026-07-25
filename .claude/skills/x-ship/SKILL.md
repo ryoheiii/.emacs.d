@@ -54,6 +54,8 @@ git rev-list main..HEAD --oneline
 `.claude/rules/verification.md` に従い、変更範囲に対応するテストを実行する:
 
 - 起動設定のみ: `make test-startup`
+- 表示・キーバインド・補完・クリップボード・GUI 分岐など tty へ影響する変更:
+  `make test-tty` と `make test-tty-live` も実行（`emacs -nw` が主用途のため必須）
 - それ以外の設定変更: `make test`
 - `emacs-setup.sh` 変更: `make test-setup` も実行
 - ドキュメントのみの変更: 記載パス・コマンドの実在確認で代替できる

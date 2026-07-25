@@ -8,6 +8,8 @@
 - Emacs 30.x 以上
 - Linux (Debian/Ubuntu) / WSL2 / macOS (Emacs 設定のみ。emacs-setup.sh は未対応)
 - パッケージ管理: [straight.el](https://github.com/radian-software/straight.el)（`package.el` は不使用）
+- 主用途は端末上の `emacs -nw`（CLI モード）。GUI でも動作するが、tty での動作維持を
+  優先する（変更時の規約は `AGENTS.md` の「【最優先】CLI (`emacs -nw`) 前提」を参照）
 
 ---
 

@@ -57,7 +57,10 @@ Review the plan in:
 Focus on:
 - missing steps
 - risky assumptions
-- validation/testing gaps (make test / make test-startup coverage)
+- validation/testing gaps (make test / make test-startup / make test-tty /
+  make test-tty-live coverage)
+- tty regressions: the primary usage is a terminal (`emacs -nw`); the plan must keep
+  GUI-only code guarded, preserve terminal alternatives, and verify tty explicitly
 - sequencing problems (init-loader load order, module numbering)
 - violations of repo conventions (use-package sections, :straight nil for
   built-ins, path helpers instead of hardcoded paths, fixed C-t tag-navigation

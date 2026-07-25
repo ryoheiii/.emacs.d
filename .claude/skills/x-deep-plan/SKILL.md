@@ -68,7 +68,8 @@ allowed-tools: Bash, Read, Grep, Glob, Agent, Write, EnterPlanMode, ExitPlanMode
 ```
 
 .emacs.d 固有の観点を必ず含める: `loads/inits/` の番号帯責務（`.claude/rules/codebase-map.md`）、
-use-package 規約と不変条件（`.claude/rules/elisp-conventions.md`）、パスヘルパー、起動シーケンス。
+use-package 規約と不変条件（`.claude/rules/elisp-conventions.md`）、パスヘルパー、起動シーケンス、
+tty（`emacs -nw`）前提（`AGENTS.md` の「【最優先】CLI (`emacs -nw`) 前提」）。
 
 出力全文を `/tmp/x-deep-plan-<RUN_ID>/codebase.md` に Write で保存する。
 失敗・タイムアウト時は `SUMMARY = 調査未完了` として続行する。
@@ -115,7 +116,9 @@ ACTION が矛盾すれば両論併記してユーザー決定を求める。`[CO
 - SCOPE_OUT が明記されている
 - .emacs.d 固有チェックに各 1 文以上言及している:
   モジュール境界と読み込み順 / use-package 規約（`:custom`・`:hook`・`:bind`、
-  組み込みは `:straight nil`）/ パスヘルパー使用 / タグナビゲーション不変条件 / 起動時間への影響
+  組み込みは `:straight nil`）/ パスヘルパー使用 / タグナビゲーション不変条件 / 起動時間への影響 /
+  tty（`emacs -nw`）への影響（影響し得る場合はテスト計画へ `make test-tty` と
+  `make test-tty-live` を含める）
 
 **フェイル・クローズド**: 根拠のある証拠で埋められない項目を推測で埋めない。
 埋められない場合は停止し、「追加情報提供 / 調査再実行 / スキル中止」から選んでもらう。
