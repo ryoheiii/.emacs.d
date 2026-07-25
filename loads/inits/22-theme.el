@@ -5,35 +5,6 @@
 ;;; Code:
 
 ;;;; [Group] Themes - テーマ関連 ;;;;;;
-;;; color-theme-modern - モダンなカラーテーマの適用
-;; (use-package color-theme-modern
-;;   :straight t
-;;   :config
-;;   ;; 選択可能なテーマの幅を広げる
-;;   ;; 参考: https://github.com/emacs-jp/replace-colorthemes/blob/master/screenshots.md
-;;   (load-theme 'hober t t)
-;;   (enable-theme 'hober)
-;;   )
-
-;; (use-package modus-themes
-;;   :straight t
-;;   :custom
-;;   (modus-themes-italic-constructs nil) ;; イタリックを有効化
-;;   (modus-themes-bold-constructs nil)   ;; 強調を有効化
-;;   (modus-themes-mixed-fonts t)       ;; 等幅フォントとプロポーショナルフォントを混在
-;;   (modus-themes-subtle-line-numbers t) ;; `display-line-numbers` の背景を控えめに
-;;   (modus-themes-region '(bg-only no-extend))   ;; 選択範囲の背景を変更
-;;   (modus-themes-completions
-;;    '((matches . (extrabold background))
-;;      (selection . (semibold accented))))
-;;   :config
-;;   ;; デフォルトのテーマを設定
-;;   (load-theme 'modus-vivendi t) ;; ダークテーマを適用
-;;   ;; (load-theme 'modus-operandi t) ;; ライトテーマを適用したい場合はこちら
-;;   )
-;; ;; `modus-themes-toggle` をキーバインドに割り当て
-;; (global-set-key (kbd "<f6>") #'modus-themes-toggle)
-
 ;;; doom-themes - テーマ設定
 (use-package doom-themes
   :straight t
@@ -52,30 +23,29 @@
   ;; (load-theme 'doom-gruvbox t)
 
   ;; 各種設定
-  (doom-themes-visual-bell-config)
   (doom-themes-neotree-config)
   (doom-themes-org-config)
-  ;; Treemacs に Doom のスタイルを適用（GUI環境のみ）
-  (when (and (display-graphic-p) (fboundp 'treemacs))
-    (doom-themes-treemacs-config))
   )
 
 (global-set-key (kbd "<f6>") #'my/toggle-doom-theme)
 (defun my/toggle-doom-theme ()
-  "Doomテーマを light/dark で切り替える."
+  "Doomテーマを doom-dracula と doom-nord-light の間で切り替える。"
   (interactive)
-  (if (eq (car custom-enabled-themes) 'doom-one)
-      (progn (disable-theme 'doom-one) (load-theme 'doom-nord-light t))
-    (disable-theme 'doom-nord-light)
-    (load-theme 'doom-one t)))
+  (let ((next-theme (if (memq 'doom-dracula custom-enabled-themes)
+                        'doom-nord-light
+                      'doom-dracula)))
+    ;; 重ね掛けを防ぐため、有効なテーマをすべて解除してから切り替える。
+    (mapc #'disable-theme custom-enabled-themes)
+    (load-theme next-theme t)))
 
 ;;; doom-modeline - モードラインのテーマ設定
 (use-package doom-modeline
   :straight t
-  :if (display-graphic-p)
   :custom
   (doom-modeline-buffer-file-name-style 'truncate-with-project)
-  (doom-modeline-icon t)
+  ;; tty では Nerd Font グリフが幅計算を狂わせレイアウトが崩れるため GUI のみ有効化
+  ;; (daemon 起動時は nil に倒れる。GUI クライアントで必要なら明示的に t を設定する)
+  (doom-modeline-icon (display-graphic-p))
   ;; (doom-modeline-major-mode-icon nil)
   ;; (doom-modeline-minor-modes nil)
   :hook
@@ -83,19 +53,6 @@
   :config
   ;; (line-number-mode 0)
   ;; (column-number-mode 0)
-  )
-
-;;; smart-mode-line - モードラインの外観と情報表示を最適化
-(use-package smart-mode-line
-  :straight t
-  :defer t
-  :init
-  ;; sml/setup は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'sml/setup)
-  :config
-  (setq sml/no-confirm-load-theme t
-        sml/theme 'dark
-        sml/shorten-directory nil) ; ディレクトリパスはフル表示
   )
 
 ;;; hide-mode-line - 特定のモードでモードラインを非表示

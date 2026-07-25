@@ -9,7 +9,8 @@ var/*
 loads/elisp/*
 loads/site-elisp/*
 !loads/site-elisp/my-*.el
-loads/straight
+loads/straight/*
+!loads/straight/versions/
 custom/snippets/*
 
 !.gitkeep
@@ -26,3 +27,8 @@ plan.md
 
 # Claude Code
 .claude/settings.local.json
+.claude/review-state/
+.claude/worktrees/
+
+# ベンチ計測の一時生成物
+.bench/

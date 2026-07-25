@@ -9,8 +9,14 @@
 ;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style
   :straight t
-  :hook ((c-mode-common . google-set-c-style)
-         (c-mode-common . google-make-newline-indent))
+  :hook (c-mode-common . my/google-c-style-setup)
+  :config
+  (defun my/google-c-style-setup ()
+    "Google C スタイルを適用し、プロジェクト標準の offset 4 を明示する.
+19-language-modes.el の my/cc-mode-setup とのフック実行順に依存しないための再明示."
+    (google-set-c-style)
+    (google-make-newline-indent)
+    (setq c-basic-offset 4))
   )
 
 ;;; Aggressive Indent - コード編集時の自動インデント調整
@@ -23,7 +29,9 @@
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :straight t
-  :hook ((c++-mode c-mode cc-mode emacs-lisp-mode lisp-mode) . smart-newline-mode)
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  :hook ((c++-mode c-mode cc-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
+         . smart-newline-mode)
   :bind (("C-m" . smart-newline))
   )
 
@@ -35,19 +43,52 @@
   )
 
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
+;; C/C++ 補完の三段フォールバックの 2 段目。
+;;   1. clangd + compile_commands.json/.clangd あり → eglot (18-built-in-package.el)
+;;   2. irony-server 実体あり                        → irony (ここ)
+;;   3. どちらも無い                                  → cape + ggtags (28-corfu.el / 本ファイル)
+;; irony-server が未導入の環境では irony 自体をロードせず 3 段目へ落とす。
+;; 導入するには M-x irony-install-server（cmake と libclang が必要）。
+;; eglot 管理下では 18-built-in-package.el の my/eglot-cc-suppress-irony が irony を止める。
 (use-package irony
   :straight t
   :defer t
-  :after cc-mode
-  :hook ((c-mode . irony-mode)
-         (c++-mode . irony-mode)
-         (irony-mode . irony-cdb-autosetup-compile-options))
+  :preface
+  ;; :custom より前に評価される節。導入先を 1 箇所で決めて可用性判定と共有する
+  (defconst my/irony-server-prefix (my-set-history "irony")
+    "irony-server の導入先。`irony-server-install-prefix' と一致させる。")
+  :hook ((c-mode      . my/irony-maybe-enable)
+         (c++-mode    . my/irony-maybe-enable)
+         (c-ts-mode   . my/irony-maybe-enable)
+         (c++-ts-mode . my/irony-maybe-enable)
+         (irony-mode  . irony-cdb-autosetup-compile-options))
   :custom
-  ;; Irony モードのインストール場所とオプションファイルの設定
-  (irony-server-install-prefix    (my-set-history "irony"))
-  (irony-server-options-directory (my-set-history "irony"))
+  ;; irony-server の導入先 (実体は <prefix>/bin/irony-server)
+  (irony-server-install-prefix my/irony-server-prefix)
+  :init
+  (defun my/irony-server-available-p ()
+    "irony-server の実体が見つかるなら non-nil.
+irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
+（導入先の bin/ を優先しつつ PATH 上の実体と Windows の .exe も拾う）。"
+    (let ((exec-path (cons (expand-file-name "bin" my/irony-server-prefix) exec-path)))
+      (and (executable-find "irony-server") t)))
+
+  (defun my/irony-maybe-enable ()
+    "irony-server が導入済みの環境でだけ `irony-mode' を有効にする.
+未導入の環境では irony をロードせず、cape + ggtags のフォールバックに任せる。"
+    (when (my/irony-server-available-p)
+      (irony-mode 1)))
   :config
-  ;; irony-server 未インストール時に CAPF エラーを抑制する
+  ;; ts モードでも irony を使えるようにする（既定は cc-mode 系のみ）。
+  ;; irony--lang-compile-option は major-mode を assq で引くため、言語対応も
+  ;; 併せて登録しないと clang へ渡す -x が落ちる（.h が C 扱いになる）。
+  (dolist (entry '((c-ts-mode   . "c")
+                   (c++-ts-mode . "c++")))
+    (add-to-list 'irony-supported-major-modes (car entry))
+    (unless (assq (car entry) irony-lang-compile-option-alist)
+      (add-to-list 'irony-lang-compile-option-alist entry)))
+
+  ;; irony-server が壊れている場合に CAPF エラーを抑制する
   (defvar my/irony-capf-warned nil
     "Non-nil なら irony CAPF エラー警告は表示済み.")
 
@@ -64,56 +105,115 @@
     (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point))
   )
 
+;;; Yasnippet Snippets - 追加スニペット集
+;; yasnippet の :config 内で宣言すると straight の登録とビルドが :defer 1 まで遅れ、
+;; フレーム表示後に同期処理が走って入力がブロックされる。トップレベルへ出して起動中に済ませる。
+;; ロード自体は :after で yasnippet に追随させる。yasnippet-snippets.el は冒頭で
+;; yasnippet を require するため、無条件ロードにすると yasnippet の遅延が壊れる
+;; (tests/my-test-packages.el の deferred-features 検査が検出する)。
+(use-package yasnippet-snippets
+  :straight t
+  :after yasnippet
+  :demand t
+  )
+
 ;;; Yasnippet - コードスニペットの管理と挿入
+(defun my/yas-personal-snippet-dirs (&optional root)
+  "個人スニペットの top-level ディレクトリ一覧を返す。
+ROOT の既定は `custom/snippets/'。
+
+2 つのレイアウトを支える (どちらの環境も実在する)。
+  A: ROOT/<mode>/ に実体のモードディレクトリを直接置く    -> ROOT を返す
+  B: ROOT/snippets を外部ディレクトリへの symlink にする  -> ROOT/snippets を返す
+
+yasnippet は top-level dir 直下のディレクトリ名をメジャーモード名として intern する
+ため、B の構成で ROOT を登録すると架空モード `snippets' が作られ、同じツリーを二重に
+走査する。A と B が同時に成立する構成は yasnippet の契約では表現できないため非対応と
+し、B を優先して警告する (A 側のモードディレクトリはロードしない)。"
+  (let* ((root (or root (my-set-custom "snippets")))
+         (linked (expand-file-name "snippets" root))
+         (linked-p (file-directory-p linked))
+         (root-mode-dirs
+          (and (file-directory-p root)
+               (seq-remove (lambda (dir)
+                             (equal (file-name-nondirectory dir) "snippets"))
+                           (seq-filter #'file-directory-p
+                                       (directory-files root t "\\`[^.]" t))))))
+    ;; `file-directory-p' は壊れた symlink に対して nil を返すため、検出しないと
+    ;; リンク先の消失が無警告で握り潰される。
+    (dolist (path (list root linked))
+      (when (and (file-symlink-p path) (not (file-directory-p path)))
+        (display-warning 'my-config
+                         (format "スニペットディレクトリの symlink が壊れている: %s" path)
+                         :warning)))
+    (cond
+     ((and linked-p root-mode-dirs)
+      (display-warning
+       'my-config
+       (format "個人スニペットの 2 レイアウトが混在している。%s を優先し、%s 直下のモードディレクトリはロードしない"
+               linked root)
+       :warning)
+      (list linked))
+     (linked-p (list linked))
+     (root-mode-dirs (list root))
+     (t nil))))
+
+(defun my/yas-resolve-snippet-dirs (dirs)
+  "DIRS のうち解決できる要素だけを返し、除外した要素を `display-warning' で報告する。
+`yas-snippet-dirs' (関数) は解決できない要素に対して error を送出するため、
+そのままでは `yas-global-mode' ごと失敗する。パス参照ミスを黙って握り潰さない
+よう、除外は必ず可視化する。"
+  (let (kept dropped)
+    (dolist (entry dirs)
+      (let ((path (cond ((stringp entry) entry)
+                        ((and (symbolp entry)
+                              (boundp entry)
+                              (stringp (symbol-value entry)))
+                         (symbol-value entry)))))
+        (if (and path (file-directory-p path))
+            (push entry kept)
+          (push entry dropped))))
+    (dolist (entry (nreverse dropped))
+      (display-warning 'my-config
+                       (format "yas-snippet-dirs から解決できない要素を除外した: %S" entry)
+                       :warning))
+    (nreverse kept)))
+
+(defun my/yas-setup ()
+  "`yas-snippet-dirs' を解決済みの値へ確定し、可能なら `yas-global-mode' を有効にする。
+有効化した場合は non-nil を返す。
+
+全エントリが解決できず `yas-snippet-dirs' が nil になると、`yas--load-snippet-dirs'
+は `(call-interactively \\='yas-load-directory)' を呼び、起動が対話プロンプトで
+停止する。その場合はモードを有効化せず、警告して縮退する。"
+  (setq yas-snippet-dirs (my/yas-resolve-snippet-dirs yas-snippet-dirs))
+  (cond
+   (yas-snippet-dirs (yas-global-mode 1) t)
+   (t (display-warning
+       'my-config
+       "利用できるスニペットディレクトリが無いため yas-global-mode を有効化しない"
+       :warning)
+      nil)))
+
 (use-package yasnippet
   :straight t
-  :defer t
+  :defer 1
   :custom
-  (yas-prompt-functions '(yas-ido-prompt yas-no-prompt))  ; スニペット展開のプロンプト
-  (yas-trigger-key "TAB")                                 ; トリガーキーを TAB に設定
+  (yas-prompt-functions '(yas-completing-read-prompt yas-no-prompt)) ; スニペット選択は completing-read (vertico) を使用
   :init
-  ;; yas-global-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 1 nil #'yas-global-mode 1)
-  :config
   ;; ロードスニペットの設定
+  ;; 'yasnippet-snippets-dir (パッケージが公開する defconst) をあらかじめ入れておく。
+  ;; yasnippet ロード時に走る yasnippet-snippets-initialize (autoload の eval-after-load)
+  ;; は (member 'yasnippet-snippets-dir yas-snippet-dirs) が真なら何もしない。事前投入に
+  ;; より初期化時の yas--load-snippet-dirs が抑止され、全ディレクトリ走査は :config の
+  ;; yas-global-mode による 1 回だけになる (事前投入なしでは 2 回走る)。
+  ;; straight のビルドパスを自前で組み立てず、パッケージ公開のシンボルで参照する。
+  ;; :custom を使わないのは yas-snippet-dirs の :set が yas-reload-all を呼ぶため。
   (setq yas-snippet-dirs
-        (seq-filter #'file-exists-p
-                    (list (my-set-custom "snippets")
-                          ;; シンボリックリンク用
-                          (my-set-custom "snippets/snippets")
-                          ;; yasnippet-snippets パッケージから取得
-                          ;; (my-set-elisp "straight/build/yasnippet-snippets/snippets") ; 必要最小限に絞る
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/c++-ts-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-lang-common")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/c-ts-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/cc-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/cmake-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/css-ts-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/dockerfile-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/emacs-lisp-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/git-commit-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/html-ts-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-interaction-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/lisp-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-automake-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-bsdmake-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-gmake-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/makefile-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/markdown-ts-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/org-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/prog-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/python-ts-mode")
-                          (my-set-elisp "straight/build/yasnippet-snippets/snippets/text-mode")
-                          )))
-
-  ;; Yasnippet Snippets - 追加スニペット集
-  (use-package yasnippet-snippets :straight t)
+        (append (my/yas-personal-snippet-dirs)
+                (list 'yasnippet-snippets-dir)))
+  :config
+  (my/yas-setup)
   )
 
 ;;;;; [Group] Tags - タグナビゲーション ;;;;;
@@ -123,8 +223,12 @@
 (use-package ggtags
   :straight t
   :defer t
-  :hook ((c-mode   . ggtags-mode)
-         (c++-mode . ggtags-mode))
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  ;; （C-t タグナビゲーションの不変条件を ts モードでも維持するために必須）
+  :hook ((c-mode      . ggtags-mode)
+         (c++-mode    . ggtags-mode)
+         (c-ts-mode   . ggtags-mode)
+         (c++-ts-mode . ggtags-mode))
   :bind (:map ggtags-mode-map
               ("C-t d"   . my/gtags-find-definition)     ; 関数の定義場所の検索 (define)
               ("C-t C-d" . my/gtags-find-definition)
@@ -149,9 +253,16 @@
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :straight t
+  ;; 遅延ロードする。本体を起動時にロードすると初回描画までに約 170ms を要し、
+  ;; これは外部パッケージが起動経路で消費する時間の 82% を占めていた
+  ;; （docs/eval/7-elpaca-ceiling/ の実測）。
+  ;; mc/* は autoload されるため、実際にコマンドを使うまでロードされない。
+  :defer t
   :custom
   (mc/list-file (my-set-history "mc-lists.el"))
-  :config
+  ;; repeat-map と C-q プレフィックスは本体をロードせずに使える必要があるため
+  ;; :config ではなく :init で定義する（束縛はシンボル参照のみで本体を要求しない）。
+  :init
   ;; `repeat-mode` 用の `repeat-map` を作成
   (defvar-keymap my/mc-repeat-map
     :doc "Keymap for repeating multiple-cursors commands"
@@ -186,17 +297,17 @@
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :straight t
-  :custom
-  (transient-mark-mode t) ; 明示的に選択範囲を表示
   :bind (("C-," . er/expand-region))
   )
 
-;;; symbol-overlay - シンボルの置換
+;;; symbol-overlay - シンボルのハイライトと置換
 ;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
 (use-package symbol-overlay
   :straight t
   :hook (prog-mode . symbol-overlay-mode)
-  :bind (("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
+  :bind (([f3]      . symbol-overlay-put)                   ; シンボルの永続ハイライトをトグル
+         ([f4]      . symbol-overlay-remove-all)            ; ハイライトを全解除
+         ("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
          ("C-x a"   . my-symbol-overlay-rename-in-function) ; 関数・メソッド内の置換
          ("C-x C-g" . symbol-overlay-rename))               ; バッファ全体のシンボルを置換
   :config
@@ -219,13 +330,20 @@
     (interactive)
     (let* ((symbol (symbol-overlay-get-symbol))
            (new-name (read-string (format "Rename '%s' to: " symbol)))
+           ;; ts モードは derived-mode-p 上は c-mode/c++-mode の派生だが cc-mode の
+           ;; 内部状態を持たない。c-beginning-of-defun が使えないため先に振り分け、
+           ;; treesit が設定する beginning-of-defun-function 経由の汎用関数を使う。
            (start (cond
+                   ((derived-mode-p 'c-ts-mode 'c++-ts-mode)
+                    (save-excursion (beginning-of-defun) (point)))
                    ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
                     (save-excursion (c-beginning-of-defun) (point)))
                    ((derived-mode-p 'python-mode)
                     (save-excursion (python-nav-beginning-of-defun) (point)))
                    (t (point-min)))) ;; その他のモードではファイル全体
            (end (cond
+                 ((derived-mode-p 'c-ts-mode 'c++-ts-mode)
+                  (save-excursion (end-of-defun) (point)))
                  ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
                   (save-excursion (c-end-of-defun) (point)))
                  ((derived-mode-p 'python-mode)

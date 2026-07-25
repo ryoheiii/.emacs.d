@@ -16,7 +16,7 @@
 ;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
 (use-package paren
   :straight nil
-  :hook (after-init . show-paren-mode)
+  ;; show-paren-mode は Emacs 28+ でデフォルト有効のため hook 不要
   :custom
   (show-paren-delay 0)      ;; 遅延なしで即時ハイライト
   (show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる
@@ -58,9 +58,8 @@
   )
 
 ;;; 表示設定
-(use-package display-time
+(use-package time
   :straight nil
-  :if window-system
   :hook (after-init . display-time-mode)
   :custom
   (display-time-day-and-date t)
@@ -68,27 +67,116 @@
                                        month day dayname 24-hours minutes)))
   )
 
+;;;;;; [Group] Tree-sitter - 構文解析基盤 ;;;;;;
+;;; Treesit - 文法ライブラリの配置先と導入経路
+;; 文法は var/package/tree-sitter/ へ隔離する (既定の ~/.emacs.d/tree-sitter/ は使わない)。
+;; 導入は M-x my/treesit-install-c-grammars だけで行い、自動ではインストールしない。
+;; 文法が無い環境では 19-language-modes.el の remap が成立せず cc-mode のまま動作する。
+;;
+;; 注意: c-ts-mode.el は末尾で treesit-ready-p を呼ぶため、文法不在の環境で require すると
+;; display-warning が発火して make test-startup が失敗する。起動経路で c-ts-mode を
+;; require してはならない。可用性判定には警告を出さない treesit-language-available-p を使う。
+(use-package treesit
+  :straight nil
+  ;; treesit.el のロードは grammar 導入時だけで足りる (起動経路では読まない)
+  :defer t
+  :init
+  (defvar my/treesit-grammar-dir (my-set-package "tree-sitter/")
+    "tree-sitter 文法ライブラリの配置先。")
+
+  (defconst my/treesit-c-language-sources
+    '((c   . ("https://github.com/tree-sitter/tree-sitter-c"   "v0.23.6" "src"))
+      (cpp . ("https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.4" "src")))
+    "C/C++ 文法の取得元。Emacs 30 が読める ABI へ収まるタグへ固定する。")
+
+  (defun my/treesit-install-c-grammars (&optional force)
+    "C/C++ の tree-sitter 文法を `my/treesit-grammar-dir' へ導入する.
+FORCE (C-u) を付けると導入済みでも再ビルドする。git と C コンパイラが必要。
+導入後の切り替えは Emacs の再起動で反映される。"
+    (interactive "P")
+    (unless (and (fboundp 'treesit-available-p) (treesit-available-p))
+      (user-error "この Emacs は tree-sitter 無効ビルドです"))
+    (require 'treesit)
+    (make-directory my/treesit-grammar-dir t)
+    ;; グローバルな treesit-language-source-alist を汚さずレシピを渡す
+    (let ((treesit-language-source-alist my/treesit-c-language-sources))
+      (dolist (entry my/treesit-c-language-sources)
+        (let ((lang (car entry)))
+          (if (and (not force) (treesit-language-available-p lang))
+              (message "treesit: %s は導入済み" lang)
+            (treesit-install-language-grammar lang my/treesit-grammar-dir)))))
+    (message "treesit: 完了。Emacs を再起動すると ts モードへ切り替わります"))
+
+  ;; treesit-extra-load-path は treesit.c 側の変数で、treesit.el をロードせずに設定できる
+  (when (and (fboundp 'treesit-available-p) (treesit-available-p))
+    (add-to-list 'treesit-extra-load-path my/treesit-grammar-dir))
+  )
+
+;;;;;; [Group] LSP - Language Server ;;;;;;
+;; C/C++ 補完の三段フォールバック (環境に応じて自動選択)
+;;   1. clangd + compile_commands.json/.clangd あり → eglot
+;;   2. irony-server 実体あり                        → irony (31-editing.el)
+;;   3. どちらも無い                                  → cape + ggtags
+(use-package eglot
+  :straight nil
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  :hook ((c-mode      . my/eglot-cc-maybe-ensure)
+         (c++-mode    . my/eglot-cc-maybe-ensure)
+         (c-ts-mode   . my/eglot-cc-maybe-ensure)
+         (c++-ts-mode . my/eglot-cc-maybe-ensure))
+  :init
+  (defconst my/eglot-cc-file-regexp "\\.\\(c\\|cc\\|C\\|cpp\\|cxx\\|h\\|hh\\|hpp\\|hxx\\)\\'"
+    "eglot を自動起動してよい C/C++ 実ソースの拡張子。.log/.cfg (c-mode 割当) を除外する.")
+  (defun my/eglot-cc-project-p ()
+    "compile_commands.json または .clangd を持つプロジェクトなら non-nil."
+    (and buffer-file-name
+         (or (locate-dominating-file default-directory "compile_commands.json")
+             (locate-dominating-file default-directory ".clangd")
+             (locate-dominating-file
+              default-directory
+              (lambda (dir)
+                (file-exists-p
+                 (expand-file-name "build/compile_commands.json" dir)))))))
+  (defun my/eglot-cc-maybe-ensure ()
+    "clangd があり CDB または .clangd を持つ C/C++ 実ソースのみ eglot を自動起動する.
+.clangd 単独 (CDB なし) のプロジェクトも意図的に自動起動対象とする."
+    (when (and buffer-file-name
+               (string-match-p my/eglot-cc-file-regexp buffer-file-name)
+               (executable-find "clangd")
+               (my/eglot-cc-project-p))
+      (eglot-ensure)))
+  :custom
+  (eglot-autoshutdown t)
+  (eglot-events-buffer-config '(:size 0 :format full))
+  (eglot-ignored-server-capabilities '(:inlayHintProvider :documentHighlightProvider))
+  (eglot-stay-out-of '(flymake))       ; 使用感維持。診断が欲しくなったらここから外す
+  (eldoc-echo-area-use-multiline-p nil)
+  :config
+  ;; clangd 起動引数 (Doom :lang cc 準拠)。--header-insertion=never は補完確定時の
+  ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用
+  (add-to-list 'eglot-server-programs
+               '((c-mode c-ts-mode c++-mode c++-ts-mode)
+                 . ("clangd" "--background-index" "--header-insertion=never"
+                    "--header-insertion-decorators=0")))
+  ;; eglot 管理バッファでは irony を止める (CAPF 競合防止)。
+  ;; eglot-ensure は post-command-hook で遅延接続するため、モードフックでの判定は不可
+  (defun my/eglot-cc-suppress-irony ()
+    (when (and (eglot-managed-p) (bound-and-true-p irony-mode))
+      (irony-mode -1)))
+  (add-hook 'eglot-managed-mode-hook #'my/eglot-cc-suppress-irony)
+  )
+
 ;;;;;; [Group] Search - 検索 ;;;;;;
 ;;; Grep - ファイル内検索機能の設定。特定のパターンに基づいてファイルを検索
+;; consult-ripgrep (C-x g) が .gitignore を尊重するのに対し、C-c g は生 grep
 (use-package grep
   :straight nil
   :bind ("C-c g" . grep)
-  :config
-  (setq grep-command-before-query "grep -nr -e ")
-  (defun grep-default-command ()
-    (if current-prefix-arg
-        (let ((grep-command-before-target
-               (concat grep-command-before-query
-                       (shell-quote-argument (grep-tag-default)))))
-          (cons (if buffer-file-name
-                    (concat grep-command-before-target
-                            " *."
-                            (file-name-extension buffer-file-name))
-                  (concat grep-command-before-target " ."))
-                (+ (length grep-command-before-target) 1)))
-      (car grep-command)))
-  (setq grep-command (cons (concat grep-command-before-query " .")
-                           (+ (length grep-command-before-query) 1)))
+  :custom
+  ;; 初期入力を "grep -nr -e  ." とし、カーソルを -e の直後へ置く
+  ;; (cons 形式は組み込み grep-default-command が string-match で型エラーになるため不可)
+  (grep-command "grep -nr -e  .")
+  (grep-command-position 13)
   )
 
 ;;;;;; [Group] Editing - 編集補助 ;;;;;;
@@ -121,7 +209,6 @@
 (use-package autorevert
   :straight nil
   :hook (after-init . global-auto-revert-mode)
-  :custom (magit-auto-revert-mode t)
   )
 
 ;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存

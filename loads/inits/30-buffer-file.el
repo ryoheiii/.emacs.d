@@ -11,10 +11,9 @@
            (getenv "DISPLAY")        ; X11 の DISPLAY 変数がある
            (executable-find "xclip")) ; `xclip` がシステムにインストールされている
   :straight t
-  :defer t
-  :init
-  ;; xclip-mode は autoload 済み → タイマーでパッケージロード + :config 実行
-  (run-with-idle-timer 0.5 nil #'xclip-mode 1)
+  :defer 0.5
+  :config
+  (xclip-mode 1)
   )
 
 ;;; dashboard - Emacs のスタートアップ画面をカスタマイズ
@@ -36,7 +35,7 @@
 
 ;;; recentf - 最近使用したファイルの履歴管理
 (use-package recentf
-  :straight t
+  :straight nil
   :hook (after-init . recentf-mode)
   :custom
   (recentf-max-saved-items 2000)                                 ; 保存するファイルの数
@@ -52,8 +51,8 @@
     `(let ((message-log-max nil))
        (with-temp-message (or (current-message) "") ,@body)))
 
-  ;; 30秒ごとに recentf リストを自動保存
-  (run-with-idle-timer 30 t 'recentf-save-list)
+  ;; 30秒ごとに recentf リストを自動保存(エコーエリアへのメッセージは抑制)
+  (run-with-idle-timer 30 t (lambda () (with-suppressed-message (recentf-save-list))))
   )
 
 ;;; recentf-ext - recentf の拡張機能
@@ -62,12 +61,15 @@
   :after recentf
   )
 
-;;; smooth-scroll - スムーズなスクロール
-(use-package smooth-scroll
-  :straight t
-  :hook (after-init . smooth-scroll-mode)
+;;; pixel-scroll - ピクセル単位のスムーズなスクロール(組み込み)
+;; ロード時の GUI 判定のため daemon 起動は対象外
+;; (doom-modeline 等の既存 GUI 限定宣言と同一方針)
+(use-package pixel-scroll
+  :straight nil
+  :if (display-graphic-p)
+  :hook (after-init . pixel-scroll-precision-mode)
   :custom
-  (smooth-scroll/vscroll-step-size 8) ; スクロールのステップサイズ
+  (pixel-scroll-precision-interpolate-page t) ; ページ送りも補間する
   )
 
 ;;; anzu - 検索・置換時にマッチ数や現在位置を表示

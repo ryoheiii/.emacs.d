@@ -9,11 +9,12 @@
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
   :straight t
-  :mode ("\\.md\\'" . markdown-mode)
-  :init (setq markdown-enable-math t                   ; 数式 ($…$ / $$…$$) を有効に
-              markdown-fontify-code-blocks-natively t) ; コードブロックを必ず着色
+  :mode (("\\.md\\'" . markdown-mode)
+         ("README\\.md\\'" . gfm-mode))
   :hook ((markdown-mode . my/markdown-setup))
   :custom
+  (markdown-enable-math t)                   ; 数式 ($…$ / $$…$$) を有効に
+  (markdown-fontify-code-blocks-natively t)  ; コードブロックを必ず着色
   (markdown-indent-level 4)
   (markdown-link-space-substitution-method 'underscores) ; リンクのスペースをアンダースコアに置換
   (markdown-header-scaling t)                            ; 見出しサイズの自動調整
@@ -23,10 +24,11 @@
                               ("python" . python)))
   ;; 画像を表示する設定
   (markdown-image-use-cache t) ; キャッシュして表示
-  :bind (("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
-         ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
-         ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
-         ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
+  :bind (:map markdown-mode-map
+              ("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
+              ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
+              ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
+              ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
   :config
   (require 'my-markdown)
   ;; Pandoc コマンドと CSS を遅延設定（markdown-mode ロード時に初めて構築）
@@ -50,7 +52,8 @@
          ;; (markdown-mode . markdown-toc-insert-toc) ; 保存時に目次を自動挿入
          ;; (before-save . markdown-toc-update-toc)   ; 保存前に目次を更新
          )
-  :bind (("C-c C-v t" . markdown-toc-generate-toc))   ; 目次を手動で生成
+  :bind (:map markdown-mode-map
+              ("C-c C-v t" . markdown-toc-generate-toc))      ; 目次を手動で生成
   :custom
   (markdown-toc-without-markdown-toc t)               ; コメントを含めない
   (markdown-toc-headline-style 'atx)                  ; 見出しのスタイル

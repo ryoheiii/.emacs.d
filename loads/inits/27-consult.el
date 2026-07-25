@@ -10,8 +10,7 @@
   :straight t
   :after vertico
   :bind
-  (("C-x C-f" . find-file)
-   ("C-x f"   . consult-find)
+  (("C-x f"   . consult-find)
    ("C-x C-r" . consult-recent-file)
    ("C-x C-y" . consult-yank-pop)
    ("C-x b"   . consult-buffer)
@@ -19,9 +18,13 @@
    ("C-s"     . consult-line)
    ("C-S"     . my/consult-line-multi)
    ("C-."     . consult-goto-line)
-   ("C-x g"   . consult-grep)
-   ;; ("C-x g"   . affe-grep)
+   ("C-x g"   . my/consult-ripgrep-or-grep)
    )
+  :init
+  ;; consult は遅延ロードのため、起動直後から xref 検索へ反映されるよう
+  ;; :config でなく :init で設定する (defcustom は setq 済みの値を上書きしない)
+  (when (executable-find "rg")
+    (setq xref-search-program 'ripgrep))
   :custom
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
@@ -35,6 +38,15 @@
     (interactive "P")
     (let ((consult-async-min-input 1))
       (apply #'consult-line-multi args)))
+
+  ;; consult-ripgrep は .gitignore を尊重する。ignore されたファイルも
+  ;; 検索したいときは C-c g の生 grep を使う
+  (defun my/consult-ripgrep-or-grep (&optional dir initial)
+    "rg があれば consult-ripgrep、なければ consult-grep."
+    (interactive "P")
+    (if (executable-find "rg")
+        (consult-ripgrep dir initial)
+      (consult-grep dir initial)))
   )
 
 ;;; Consult-yasnippet - Yasnippet の `consult` インテグレーション
@@ -54,16 +66,6 @@
 (use-package embark-consult
   :straight t
   :hook (embark-collect-mode . consult-preview-at-point-mode)
-  )
-
-;;; Affe - 高速検索（grep 代替）
-(use-package affe
-  :straight t
-  :defer t
-  :commands (affe-grep affe-find)
-  :config
-  (setq affe-regexp-function #'orderless-pattern-compiler)
-  (setq affe-highlight-function #'orderless-highlight-matches)
   )
 
 ;;; Orderless - 高度な補完フィルタ

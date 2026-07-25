@@ -1,0 +1,53 @@
+name: Emacs 回帰テスト
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Emacs ${{ matrix.emacs-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: ${{ matrix.experimental }}
+    env:
+      # test-tty-live(emacs -nw)用。TERM 未設定/dumb では emacs -nw が起動できない。
+      TERM: xterm-256color
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - emacs-version: "30.2"
+            experimental: false
+          - emacs-version: snapshot
+            experimental: true
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v6.0.2
+
+      - name: Emacs をセットアップ
+        uses: purcell/setup-emacs@v8.0
+        with:
+          version: ${{ matrix.emacs-version }}
+
+      - name: straight.el キャッシュを復元
+        id: straight-cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            loads/straight/repos
+            loads/straight/build
+            loads/straight/build-cache.el
+          key: straight-v3-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
+          restore-keys: |
+            straight-v3-${{ matrix.emacs-version }}-
+
+      - name: lockfile のリビジョンを適用
+        run: make straight-thaw
+
+      - name: 回帰テストを実行
+        run: make test
