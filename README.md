@@ -107,7 +107,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `31-editing.el` | コード編集・タグナビゲーション（google-c-style, irony, ggtags 等） |
 | `32-navigation.el` | ナビゲーション・スペルチェック（migemo, neotree, flyspell） |
 | `33-vcs.el` | バージョン管理（magit, diff-hl, difftastic） |
-| `34-misc.el` | ユーティリティ（which-key, undo-fu, vundo） |
+| `34-misc.el` | ユーティリティ（which-key, vundo, undo-fu-session） |
 | `99-private.el` | プライベート設定 |
 
 #### site-elisp モジュール
@@ -127,7 +127,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | Git | Magit + diff-hl + difftastic |
 | C/C++ | cc-mode, google-c-style, eglot + clangd（CDB/.clangd 検出時）、ggtags（フォールバック）、irony（非 LSP 補完） |
 | 日本語入力 | Mozc, Migemo, TR-ime (Windows) |
-| Undo | vundo + undo-fu + undo-fu-session |
+| Undo | vundo + undo-fu-session |
 
 ### パスヘルパー関数
 
