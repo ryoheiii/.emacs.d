@@ -257,13 +257,33 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
     (should (equal (buffer-string) "int x;\n   "))))
 
 (ert-deftest my-test-cpp-config-c-ts-layout-rules ()
-  "自動改行の規則がリテラルとアクセス指定子を正しく区別する."
+  "自動改行の規則がリテラル・行途中・括弧内・アクセス指定子を正しく区別する."
   :tags '(:cpp-config)
   (with-temp-buffer
     (c++-mode)
     (insert "int x;")
-    (should (eq (my/c-ts-layout-after) 'after))
-    (should (eq (my/c-ts-layout-around) 'around)))
+    (should (eq (my/c-ts-layout-open-brace) 'after))
+    (should (eq (my/c-ts-layout-close-brace) 'around))
+    (should (eq (my/c-ts-layout-semi) 'after)))
+  ;; 行途中では改行しない（cc-mode の c-semi&comma-no-newlines-before-nonblanks 相当）
+  (with-temp-buffer
+    (c++-mode)
+    (insert "foo; bar")
+    (goto-char (+ (point-min) 4))
+    (should-not (my/c-ts-layout-semi))
+    (should-not (my/c-ts-layout-open-brace))
+    (should-not (my/c-ts-layout-close-brace)))
+  ;; 括弧の中では `;' で改行しない（for の区切り）
+  (with-temp-buffer
+    (c++-mode)
+    (insert "for (int i = 0;")
+    (should (my/c-ts-inside-parens-p))
+    (should-not (my/c-ts-layout-semi)))
+  ;; 空の `{}' 対は後ろだけ改行する（empty-defun-braces 相当）
+  (with-temp-buffer
+    (c++-mode)
+    (insert "int f() {}")
+    (should (eq (my/c-ts-layout-close-brace) 'after)))
   ;; 文字列・コメントの中では改行しない
   ;; （C の文字列は行をまたげないため、閉じていない文字列は cc-mode の
   ;;   syntax-propertize がリテラル扱いしない。閉じた文字列で検証する）
@@ -272,15 +292,15 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
     (insert "const char* s = \"a;b\";\n")
     (goto-char (point-min))
     (should (search-forward ";" nil t))   ; 文字列内の `;' の直後
-    (should-not (my/c-ts-layout-after))
-    (should-not (my/c-ts-layout-around)))
+    (should-not (my/c-ts-layout-semi))
+    (should-not (my/c-ts-layout-close-brace)))
   (with-temp-buffer
     (c++-mode)
     (insert "// a;b\nint x;\n")
     (goto-char (point-min))
     (should (search-forward ";" nil t))   ; コメント内の `;' の直後
-    (should-not (my/c-ts-layout-after))
-    (should-not (my/c-ts-layout-around)))
+    (should-not (my/c-ts-layout-semi))
+    (should-not (my/c-ts-layout-close-brace)))
   ;; コロンはアクセス指定子のときだけ改行する
   (pcase-dolist (`(,line . ,expected)
                  '(("  public:"          . after)
@@ -295,19 +315,65 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
       (should (eq (my/c-ts-layout-colon) expected)))))
 
 (ert-deftest my-test-cpp-config-c-ts-brace-cleanup ()
-  "`}' の後ろの改行を `;' / else / while のときだけ取り消す."
+  "`}' の後ろの改行を `;' / else / while / catch のときだけ取り消す."
   :tags '(:cpp-config)
   (pcase-dolist (`(,input . ,expected)
-                 '(("class A {\n}\n;"   . "class A {\n};")
-                   ("if (a) {\n}\nelse" . "if (a) {\n} else")
-                   ("do {\n}\nwhile"    . "do {\n} while")
+                 '(("class A {\n}\n;"      . "class A {\n};")
+                   ("if (a) {\n}\nelse"    . "if (a) {\n} else")
+                   ("do {\n}\nwhile"       . "do {\n} while")
+                   ("try {\n}\ncatch"      . "try {\n} catch")
+                   ;; empty-defun-braces 相当: `{' 直後の空行の `}' を 1 行へ戻す
+                   ("int f() {\n    }"     . "int f() {}")
                    ;; 直前が `}' でなければ触らない
-                   ("int a;\n;"         . "int a;\n;")))
+                   ("int a;\n;"            . "int a;\n;")))
     (with-temp-buffer
       (c++-mode)
       (insert input)
       (my/c-ts-pre-layout-fixups)
       (should (equal (buffer-string) expected)))))
+
+(defun my-test-cpp-config--type (string)
+  "STRING を 1 文字ずつ実際のキー割当経由で入力する.
+`self-insert-command' を `call-interactively' で呼ぶことで
+`post-self-insert-hook'（cleanup → electric-layout → electric-indent）を通す。"
+  (dolist (ch (string-to-list string))
+    (let ((last-command-event ch))
+      (call-interactively (or (key-binding (vector ch)) #'self-insert-command)))))
+
+(ert-deftest my-test-cpp-config-c-ts-electric-typing ()
+  "実際の入力経路（post-self-insert-hook 経由）で cc-mode と同じ構造になること.
+helper の直接呼び出しでは electric-layout / electric-indent との連携を検証できない。"
+  :tags '(:cpp-config)
+  (skip-unless (my/treesit-cc-grammar-ready-p 'cpp))
+  (require 'c-ts-mode)
+  (pcase-dolist (`(,input . ,expected)
+                 '(("for (int i = 0; i < n; ++i) {x;}"
+                    . "for (int i = 0; i < n; ++i) {\n    x;\n}\n")
+                   ("int f() {}"            . "int f() {}\n")
+                   ("try {a;} catch (...) {b;}"
+                    . "try {\n    a;\n} catch (...) {\n    b;\n}\n")
+                   ("do {a;} while (b);"    . "do {\n    a;\n} while (b);\n")
+                   ("int f(int a, int b);"  . "int f(int a, int b);\n")))
+    (with-temp-buffer
+      (c++-ts-mode)
+      (my-test-cpp-config--type input)
+      (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                     expected))))
+  ;; 行途中への `;' 挿入で行を割らないこと
+  (with-temp-buffer
+    (c++-ts-mode)
+    (insert "foo bar")
+    (goto-char (+ (point-min) 3))
+    (my-test-cpp-config--type ";")
+    (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                   "foo; bar")))
+  ;; DEL が ts モードでも hungry delete へ解決されること
+  (with-temp-buffer
+    (c++-ts-mode)
+    (insert "int x;\n    ")
+    (call-interactively (key-binding (kbd "DEL")))
+    (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                   "int x;"))))
 
 ;;;;; [Group] C++ Config - 補完フォールバック段 ;;;;;
 (ert-deftest my-test-cpp-config-irony-server-prefix ()

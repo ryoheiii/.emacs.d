@@ -148,40 +148,46 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
   (defun my/c-ts-hungry-delete-backward (&optional arg)
     "直前の空白をまとめて削除する（cc-mode の hungry delete 相当）.
 改行も対象にする点まで `c-hungry-delete-backwards' に合わせる。
-ARG 付き、リージョン選択中、コメント・文字列の中では通常の削除に戻す。"
+リージョン選択中は選択範囲を消す。ARG 付きとコメント・文字列の中では
+cc-mode の `c-backspace-function' と同じ通常削除へ戻す（kill-ring は使わない）。"
     (interactive "P")
-    (if (or arg (use-region-p) (my/c-ts-in-literal-p))
-        (call-interactively #'delete-backward-char)
-      (let ((backward-delete-char-untabify-method 'all))
-        (backward-delete-char-untabify 1))))
+    (cond
+     ((use-region-p) (delete-region (region-beginning) (region-end)))
+     ((or arg (my/c-ts-in-literal-p))
+      (backward-delete-char-untabify (prefix-numeric-value arg)))
+     (t (let ((backward-delete-char-untabify-method 'all))
+          (backward-delete-char-untabify 1)))))
 
-  ;; electric-layout は挿入位置の文脈を見ないため、規則側でリテラルを除外する
-  (defun my/c-ts-layout-after ()
-    "リテラル外なら文字の後ろで改行する."
-    (unless (my/c-ts-in-literal-p) 'after))
+  ;; --- 自動改行の抑止条件（cc-mode の c-hanging-semi&comma-criteria 相当）------
+  ;; electric-layout は挿入位置の文脈を見ないため、規則側で判定する。
+  (defun my/c-ts-before-nonblank-p ()
+    "point の後ろに空白以外が残っているなら non-nil.
+cc-mode の `c-semi&comma-no-newlines-before-nonblanks' 相当（行途中編集を壊さない）。"
+    (not (looking-at-p "[ \t]*$")))
 
-  (defun my/c-ts-layout-around ()
-    "リテラル外なら文字の前後で改行する."
-    (unless (my/c-ts-in-literal-p) 'around))
+  (defun my/c-ts-inside-parens-p ()
+    "`(' の内側なら non-nil.
+cc-mode の `c-semi&comma-inside-parenlist' 相当（for の区切りで改行しない）。"
+    (let ((open (nth 1 (syntax-ppss))))
+      (and open (eq (char-after open) ?\())))
 
-  (defun my/c-ts-pre-layout-fixups ()
-    "自動改行の直前に走らせる整形（cc-mode の電気コマンド相当）.
-`electric-layout'（深さ 40）と `electric-indent'（深さ 60）より先に走る必要がある。"
-    (unless (my/c-ts-in-literal-p)
-      (let ((line (buffer-substring-no-properties (line-beginning-position) (point))))
-        (cond
-         ;; c-cleanup-list の (brace-else-brace defun-close-semi) 相当。
-         ;; `}' の後ろへ入れた改行を、次行が `;' / `else' / `while' なら取り消す
-         ((string-match "\\`[ \t]*\\(;\\|else\\|while\\)\\'" line)
-          (let ((sep (if (string= (match-string 1 line) ";") "" " "))
-                (token (save-excursion (back-to-indentation) (point))))
-            (save-excursion
-              (goto-char token)
-              (skip-chars-backward " \t\n")
-              (when (eq (char-before) ?\})
-                (delete-region (point) token)
-                (insert sep)))))
-         ))))
+  (defun my/c-ts-layout-inhibit-p ()
+    "リテラル内・行途中では自動改行しない."
+    (or (my/c-ts-in-literal-p) (my/c-ts-before-nonblank-p)))
+
+  (defun my/c-ts-layout-open-brace ()
+    "`{' の後ろで改行する."
+    (unless (my/c-ts-layout-inhibit-p) 'after))
+
+  (defun my/c-ts-layout-close-brace ()
+    "`}' の前後で改行する。空の `{}' 対なら後ろだけ改行する."
+    (unless (my/c-ts-layout-inhibit-p)
+      (if (eq (char-before (1- (point))) ?\{) 'after 'around)))
+
+  (defun my/c-ts-layout-semi ()
+    "文末の `;' の後ろで改行する。`for' の区切りなど括弧の中では改行しない."
+    (unless (or (my/c-ts-layout-inhibit-p) (my/c-ts-inside-parens-p))
+      'after))
 
   (defun my/c-ts-layout-colon ()
     "アクセス指定子の `:' でだけ改行する.
@@ -193,10 +199,42 @@ case ラベル・三項演算子・スコープ解決演算子では改行しな
         (when (looking-at "[ \t]*\\(public\\|private\\|protected\\)[ \t]*:[ \t]*$")
           'after))))
 
+  ;; --- cleanup（cc-mode の c-cleanup-list 相当）--------------------------------
+  (defconst my/c-ts-close-brace-followers-regexp
+    "\\`[ \t]*\\(;\\|else\\|while\\|catch\\)\\'"
+    "`}' の直後の改行を取り消す語。
+google-c-style の (defun-close-semi brace-else-brace brace-elseif-brace
+brace-catch-brace) に対応する。")
+
+  (defun my/c-ts-pre-layout-fixups ()
+    "自動改行の直前に走らせる整形（cc-mode の `c-cleanup-list' 相当）.
+`electric-layout'（深さ 40）と `electric-indent'（深さ 60）より先に走る必要がある。"
+    (unless (my/c-ts-in-literal-p)
+      (let ((line (buffer-substring-no-properties (line-beginning-position) (point))))
+        (cond
+         ;; `}' の後ろへ入れた改行を、次行が `;' / else / while / catch なら取り消す
+         ((string-match my/c-ts-close-brace-followers-regexp line)
+          (let ((sep (if (string= (match-string 1 line) ";") "" " "))
+                (token (save-excursion (back-to-indentation) (point))))
+            (save-excursion
+              (goto-char token)
+              (skip-chars-backward " \t\n")
+              (when (eq (char-before) ?\})
+                (delete-region (point) token)
+                (insert sep)))))
+         ;; empty-defun-braces 相当: `{' の直後の空行へ `}' を置いたら 1 行へ戻す
+         ((string-match-p "\\`[ \t]*}\\'" line)
+          (let ((brace (1- (point))))
+            (save-excursion
+              (goto-char brace)
+              (skip-chars-backward " \t\n")
+              (when (eq (char-before) ?\{)
+                (delete-region (point) brace)))))))))
+
   (defconst my/c-ts-electric-layout-rules
-    '((?\{ . my/c-ts-layout-after)
-      (?\} . my/c-ts-layout-around)
-      (?\; . my/c-ts-layout-after)
+    '((?\{ . my/c-ts-layout-open-brace)
+      (?\} . my/c-ts-layout-close-brace)
+      (?\; . my/c-ts-layout-semi)
       (?\: . my/c-ts-layout-colon))
     "ts モードの自動改行規則。cc-mode + google-c-style の実挙動に対応させる。")
 
