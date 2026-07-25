@@ -70,6 +70,9 @@
 (load custom-file 'noerror)
 
 ;;; バックアップ設定
+;; auto-save-file-name-transforms は保存先ディレクトリを作成しないため、
+;; fresh 環境や --clean 後でも auto-save が失敗しないよう事前に作成する
+(make-directory my-backup-dir t)
 (add-to-list 'backup-directory-alist (cons "." my-backup-dir))
 (setq auto-save-file-name-transforms `((".*" ,my-backup-dir t)))
 
