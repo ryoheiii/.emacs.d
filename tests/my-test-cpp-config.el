@@ -9,8 +9,12 @@
 (require 'my-gtags)
 
 ;;;;; [Group] C++ Config - 編集・検索設定 ;;;;;
+;; cc-mode 側のスタイル固定。ts モードが有効な環境では c-basic-offset などが
+;; 存在しないため、同等の検証は my-test-cpp-config-c-ts-indent-google-equivalent
+;; が担当する（どちらか一方が必ず走る）。
 (ert-deftest my-test-cpp-config-google-style ()
   :tags '(:cpp-config)
+  (skip-unless (not (my/treesit-cc-ready-p 'cpp)))
   (let ((file (make-temp-file "my-test-cpp-config-" nil ".cpp"))
         buffer)
     (unwind-protect
@@ -99,6 +103,138 @@ NO-CLANGD が non-nil なら clangd 不在環境を模擬する。"
           (should-not (my-test-cpp-config--eglot-called-p with-cdb "sample.cpp" t))
           (should-not (my-test-cpp-config--eglot-called-p with-cdb nil)))
       (delete-directory root t))))
+
+;;;;; [Group] C++ Config - tree-sitter 段階移行 ;;;;;
+;; 文法が無い環境（会社環境・CI）では cc-mode へ自動フォールバックすることが
+;; この機能の前提であるため、フォールバック側を最優先で固定する。
+(ert-deftest my-test-cpp-config-treesit-fallback ()
+  "文法が無い環境では remap を登録せず cc-mode のまま動作する."
+  :tags '(:cpp-config)
+  (skip-unless (not (my/treesit-cc-ready-p 'cpp)))
+  (should-not (assq 'c-mode major-mode-remap-alist))
+  (should-not (assq 'c++-mode major-mode-remap-alist))
+  (let ((file (make-temp-file "my-test-treesit-fallback-" nil ".cpp"))
+        buffer)
+    (unwind-protect
+        (progn
+          (setq buffer (find-file-noselect file))
+          (with-current-buffer buffer
+            (should (eq major-mode 'c++-mode))))
+      (when (buffer-live-p buffer)
+        (kill-buffer buffer))
+      (delete-file file))))
+
+(ert-deftest my-test-cpp-config-treesit-opt-out ()
+  "`my/use-treesit-for-cc' を nil にすると文法があっても ts を使わない."
+  :tags '(:cpp-config)
+  (let ((my/use-treesit-for-cc nil))
+    (should-not (my/treesit-cc-ready-p 'c))
+    (should-not (my/treesit-cc-ready-p 'cpp))))
+
+(defun my-test-cpp-config--dispatch (dispatcher file)
+  "FILE を訪問中として DISPATCHER を実行し、選ばれたモード関数名を返す."
+  (let (called)
+    (cl-letf (((symbol-function 'c-mode)      (lambda () (setq called 'c-mode)))
+              ((symbol-function 'c++-mode)    (lambda () (setq called 'c++-mode)))
+              ((symbol-function 'c-ts-mode)   (lambda () (setq called 'c-ts-mode)))
+              ((symbol-function 'c++-ts-mode) (lambda () (setq called 'c++-ts-mode))))
+      (with-temp-buffer
+        (setq buffer-file-name file)
+        (funcall dispatcher)
+        (setq buffer-file-name nil)))
+    called))
+
+(ert-deftest my-test-cpp-config-treesit-dispatch ()
+  "実ソースだけ ts モードへ回し、cc-mode を流用しているファイルは除外する."
+  :tags '(:cpp-config)
+  ;; 実 C/C++ ソース → ts モード
+  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.c")
+              'c-ts-mode))
+  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.cpp")
+              'c++-ts-mode))
+  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.h")
+              'c++-ts-mode))
+  ;; ログ閲覧用の流用 (.log/.cfg) と Squirrel (.nut) は cc-mode のまま
+  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.log")
+              'c-mode))
+  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.cfg")
+              'c-mode))
+  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.nut")
+              'c++-mode))
+  ;; ファイルに紐付かないバッファも cc-mode 側へ倒す
+  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch nil) 'c-mode))
+  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch nil) 'c++-mode)))
+
+(ert-deftest my-test-cpp-config-treesit-grammar-dir-isolated ()
+  "文法の配置先は var/package/ 配下へ隔離し、リポジトリ直下へ置かない."
+  :tags '(:cpp-config)
+  (skip-unless (and (fboundp 'treesit-available-p) (treesit-available-p)))
+  ;; 実ディレクトリは導入時まで存在しないため文字列前方一致で判定する
+  (should (string-prefix-p (file-name-as-directory (my-set-package ""))
+                           my/treesit-grammar-dir))
+  (should (member my/treesit-grammar-dir treesit-extra-load-path)))
+
+(ert-deftest my-test-cpp-config-c-ts-indent-google-equivalent ()
+  "ts モードのインデントが google-c-style 相当（offset 4）になること."
+  :tags '(:cpp-config)
+  (skip-unless (my/treesit-cc-ready-p 'cpp))
+  (require 'c-ts-mode)
+  (with-temp-buffer
+    (c++-ts-mode)
+    (insert "namespace ns {\n"
+            "class A {\n"
+            "public:\n"
+            "void f(int x) {\n"
+            "switch (x) {\n"
+            "case 1:\n"
+            "break;\n"
+            "}\n"
+            "}\n"
+            "};\n"
+            "}\n")
+    (indent-region (point-min) (point-max))
+    (goto-char (point-min))
+    (let ((column-of
+           (lambda (needle)
+             (goto-char (point-min))
+             (should (re-search-forward (concat "^\\([ \t]*\\)" (regexp-quote needle)) nil t))
+             (length (match-string 1)))))
+      ;; (innamespace . 0): namespace 本体はインデントしない
+      (should (= (funcall column-of "class A {") 0))
+      ;; (access-label . /): メンバ (4) より半段浅い 2
+      (should (= (funcall column-of "public:") 2))
+      (should (= (funcall column-of "void f(int x) {") 4))
+      ;; (case-label . +): switch から 1 段下げる
+      (should (= (funcall column-of "switch (x) {") 8))
+      (should (= (funcall column-of "case 1:") 12))
+      (should (= (funcall column-of "break;") 16)))))
+
+;;;;; [Group] C++ Config - 補完フォールバック段 ;;;;;
+(ert-deftest my-test-cpp-config-irony-server-prefix ()
+  "irony の導入先は var/hist/ 配下で、可用性判定と同じ場所を指すこと."
+  :tags '(:cpp-config)
+  (should (string-prefix-p (file-name-as-directory (my-set-history ""))
+                           my/irony-server-prefix))
+  ;; 遅延パッケージの :custom は theme 値として記録され、パッケージのロード時に
+  ;; 適用される。実ロードして反映と :config の設定を確認する
+  ;; (irony 未ロードを固定する :invariant とは別プロセスで動くため安全)。
+  (require 'irony)
+  (should (equal irony-server-install-prefix my/irony-server-prefix))
+  ;; ts モードでも irony を有効化できること
+  (should (memq 'c-ts-mode irony-supported-major-modes))
+  (should (memq 'c++-ts-mode irony-supported-major-modes)))
+
+(ert-deftest my-test-cpp-config-irony-gate ()
+  "irony-server 実体が無い環境では irony-mode を有効化しない."
+  :tags '(:cpp-config)
+  (let (enabled)
+    (cl-letf (((symbol-function 'irony-mode) (lambda (&rest _) (setq enabled t))))
+      (cl-letf (((symbol-function 'my/irony-server-available-p) (lambda () nil)))
+        (my/irony-maybe-enable)
+        (should-not enabled))
+      (cl-letf (((symbol-function 'my/irony-server-available-p) (lambda () t)))
+        (my/irony-maybe-enable)
+        (should enabled)))))
 
 ;;;;; [Group] C++ Config - フォーカス・タグ検索 ;;;;;
 (ert-deftest my-test-cpp-config-focus-change ()
