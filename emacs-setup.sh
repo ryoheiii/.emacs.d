@@ -80,8 +80,21 @@ setup_env() {
     sudo apt-get install -y build-essential autoconf automake texinfo git libtool
 
     ## GCC バージョン検出（libgccjit 用）
+    # gcc は build-essential でここまでに入る。事前チェックには含めない。
+    local GCC_VERSION
     GCC_VERSION=$(gcc -dumpversion | cut -d. -f1)
     echo "Detected GCC version: $GCC_VERSION"
+
+    # libgccjit は gcc とバージョンを揃える必要がある。
+    # 欠落したまま続行すると install_emacs の --with-native-compilation が
+    # 無条件のため、setup の成功が後のビルド失敗に化ける。ここで止める。
+    if ! apt-cache policy "libgccjit-${GCC_VERSION}-dev" 2>/dev/null | grep -q '^libgccjit-'; then
+        echo "Error: libgccjit-${GCC_VERSION}-dev が見つかりません。" >&2
+        echo "       --with-native-compilation には gcc と同じバージョンの libgccjit が必要です。" >&2
+        echo "       利用可能な候補:" >&2
+        apt-cache search '^libgccjit-[0-9]+-dev$' >&2 || true
+        exit 1
+    fi
 
     ## 推奨
     # libm17n-dev              — 多言語テキスト処理（必要に応じて有効化）
@@ -129,7 +142,7 @@ setup_env() {
         libxcomposite-dev               # GTK3 での合成描画
         libmagickwand-dev               # ImageMagick の C API
         libxi-dev                       # 入力拡張 (XInput) 用のライブラリ
-        libcairo-5c-dev                 # 2Dグラフィックス
+        libcairo2-dev                   # 2D グラフィックス (cairo 描画)
         liblcms2-dev                    # カラーマネジメント
         libwebp-dev                     # WebP 画像サポート
         # PGTK 用

@@ -657,6 +657,68 @@ fi
 rm -rf "$PKG_LIVE" "$PKG_BAK" "$PKG_VAR" "$PKG_ARCHIVE"
 
 echo ""
+echo "=== --setup の依存パッケージ ==="
+
+# --setup は実 sudo / apt-get を起動してはならない。必ずスタブ経由で検査し、
+# 終了コードだけを見るテストは書かない（実 sudo を起動する危険があるため）。
+make_setup_stubs() {
+    local dir="$1" gccjit_available="$2"
+    make_stub_bin "$dir" sudo apt-get
+    cat > "$dir/gcc" <<'GCCSTUB'
+#!/bin/bash
+printf '13\n'
+GCCSTUB
+    chmod +x "$dir/gcc"
+    if [ "$gccjit_available" = yes ]; then
+        cat > "$dir/apt-cache" <<'APTCACHE'
+#!/bin/bash
+printf 'apt-cache %s\n' "$*" >> "$(dirname "$0")/calls.log"
+case "$1" in
+    policy) printf 'libgccjit-13-dev:\n  候補: 13.3.0\n' ;;
+    search) printf 'libgccjit-13-dev - GCC just-in-time compilation\n' ;;
+esac
+APTCACHE
+    else
+        cat > "$dir/apt-cache" <<'APTCACHE'
+#!/bin/bash
+printf 'apt-cache %s\n' "$*" >> "$(dirname "$0")/calls.log"
+case "$1" in
+    policy) printf 'N: Unable to locate package\n' ;;
+    search) printf 'libgccjit-14-dev - GCC just-in-time compilation\n' ;;
+esac
+APTCACHE
+    fi
+    chmod +x "$dir/apt-cache"
+}
+
+# libgccjit あり: 正しい cairo パッケージが渡り、誤記のものは渡らない
+SETUP_OK_STUB="$(harness_mktemp)"
+make_setup_stubs "$SETUP_OK_STUB" yes
+PATH="$SETUP_OK_STUB:$PATH" "$SCRIPT" --setup >/dev/null 2>&1
+setup_problems=""
+grep -q 'libcairo2-dev' "$SETUP_OK_STUB/calls.log" 2>/dev/null || setup_problems="$setup_problems libcairo2-dev未指定"
+grep -q 'libcairo-5c-dev' "$SETUP_OK_STUB/calls.log" 2>/dev/null && setup_problems="$setup_problems libcairo-5c-dev混入"
+grep -q 'libgccjit-13-dev' "$SETUP_OK_STUB/calls.log" 2>/dev/null || setup_problems="$setup_problems libgccjit未指定"
+if [ -z "$setup_problems" ]; then
+    record_pass "setup installs the correct cairo and libgccjit packages"
+else
+    record_fail "setup installs the correct cairo and libgccjit packages —$setup_problems"
+fi
+
+# libgccjit なし: apt-get install へ進まずに停止する
+SETUP_NG_STUB="$(harness_mktemp)"
+make_setup_stubs "$SETUP_NG_STUB" no
+SETUP_NG_ERR="$(PATH="$SETUP_NG_STUB:$PATH" "$SCRIPT" --setup 2>&1 >/dev/null)"
+setup_problems=""
+echo "$SETUP_NG_ERR" | grep -q 'libgccjit-13-dev が見つかりません' || setup_problems="$setup_problems エラー文言なし"
+grep -q 'apt-get install -y pkg-config' "$SETUP_NG_STUB/calls.log" 2>/dev/null && setup_problems="$setup_problems 続行してしまった"
+if [ -z "$setup_problems" ]; then
+    record_pass "setup stops when libgccjit is unavailable"
+else
+    record_fail "setup stops when libgccjit is unavailable —$setup_problems"
+fi
+
+echo ""
 echo "=== 基本オプション ==="
 assert_exit "help returns 0"           0  --help
 assert_exit "no args returns 1"        1
