@@ -239,6 +239,93 @@ else
 fi
 
 echo ""
+echo "=== ダウンロード元のフォールバック ==="
+
+# wget スタブ。URL が WGET_FAIL_PATTERN に一致したら失敗する。
+# -O が指定されていればその出力先を作る（原子的ダウンロードの検査用）。
+make_wget_stub() {
+    local dir="$1"
+    mkdir -p "$dir" || return 1
+    cat > "$dir/wget" <<'WGETSTUB'
+#!/bin/bash
+printf 'wget %s\n' "$*" >> "$(dirname "$0")/calls.log"
+out=""
+url=""
+prev=""
+for arg in "$@"; do
+    case "$prev" in
+        -O) out="$arg" ;;
+    esac
+    case "$arg" in
+        -*) ;;
+        *) url="$arg" ;;
+    esac
+    prev="$arg"
+done
+if [ -n "${WGET_FAIL_PATTERN:-}" ] && printf '%s' "$url" | grep -q "$WGET_FAIL_PATTERN"; then
+    exit 8
+fi
+if [ -n "$out" ]; then
+    printf 'dummy-tarball\n' > "$out"
+else
+    printf 'dummy-tarball\n' > "$(basename "$url")"
+fi
+exit 0
+WGETSTUB
+    chmod +x "$dir/wget" || return 1
+}
+
+# --install は download の後に tar/configure/make へ進んで失敗する。
+# ここで検査するのは取得元の組み立てとフォールバックの有無なので、
+# 終了コードではなく calls.log を見る。
+run_install_download() {
+    local stub_dir="$1" fail_pattern="$2"
+    rm -rf "$HOME/.local/downloads"
+    rm -f "$stub_dir/calls.log"
+    PATH="$stub_dir:$PATH" WGET_FAIL_PATTERN="$fail_pattern" \
+        "$SCRIPT" --install 30.2 >/dev/null 2>&1
+    return 0
+}
+
+assert_download_urls() {
+    local desc="$1" fail_pattern="$2" expect_mirror="$3" expect_upstream="$4"
+    local stub_dir problems=""
+    stub_dir="$(harness_mktemp)"
+    make_wget_stub "$stub_dir"
+    run_install_download "$stub_dir" "$fail_pattern"
+    local log="$stub_dir/calls.log"
+    if [ "$expect_mirror" = yes ]; then
+        grep -q 'ftp.jaist.ac.jp' "$log" 2>/dev/null || problems="$problems ミラー未試行"
+    fi
+    if [ "$expect_upstream" = yes ]; then
+        grep -q 'ftp.gnu.org' "$log" 2>/dev/null || problems="$problems upstream未試行"
+    else
+        grep -q 'ftp.gnu.org' "$log" 2>/dev/null && problems="$problems upstream不要試行"
+    fi
+    grep -q -- '--timeout' "$log" 2>/dev/null || problems="$problems タイムアウト未指定"
+    if [ -z "$problems" ]; then
+        record_pass "$desc"
+    else
+        record_fail "$desc — $problems"
+    fi
+}
+
+assert_download_urls "download uses mirror first" "" yes no
+assert_download_urls "download falls back to upstream" "jaist" yes yes
+
+DL_BOTH_STUB="$(harness_mktemp)"
+make_wget_stub "$DL_BOTH_STUB"
+rm -rf "$HOME/.local/downloads"
+DL_BOTH_ERR="$(PATH="$DL_BOTH_STUB:$PATH" WGET_FAIL_PATTERN="." \
+    "$SCRIPT" --install 30.2 2>&1 >/dev/null)"
+if echo "$DL_BOTH_ERR" | grep -q "ミラー・upstream 共に失敗"; then
+    record_pass "download reports when both sources fail"
+else
+    record_fail "download reports when both sources fail — $DL_BOTH_ERR"
+fi
+rm -rf "$HOME/.local/downloads"
+
+echo ""
 echo "=== --uninstall の契約 ==="
 
 # ダミーのソースツリーと prefix 成果物を用意し、make uninstall の成否ごとに

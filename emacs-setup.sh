@@ -202,6 +202,29 @@ list_emacs_versions() {
     fi
 }
 
+##### tarball の取得 #####
+# ミラーで失敗したら upstream へ 1 回だけフォールバックする。
+# 404 は「そのホストに存在しない」ことを意味するため同一ホストへは再試行しない。
+download_emacs_tarball() {
+    local tar_file="$1"
+
+    if [ -f "$tar_file" ]; then
+        return 0
+    fi
+
+    if wget --timeout=30 --tries=2 "$EMACS_SETUP_MIRROR_URL/$tar_file"; then
+        return 0
+    fi
+
+    echo "Warning: ミラーからの取得に失敗しました。upstream へフォールバックします。" >&2
+    if wget --timeout=30 --tries=2 "$EMACS_SETUP_UPSTREAM_URL/$tar_file"; then
+        return 0
+    fi
+
+    echo "Error: ダウンロードに失敗しました（ミラー・upstream 共に失敗）。" >&2
+    exit 1
+}
+
 ##### Emacs インストール #####
 # 参考: https://myemacs.readthedocs.io/ja/latest/build.html
 install_emacs() {
@@ -216,9 +239,7 @@ install_emacs() {
     mkdir -p "$DL_DIR"
     cd "$DL_DIR"
     TAR_FILE="emacs-$VERSION.tar.gz"
-    if [ ! -f "$TAR_FILE" ]; then
-        wget "https://ftp.jaist.ac.jp/pub/GNU/emacs/$TAR_FILE"
-    fi
+    download_emacs_tarball "$TAR_FILE"
 
     tar xvf "$TAR_FILE" --transform="s/^emacs-$VERSION/emacs/"
 
