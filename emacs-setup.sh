@@ -387,27 +387,26 @@ packing_package() {
         local TMP_LIST
         TMP_LIST=$(mktemp)
 
-        # `PACKAGE_TARGET` の各項目をリストに追加
+        # `PACKAGE_TARGET` はすべて揃っていることを要求する。
+        # 一部だけのアーカイブを許すと、展開側が完全性を要求するため
+        # 「自分で作ったアーカイブを復元できない」組み合わせが生まれる。
         for target in "${PACKAGE_TARGET[@]}"; do
-            if [ -e "$LOADS_DIR/$PACKAGE_DIR/$target" ]; then
-                echo "$PACKAGE_DIR/$target" >> "$TMP_LIST"
+            if [ ! -e "$LOADS_DIR/$PACKAGE_DIR/$target" ]; then
+                rm -f "$TMP_LIST"
+                echo "Error: $PACKAGE_DIR/$target がありません。アーカイブを作成しません。" >&2
+                exit 1
             fi
+            echo "$PACKAGE_DIR/$target" >> "$TMP_LIST"
         done
 
         # 圧縮
-        if [ -s "$TMP_LIST" ]; then
-            if ! tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$TMP_LIST"; then
-                rm -f "$TMP_LIST"
-                echo "Error: Archive creation failed."
-                exit 1
-            fi
+        if ! tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$TMP_LIST"; then
             rm -f "$TMP_LIST"
-            echo "Package directory archived as $PACKAGE_ARCHIVE"
-        else
-            rm -f "$TMP_LIST"
-            echo "Error: No valid files/directories to archive."
+            echo "Error: Archive creation failed."
             exit 1
         fi
+        rm -f "$TMP_LIST"
+        echo "Package directory archived as $PACKAGE_ARCHIVE"
     else
         echo "Error: Package directory does not exist. Skipping archive."
         exit 1
@@ -415,24 +414,109 @@ packing_package() {
 }
 
 ##### パッケージディレクトリの展開 #####
+# 展開はトランザクションとして扱う。旧実装は既存ツリーを消してから展開しており、
+# アーカイブが壊れていると tar の失敗時点でパッケージツリーだけが失われ、
+# 復元手段が無かった。
+#
+#   フェーズ A: 一時ディレクトリへ展開し、内容を検証する（既存ツリーは無変更）
+#   フェーズ B: 退避 rename と本体 rename で入れ替える（失敗したら rollback）
+#   フェーズ C: ビルドする（失敗しても自動 rollback はせず .bak を残す）
+#
+# 一時ディレクトリは $LOADS_DIR 配下へ作る。別ファイルシステムだと
+# フェーズ B の rename が跨げないため。
 extract_package() {
-    if [ -f "$PACKAGE_ARCHIVE" ]; then
-        # 展開
-        echo "Extracting package directory..."
-        if [ -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
-            echo "Removing existing $LOADS_DIR/$PACKAGE_DIR..."
-            rm -rf "${LOADS_DIR:?}/${PACKAGE_DIR:?}"
-        fi
-        tar -xzf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR"
-        echo "Package directory extracted to $LOADS_DIR/$PACKAGE_DIR"
-        clean
+    local live="$LOADS_DIR/$PACKAGE_DIR"
+    local backup="$LOADS_DIR/$PACKAGE_DIR.bak"
+    local staging staged target had_live=no
 
-        # ビルド
-        echo "Running package build..."
-        run_package_build
-    else
-        echo "Error: Archive file $PACKAGE_ARCHIVE not found."
+    if [ ! -f "$PACKAGE_ARCHIVE" ]; then
+        echo "Error: Archive file $PACKAGE_ARCHIVE not found." >&2
         exit 1
+    fi
+
+    # run_package_build へ到達できないのに既存ツリーを消してしまわないよう、
+    # 削除を始める前に emacs の存在を確認する。
+    if ! command -v emacs >/dev/null 2>&1; then
+        echo "Error: emacs が見つかりません。展開前に中止します。" >&2
+        exit 1
+    fi
+
+    if [ -e "$backup" ]; then
+        echo "Error: $backup が残っています。前回の復元が完了していない可能性があります。" >&2
+        echo "       内容を確認し、手動で退避または削除してから再実行してください。" >&2
+        exit 1
+    fi
+
+    ##### フェーズ A: 展開と検証 #####
+    echo "Extracting package directory..."
+    mkdir -p "$LOADS_DIR"
+    staging="$(mktemp -d "$LOADS_DIR/.extract-XXXXXX")"
+    # shellcheck disable=SC2064
+    # staging はここで確定させたいので展開を遅延させない。
+    trap "rm -rf '$staging'" EXIT
+
+    if ! tar -xzf "$PACKAGE_ARCHIVE" -C "$staging"; then
+        echo "Error: アーカイブの展開に失敗しました。既存のパッケージは変更していません。" >&2
+        exit 1
+    fi
+
+    staged="$staging/$PACKAGE_DIR"
+    if [ ! -d "$staged" ]; then
+        echo "Error: アーカイブに $PACKAGE_DIR が含まれていません。既存のパッケージは変更していません。" >&2
+        exit 1
+    fi
+    for target in "${PACKAGE_TARGET[@]}"; do
+        if [ ! -e "$staged/$target" ]; then
+            echo "Error: アーカイブに $PACKAGE_DIR/$target が含まれていません。既存のパッケージは変更していません。" >&2
+            exit 1
+        fi
+    done
+
+    ##### フェーズ B: 入れ替え #####
+    if [ -e "$live" ]; then
+        had_live=yes
+        if ! mv "$live" "$backup"; then
+            echo "Error: 既存パッケージの退避に失敗しました。既存のパッケージは変更していません。" >&2
+            exit 1
+        fi
+    fi
+
+    if ! mv "$staged" "$live"; then
+        echo "Error: パッケージの配置に失敗しました。" >&2
+        if [ "$had_live" = yes ]; then
+            if mv "$backup" "$live"; then
+                echo "       既存のパッケージを復元しました。" >&2
+            else
+                echo "       復元にも失敗しました。$backup を手動で $live へ戻してください。" >&2
+            fi
+        fi
+        exit 1
+    fi
+    echo "Package directory extracted to $live"
+
+    # eln-cache は展開したパッケージと対応しないため破棄する。
+    # var/hist と var/backup はユーザーデータなので残す。
+    if [ -d "$VAR_DIR/package" ]; then
+        echo "Removing $VAR_DIR/package ..."
+        rm -rf "${VAR_DIR:?}/package"
+    fi
+
+    ##### フェーズ C: ビルド #####
+    echo "Running package build..."
+    if ! run_package_build; then
+        echo "Error: パッケージのビルドに失敗しました。" >&2
+        if [ "$had_live" = yes ]; then
+            echo "       展開したパッケージは配置済みです。元へ戻すには次を実行してください。" >&2
+            echo "         rm -rf '$live'" >&2
+            echo "         mv '$backup' '$live'" >&2
+        else
+            echo "       復元対象の旧パッケージはありません。" >&2
+        fi
+        exit 1
+    fi
+
+    if [ "$had_live" = yes ]; then
+        rm -rf "${backup:?}"
     fi
 }
 

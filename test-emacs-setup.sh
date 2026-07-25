@@ -435,6 +435,228 @@ assert_uninstall "uninstall failure still clears source tree and reports" 1 1 ye
 rm -rf "$HOME/.local"
 
 echo ""
+echo "=== パッケージのアーカイブと展開 ==="
+
+PKG_LIVE="$HOME/.emacs.d/loads/straight"
+PKG_BAK="$HOME/.emacs.d/loads/straight.bak"
+PKG_ARCHIVE="$HOME/.emacs.d/package.tar.gz"
+PKG_VAR="$HOME/.emacs.d/var"
+PKG_STUB=""
+
+# emacs スタブを用意する。run_package_build が実 Emacs を起動しないようにする。
+setup_pkg_stub() {
+    PKG_STUB="$(harness_mktemp)"
+    make_stub_bin "$PKG_STUB" emacs
+}
+
+# marker で中身を区別できるパッケージツリーを作る。
+build_pkg_tree() {
+    local marker="$1"
+    rm -rf "$PKG_LIVE"
+    mkdir -p "$PKG_LIVE/repos/$marker-pkg" "$PKG_LIVE/versions"
+    printf '%s\n' "$marker" > "$PKG_LIVE/repos/$marker-pkg/file.el"
+    printf '(%s)\n' "$marker" > "$PKG_LIVE/versions/default.el"
+}
+
+# ユーザーデータと eln-cache を配置する。
+build_var_fixture() {
+    rm -rf "$PKG_VAR"
+    mkdir -p "$PKG_VAR/hist" "$PKG_VAR/backup" "$PKG_VAR/package/eln-cache"
+    printf 'savehist-data\n' > "$PKG_VAR/hist/savehist"
+    printf 'backup-data\n' > "$PKG_VAR/backup/bk"
+    printf 'stale\n' > "$PKG_VAR/package/eln-cache/stale.eln"
+}
+
+# new マーカーのアーカイブを作り、live を old マーカーへ戻す。
+prepare_archive_and_old_tree() {
+    rm -f "$PKG_ARCHIVE"
+    build_pkg_tree new
+    PATH="$PKG_STUB:$PATH" "$SCRIPT" --packing-package >/dev/null 2>&1
+    build_pkg_tree old
+    build_var_fixture
+    rm -rf "$PKG_BAK"
+}
+
+run_extract() {
+    PATH="$PKG_STUB:$PATH" "$SCRIPT" --extract-package
+}
+
+pkg_marker() {
+    # live ツリーがどちらのマーカーかを返す
+    if [ -e "$PKG_LIVE/repos/new-pkg/file.el" ]; then
+        printf 'new\n'
+    elif [ -e "$PKG_LIVE/repos/old-pkg/file.el" ]; then
+        printf 'old\n'
+    else
+        printf 'none\n'
+    fi
+}
+
+setup_pkg_stub
+
+# 1. 正常系: 内容が入れ替わり、ユーザーデータは保護され、eln-cache は消える
+prepare_archive_and_old_tree
+HIST_SUM="$(md5sum < "$PKG_VAR/hist/savehist")"
+BK_SUM="$(md5sum < "$PKG_VAR/backup/bk")"
+run_extract >/dev/null 2>&1
+EXTRACT_RC=$?
+pkg_problems=""
+[ "$EXTRACT_RC" -eq 0 ] || pkg_problems="$pkg_problems exit=$EXTRACT_RC"
+[ "$(pkg_marker)" = new ] || pkg_problems="$pkg_problems 内容未更新($(pkg_marker))"
+[ "$(md5sum < "$PKG_VAR/hist/savehist")" = "$HIST_SUM" ] || pkg_problems="$pkg_problems hist改変"
+[ "$(md5sum < "$PKG_VAR/backup/bk")" = "$BK_SUM" ] || pkg_problems="$pkg_problems backup改変"
+[ -e "$PKG_VAR/package/eln-cache/stale.eln" ] && pkg_problems="$pkg_problems eln残存"
+[ -e "$PKG_BAK" ] && pkg_problems="$pkg_problems bak残存"
+if [ -z "$pkg_problems" ]; then
+    record_pass "extract replaces packages and preserves user data"
+else
+    record_fail "extract replaces packages and preserves user data —$pkg_problems"
+fi
+
+# 2. アーカイブ構造（pack が straight/ を含むこと）
+prepare_archive_and_old_tree
+if tar -tzf "$PKG_ARCHIVE" | grep -q '^straight/versions/default.el$'; then
+    record_pass "archive keeps the straight/ prefix"
+else
+    record_fail "archive keeps the straight/ prefix"
+fi
+
+# 3. アーカイブ不在
+rm -f "$PKG_ARCHIVE"
+if run_extract >/dev/null 2>&1; then
+    record_fail "extract fails without an archive"
+else
+    record_pass "extract fails without an archive"
+fi
+
+# 4. 破損アーカイブ → 既存ツリーは無変更
+prepare_archive_and_old_tree
+head -c 512 /dev/urandom > "$PKG_ARCHIVE"
+run_extract >/dev/null 2>&1
+EXTRACT_RC=$?
+pkg_problems=""
+[ "$EXTRACT_RC" -ne 0 ] || pkg_problems="$pkg_problems exit=0"
+[ "$(pkg_marker)" = old ] || pkg_problems="$pkg_problems 既存ツリー改変($(pkg_marker))"
+compgen -G "$HOME/.emacs.d/loads/.extract-*" >/dev/null 2>&1 && pkg_problems="$pkg_problems 一時ディレクトリ残存"
+if [ -z "$pkg_problems" ]; then
+    record_pass "corrupt archive leaves the existing tree intact"
+else
+    record_fail "corrupt archive leaves the existing tree intact —$pkg_problems"
+fi
+
+# 5. PACKAGE_TARGET を欠くアーカイブ → 既存ツリーは無変更
+prepare_archive_and_old_tree
+PKG_PARTIAL="$(harness_mktemp)"
+mkdir -p "$PKG_PARTIAL/straight/repos/new-pkg"
+printf 'new\n' > "$PKG_PARTIAL/straight/repos/new-pkg/file.el"
+tar -czf "$PKG_ARCHIVE" -C "$PKG_PARTIAL" straight
+run_extract >/dev/null 2>&1
+EXTRACT_RC=$?
+pkg_problems=""
+[ "$EXTRACT_RC" -ne 0 ] || pkg_problems="$pkg_problems exit=0"
+[ "$(pkg_marker)" = old ] || pkg_problems="$pkg_problems 既存ツリー改変($(pkg_marker))"
+if [ -z "$pkg_problems" ]; then
+    record_pass "incomplete archive is rejected"
+else
+    record_fail "incomplete archive is rejected —$pkg_problems"
+fi
+
+# 6. swap 失敗 → rollback で既存ツリーが復元される
+prepare_archive_and_old_tree
+PKG_MV_STUB="$(harness_mktemp)"
+cat > "$PKG_MV_STUB/mv" <<'MVSTUB'
+#!/bin/bash
+if printf '%s' "$1" | grep -q '\.extract-'; then
+    exit 1
+fi
+exec /bin/mv "$@"
+MVSTUB
+chmod +x "$PKG_MV_STUB/mv"
+cp "$PKG_STUB/emacs" "$PKG_MV_STUB/emacs"
+PATH="$PKG_MV_STUB:$PATH" "$SCRIPT" --extract-package >/dev/null 2>&1
+EXTRACT_RC=$?
+pkg_problems=""
+[ "$EXTRACT_RC" -ne 0 ] || pkg_problems="$pkg_problems exit=0"
+[ "$(pkg_marker)" = old ] || pkg_problems="$pkg_problems 復元されていない($(pkg_marker))"
+[ -e "$PKG_BAK" ] && pkg_problems="$pkg_problems bak残存"
+if [ -z "$pkg_problems" ]; then
+    record_pass "swap failure rolls back to the existing tree"
+else
+    record_fail "swap failure rolls back to the existing tree —$pkg_problems"
+fi
+
+# 7. ビルド失敗 → 新ツリー配置済み・.bak 保持・復旧手順が出る／その手順が実際に効く
+prepare_archive_and_old_tree
+BUILD_ERR="$(PATH="$PKG_STUB:$PATH" STUB_EXIT_EMACS=1 \
+    "$SCRIPT" --extract-package 2>&1 >/dev/null)"
+pkg_problems=""
+[ "$(pkg_marker)" = new ] || pkg_problems="$pkg_problems 新ツリー未配置"
+[ -d "$PKG_BAK" ] || pkg_problems="$pkg_problems bak不在"
+echo "$BUILD_ERR" | grep -q "mv '$PKG_BAK' '$PKG_LIVE'" || pkg_problems="$pkg_problems 復旧手順なし"
+# 出力された手順を実際に実行して復元できることを確かめる
+rm -rf "$PKG_LIVE"
+mv "$PKG_BAK" "$PKG_LIVE"
+[ "$(pkg_marker)" = old ] || pkg_problems="$pkg_problems 手順で復元できない"
+if [ -z "$pkg_problems" ]; then
+    record_pass "build failure keeps a working restore path"
+else
+    record_fail "build failure keeps a working restore path —$pkg_problems"
+fi
+
+# 8. 初回復元（既存ツリーなし）
+prepare_archive_and_old_tree
+rm -rf "$PKG_LIVE"
+run_extract >/dev/null 2>&1
+EXTRACT_RC=$?
+pkg_problems=""
+[ "$EXTRACT_RC" -eq 0 ] || pkg_problems="$pkg_problems exit=$EXTRACT_RC"
+[ "$(pkg_marker)" = new ] || pkg_problems="$pkg_problems 展開されていない"
+[ -e "$PKG_BAK" ] && pkg_problems="$pkg_problems bak作成"
+if [ -z "$pkg_problems" ]; then
+    record_pass "first restore works without a backup"
+else
+    record_fail "first restore works without a backup —$pkg_problems"
+fi
+
+# 9. .bak 残骸がある状態 → 上書きせず停止
+prepare_archive_and_old_tree
+mkdir -p "$PKG_BAK"
+run_extract >/dev/null 2>&1
+EXTRACT_RC=$?
+if [ "$EXTRACT_RC" -ne 0 ] && [ "$(pkg_marker)" = old ]; then
+    record_pass "leftover .bak stops the restore"
+else
+    record_fail "leftover .bak stops the restore (exit=$EXTRACT_RC, marker=$(pkg_marker))"
+fi
+rm -rf "$PKG_BAK"
+
+# 10. emacs 不在 → 既存ツリーを消す前に中止
+prepare_archive_and_old_tree
+PKG_NO_EMACS="$(harness_mktemp)"
+make_isolated_bin "$PKG_NO_EMACS" bash tar mktemp mkdir rm mv command grep basename dirname
+PATH="$PKG_NO_EMACS" "$SCRIPT" --extract-package >/dev/null 2>&1
+EXTRACT_RC=$?
+if [ "$EXTRACT_RC" -ne 0 ] && [ "$(pkg_marker)" = old ]; then
+    record_pass "missing emacs aborts before touching packages"
+else
+    record_fail "missing emacs aborts before touching packages (exit=$EXTRACT_RC, marker=$(pkg_marker))"
+fi
+
+# 11. pack は PACKAGE_TARGET が欠けていたら作らない
+build_pkg_tree new
+rm -f "$PKG_LIVE/versions/default.el"
+rm -f "$PKG_ARCHIVE"
+PATH="$PKG_STUB:$PATH" "$SCRIPT" --packing-package >/dev/null 2>&1
+PACK_RC=$?
+if [ "$PACK_RC" -ne 0 ] && [ ! -f "$PKG_ARCHIVE" ]; then
+    record_pass "packing rejects an incomplete tree"
+else
+    record_fail "packing rejects an incomplete tree (exit=$PACK_RC)"
+fi
+
+rm -rf "$PKG_LIVE" "$PKG_BAK" "$PKG_VAR" "$PKG_ARCHIVE"
+
+echo ""
 echo "=== 基本オプション ==="
 assert_exit "help returns 0"           0  --help
 assert_exit "no args returns 1"        1
