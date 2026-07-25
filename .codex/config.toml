@@ -5,5 +5,5 @@
 # 注意: Codex CLI のサンドボックスは .codex/ 配下への自己書き込みを拒否する。
 # このファイルの変更は、ユーザーまたは Codex 以外のエージェントが明示的に行う。
 
-approval_policy = "on-request"
-sandbox_mode = "workspace-write"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
