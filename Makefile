@@ -86,7 +86,18 @@ endef
 prepare-straight:
 	@mkdir -p "$(STRAIGHT_REPOS)" "$(STRAIGHT_BUILD)" "$(STRAIGHT_VERSIONS)"
 
+# シェルスクリプトは shellcheck、Elisp は byte compile で検査する。
+# shellcheck は straight のロード環境を必要としないため、prepare_test_root を
+# 経由せず作業ツリーのファイルを直接検査する（Elisp 側も実体は作業ツリーのファイル）。
 lint: | prepare-straight
+	@command -v shellcheck >/dev/null || { \
+		printf '%s\n' "lint: shellcheck コマンドが必要です" >&2; \
+		exit 1; \
+	}
+	@set -eu -o pipefail; \
+	mapfile -t sh_sources < <($(GIT) ls-files -- '*.sh'); \
+	test "$${#sh_sources[@]}" -gt 0; \
+	shellcheck "$${sh_sources[@]}"
 	@set -eu -o pipefail; \
 	$(prepare_test_root) \
 	lint_dir="$$(mktemp -d)"; \
