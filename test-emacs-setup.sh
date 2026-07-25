@@ -33,10 +33,21 @@ harness_fatal() {
 HARNESS_ROOT="$(mktemp -d)" || harness_fatal "一時ディレクトリを作成できません。"
 trap 'rm -rf "$HARNESS_ROOT"' EXIT
 
+# 失敗したら何も出力せず非ゼロを返す。呼び出し側は必ず || harness_fatal を付ける。
+# この関数自体で exit しても、呼び出しが $(...) のサブシェル内なので親は止まらない。
 harness_mktemp() {
     local dir
     dir="$(mktemp -d "$HARNESS_ROOT/h-XXXXXX")" || return 1
+    [ -n "$dir" ] || return 1
     printf '%s\n' "$dir"
+}
+
+# スタブ用ディレクトリとして使える実体があることを確認する。
+# 空パスを PATH の先頭へ置くとカレントディレクトリ扱いになり、
+# 実コマンドへフォールバックするため必ず fatal にする。
+harness_require_dir() {
+    [ -n "$1" ] || harness_fatal "一時ディレクトリのパスが空です。"
+    [ -d "$1" ] || harness_fatal "一時ディレクトリ $1 が存在しません。"
 }
 
 # スタブが実際に生成され実行可能であることを確認する。
@@ -54,7 +65,8 @@ assert_stubs_executable() {
 # 終了コードは STUB_EXIT_<CMD> で制御する（既定 0、ハイフンは _ へ読み替え）。
 make_stub_bin() {
     local dir="$1"; shift
-    mkdir -p "$dir" || return 1
+    harness_require_dir "$dir"
+    mkdir -p "$dir" || harness_fatal "$dir を作成できません。"
     local cmd upper
     for cmd in "$@"; do
         upper="$(printf '%s' "$cmd" | tr 'a-z-' 'A-Z_')"
@@ -63,7 +75,7 @@ make_stub_bin() {
 printf '%s %s\n' "$cmd" "\$*" >> "$dir/calls.log"
 exit "\${STUB_EXIT_$upper:-0}"
 STUB
-        chmod +x "$dir/$cmd" || return 1
+        chmod +x "$dir/$cmd" || harness_fatal "$dir/$cmd を実行可能にできません。"
     done
     assert_stubs_executable "$dir" "$@"
 }
@@ -73,11 +85,12 @@ STUB
 # 「コマンドが存在しない」状況を再現できる（PATH 先頭への追加では実物が残り再現できない）。
 make_isolated_bin() {
     local dir="$1"; shift
-    mkdir -p "$dir" || return 1
+    harness_require_dir "$dir"
+    mkdir -p "$dir" || harness_fatal "$dir を作成できません。"
     local name src
     for name in "$@"; do
         src="$(command -v "$name" 2>/dev/null)" || continue
-        ln -sf "$src" "$dir/$name" || return 1
+        ln -sf "$src" "$dir/$name" || harness_fatal "$dir/$name を作成できません。"
     done
 }
 
@@ -90,11 +103,12 @@ assert_isolated_bin() {
 # make_fake_home <dir> — 使い捨ての HOME を組み立てる。
 make_fake_home() {
     local home="$1"
+    harness_require_dir "$home"
     mkdir -p "$home/.emacs.d/loads/straight/repos" \
              "$home/.emacs.d/loads/straight/versions" \
              "$home/.emacs.d/var/hist" \
              "$home/.emacs.d/var/backup" \
-             "$home/.emacs.d/var/package" || return 1
+             "$home/.emacs.d/var/package" || harness_fatal "$home を初期化できません。"
 }
 
 record_pass() {
@@ -165,7 +179,7 @@ assert_guard() {
 echo "=== サンドボックスガード ==="
 
 GUARD_REAL_HOME="$(my_test_guard__real_home)"
-GUARD_SANDBOX="$(harness_mktemp)"
+GUARD_SANDBOX="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_fake_home "$GUARD_SANDBOX"
 
 # 1. マーカー未設定 + 実ホーム → 拒否
@@ -179,7 +193,7 @@ assert_guard "guard accepts sandbox home" 0 "" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SANDBOX"
 
 # 4. getent 不在 + 正常な dscl → 通過（macOS 相当）
-GUARD_BIN_DSCL="$(harness_mktemp)"
+GUARD_BIN_DSCL="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_isolated_bin "$GUARD_BIN_DSCL" bash id cut awk
 cat > "$GUARD_BIN_DSCL/dscl" <<DSCL
 #!/bin/bash
@@ -191,7 +205,7 @@ assert_guard "guard falls back to dscl when getent is absent" 0 "$GUARD_BIN_DSCL
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SANDBOX"
 
 # 5. getent も dscl も不在 → 拒否（fail-closed）
-GUARD_BIN_NONE="$(harness_mktemp)"
+GUARD_BIN_NONE="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_isolated_bin "$GUARD_BIN_NONE" bash id cut awk
 assert_isolated_bin "$GUARD_BIN_NONE" bash id cut awk
 assert_guard "guard rejects when home lookup is unavailable" 1 "$GUARD_BIN_NONE" \
@@ -202,10 +216,26 @@ assert_guard "guard rejects unresolvable HOME" 1 "" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SANDBOX/does-not-exist"
 
 # 6b. サンドボックスの .emacs.d が実ホーム配下を指す → 拒否
-GUARD_SYMLINKED="$(harness_mktemp)"
+GUARD_SYMLINKED="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 ln -s "$GUARD_REAL_HOME/.emacs.d" "$GUARD_SYMLINKED/.emacs.d"
 assert_guard "guard rejects .emacs.d symlinked into real home" 1 "" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SYMLINKED"
+
+# 6c. .local がサンドボックス外（実ホームでもない場所）を指す → 拒否
+# ブラックリストではなくホワイトリストであることを固定する。
+GUARD_OUTSIDE="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+GUARD_FOREIGN="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+mkdir -p "$GUARD_OUTSIDE/.emacs.d" "$GUARD_FOREIGN/important"
+ln -s "$GUARD_FOREIGN/important" "$GUARD_OUTSIDE/.local"
+assert_guard "guard rejects .local pointing outside the sandbox" 1 "" \
+    "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_OUTSIDE"
+
+# 6d. スタブ生成の失敗は fail-closed（実コマンドへ落ちない）
+if ( harness_require_dir "" ) >/dev/null 2>&1; then
+    record_fail "harness aborts on an empty stub dir"
+else
+    record_pass "harness aborts on an empty stub dir"
+fi
 
 echo ""
 echo "=== --list のバージョン抽出 ==="
@@ -237,7 +267,7 @@ else
     record_fail "list excludes ghost versions — $LIST_GHOSTS 件が混入"
 fi
 
-EMPTY_INDEX="$(harness_mktemp)/empty.html"
+EMPTY_INDEX="$(harness_mktemp)/empty.html" || harness_fatal "一時ディレクトリを作成できません。"
 : > "$EMPTY_INDEX"
 LIST_EMPTY_ERR="$(EMACS_SETUP_INDEX_URL="file://$EMPTY_INDEX" "$SCRIPT" --list 2>&1 >/dev/null)"
 EMACS_SETUP_INDEX_URL="file://$EMPTY_INDEX" "$SCRIPT" --list >/dev/null 2>&1
@@ -250,7 +280,7 @@ fi
 
 # 既定の取得先が組み立てられることを検査する。fixture テストは URL を上書きするため、
 # これが無いと既定経路の破損を検出できない。
-LIST_STUB="$(harness_mktemp)"
+LIST_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_stub_bin "$LIST_STUB" curl
 PATH="$LIST_STUB:$PATH" "$SCRIPT" --list >/dev/null 2>&1
 if grep -q 'ftp.jaist.ac.jp/pub/GNU/emacs/' "$LIST_STUB/calls.log" 2>/dev/null; then
@@ -266,7 +296,8 @@ echo "=== ダウンロード元のフォールバック ==="
 # -O が指定されていればその出力先を作る（原子的ダウンロードの検査用）。
 make_wget_stub() {
     local dir="$1"
-    mkdir -p "$dir" || return 1
+    harness_require_dir "$dir"
+    mkdir -p "$dir" || harness_fatal "$dir を作成できません。"
     cat > "$dir/wget" <<'WGETSTUB'
 #!/bin/bash
 printf 'wget %s\n' "$*" >> "$(dirname "$0")/calls.log"
@@ -293,7 +324,7 @@ else
 fi
 exit 0
 WGETSTUB
-    chmod +x "$dir/wget" || return 1
+    chmod +x "$dir/wget" || harness_fatal "$dir/wget を実行可能にできません。"
     assert_stubs_executable "$dir" wget
 }
 
@@ -312,7 +343,7 @@ run_install_download() {
 assert_download_urls() {
     local desc="$1" fail_pattern="$2" expect_mirror="$3" expect_upstream="$4"
     local stub_dir problems=""
-    stub_dir="$(harness_mktemp)"
+    stub_dir="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
     make_wget_stub "$stub_dir"
     run_install_download "$stub_dir" "$fail_pattern"
     local log="$stub_dir/calls.log"
@@ -335,7 +366,7 @@ assert_download_urls() {
 assert_download_urls "download uses mirror first" "" yes no
 assert_download_urls "download falls back to upstream" "jaist" yes yes
 
-DL_BOTH_STUB="$(harness_mktemp)"
+DL_BOTH_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_wget_stub "$DL_BOTH_STUB"
 rm -rf "$HOME/.local/downloads"
 DL_BOTH_ERR="$(PATH="$DL_BOTH_STUB:$PATH" WGET_FAIL_PATTERN="." \
@@ -353,7 +384,7 @@ DL_DIR_PATH="$HOME/.local/downloads"
 assert_no_part_left() {
     local desc="$1" fail_pattern="$2" expect_tarball="$3"
     local stub_dir problems=""
-    stub_dir="$(harness_mktemp)"
+    stub_dir="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
     make_wget_stub "$stub_dir"
     rm -rf "$DL_DIR_PATH"
     PATH="$stub_dir:$PATH" WGET_FAIL_PATTERN="$fail_pattern" \
@@ -378,7 +409,7 @@ assert_no_part_left "download leaves no .part on success" "" yes
 assert_no_part_left "download cleans .part when all sources fail" "." no
 
 # 壊れた .part が残っていても再利用されない
-DL_STALE_STUB="$(harness_mktemp)"
+DL_STALE_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_wget_stub "$DL_STALE_STUB"
 rm -rf "$DL_DIR_PATH"
 mkdir -p "$DL_DIR_PATH"
@@ -394,7 +425,7 @@ rm -rf "$DL_DIR_PATH"
 
 # mv の失敗は mv スタブで再現する。
 # 確定先を既存ディレクトリにする方法は使えない（mv はその中へ移動して成功する）。
-DL_MV_STUB="$(harness_mktemp)"
+DL_MV_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_wget_stub "$DL_MV_STUB"
 make_stub_bin "$DL_MV_STUB" mv
 rm -rf "$DL_DIR_PATH"
@@ -467,7 +498,7 @@ PKG_STUB=""
 
 # emacs スタブを用意する。run_package_build が実 Emacs を起動しないようにする。
 setup_pkg_stub() {
-    PKG_STUB="$(harness_mktemp)"
+    PKG_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
     make_stub_bin "$PKG_STUB" emacs
 }
 
@@ -568,7 +599,7 @@ fi
 
 # 5. PACKAGE_TARGET を欠くアーカイブ → 既存ツリーは無変更
 prepare_archive_and_old_tree
-PKG_PARTIAL="$(harness_mktemp)"
+PKG_PARTIAL="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 mkdir -p "$PKG_PARTIAL/straight/repos/new-pkg"
 printf 'new\n' > "$PKG_PARTIAL/straight/repos/new-pkg/file.el"
 tar -czf "$PKG_ARCHIVE" -C "$PKG_PARTIAL" straight
@@ -585,7 +616,7 @@ fi
 
 # 6. swap 失敗 → rollback で既存ツリーが復元される
 prepare_archive_and_old_tree
-PKG_MV_STUB="$(harness_mktemp)"
+PKG_MV_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 cat > "$PKG_MV_STUB/mv" <<'MVSTUB'
 #!/bin/bash
 # 全引数を走査する。mv_replace は -T を前置するため $1 だけを見ると判定が外れる。
@@ -658,7 +689,7 @@ rm -rf "$PKG_BAK"
 
 # 10. emacs 不在 → 既存ツリーを消す前に中止
 prepare_archive_and_old_tree
-PKG_NO_EMACS="$(harness_mktemp)"
+PKG_NO_EMACS="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_isolated_bin "$PKG_NO_EMACS" bash tar mktemp mkdir rm mv grep basename dirname
 assert_isolated_bin "$PKG_NO_EMACS" bash tar mktemp mv
 PATH="$PKG_NO_EMACS" "$SCRIPT" --extract-package >/dev/null 2>&1
@@ -672,9 +703,9 @@ fi
 # 11b. tar が失敗しても一時ファイルを残さない
 build_pkg_tree new
 rm -f "$PKG_ARCHIVE"
-PKG_TAR_STUB="$(harness_mktemp)"
+PKG_TAR_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_stub_bin "$PKG_TAR_STUB" tar
-PKG_TMPDIR="$(harness_mktemp)"
+PKG_TMPDIR="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 TMP_BEFORE="$(find "$PKG_TMPDIR" -type f | wc -l)"
 PATH="$PKG_TAR_STUB:$PATH" TMPDIR="$PKG_TMPDIR" STUB_EXIT_TAR=1 \
     "$SCRIPT" --packing-package >/dev/null 2>&1
@@ -736,7 +767,7 @@ APTCACHE
 }
 
 # libgccjit あり: 正しい cairo パッケージが渡り、誤記のものは渡らない
-SETUP_OK_STUB="$(harness_mktemp)"
+SETUP_OK_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_setup_stubs "$SETUP_OK_STUB" yes
 PATH="$SETUP_OK_STUB:$PATH" "$SCRIPT" --setup >/dev/null 2>&1
 setup_problems=""
@@ -750,7 +781,7 @@ else
 fi
 
 # libgccjit なし: apt-get install へ進まずに停止する
-SETUP_NG_STUB="$(harness_mktemp)"
+SETUP_NG_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_setup_stubs "$SETUP_NG_STUB" no
 SETUP_NG_ERR="$(PATH="$SETUP_NG_STUB:$PATH" "$SCRIPT" --setup 2>&1 >/dev/null)"
 setup_problems=""
@@ -806,7 +837,7 @@ assert_exit "setup rejects unknown options" 1 --setup --unknown
 
 # 不正な GUI 値は副作用より前に弾く。後段で弾くとソースツリーが残り、
 # 次回の正しい install まで「already installed」で拒否されてしまう。
-GUI_EARLY_STUB="$(harness_mktemp)"
+GUI_EARLY_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_wget_stub "$GUI_EARLY_STUB"
 rm -rf "$HOME/.local"
 PATH="$GUI_EARLY_STUB:$PATH" "$SCRIPT" --install 30.2 --gui bogus >/dev/null 2>&1
@@ -921,7 +952,7 @@ MAKESTUB
 assert_install_verify() {
     local desc="$1" mode="$2" expected_exit="$3" expect_msg="$4"
     local dir err rc problems=""
-    dir="$(harness_mktemp)"
+    dir="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
     make_install_stubs "$dir"
     rm -rf "$HOME/.local"
     err="$(PATH="$dir:$PATH" FAKE_EMACS_MODE="$mode" \
@@ -949,7 +980,7 @@ echo ""
 echo "=== 実行前チェックとヘルプ ==="
 
 # macOS を模擬しても、コマンドを必要としないアクションは動き続ける
-MACOS_STUB="$(harness_mktemp)"
+MACOS_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 cat > "$MACOS_STUB/uname" <<'UNAMESTUB'
 #!/bin/bash
 printf 'Darwin\n'

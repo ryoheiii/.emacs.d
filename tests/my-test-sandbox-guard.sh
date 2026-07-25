@@ -93,10 +93,13 @@ require_test_sandbox() {
         return 1
     fi
 
-    # サンドボックス内のディレクトリが実ホーム配下を指していると、
-    # HOME 差し替えを迂回して実データへ到達してしまう。
-    # テストは .emacs.d だけでなく .local（$EMACS_INSTALL_PREFIX の親）も削除するため、
-    # 両方を検査する。
+    # テストが破壊的に扱うルート（.emacs.d と、$EMACS_INSTALL_PREFIX の親である
+    # .local）は、必ずサンドボックス HOME の配下に収まっていなければならない。
+    #
+    # 「実ホーム配下なら拒否」というブラックリストでは不十分である。
+    # サンドボックスの .local が /srv/... のような無関係な場所を指していても
+    # 通過してしまい、$HOME/.local/downloads の削除が外部データへ到達する。
+    # サンドボックス配下だけを許可するホワイトリストにする。
     for sub in .emacs.d .local; do
         if [ -e "$HOME/$sub" ] || [ -L "$HOME/$sub" ]; then
             if ! sub_real="$(my_test_guard__realpath "$HOME/$sub")"; then
@@ -104,9 +107,10 @@ require_test_sandbox() {
                 return 1
             fi
             case "$sub_real" in
-                "$real_home_real"|"$real_home_real"/*)
+                "$home_real"/*) ;;  # サンドボックス配下のみ許可
+                *)
                     my_test_guard__reject \
-                        "$HOME/$sub が実ホーム配下 ($sub_real) を指しています。"
+                        "$HOME/$sub がサンドボックス外 ($sub_real) を指しています。"
                     return 1
                     ;;
             esac
