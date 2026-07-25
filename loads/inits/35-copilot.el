@@ -150,6 +150,19 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
 
 (when (my/copilot-available-p)
 
+  ;; copilot / copilot-chat の依存解決は、組み込みで足りるパッケージでも
+  ;; レシピリポジトリに存在すればそちらを優先してクローンする
+  ;; (straight--convert-recipe が built-in へ落ちるのはレシピが見つからないときだけ)。
+  ;; その結果 straight の build が組み込み版を load-path 上で覆い隠し、
+  ;; 24-org.el の `:straight nil' や eglot が使う jsonrpc の前提が崩れる。
+  ;; Emacs 30.2 の組み込み版が要件を満たすものだけ built-in へ固定する。
+  ;;   org      9.7.11 >= 9.4.6  (copilot-chat の要件)
+  ;;   jsonrpc  1.0.25 >= 1.0.14 (copilot の要件)
+  ;; track-changes (1.2 < 1.4) と transient (0.7.2.2 < 0.8.3) は組み込みでは
+  ;; 要件を満たさないため対象にしない。
+  (dolist (pkg '(org jsonrpc))
+    (straight-override-recipe (list pkg :type 'built-in)))
+
   ;;;;; [Group] Copilot - インライン補完 ;;;;;
   ;;; Copilot - GitHub Copilot によるインライン補完
   ;; copilot.el リポジトリは独自の copilot-chat.el を同梱しており、そのまま
