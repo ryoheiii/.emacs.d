@@ -220,7 +220,7 @@ install_emacs() {
             ;;
     esac
     ./configure "${CONFIG_OPTS[@]}"
-    make -j$(nproc)
+    make -j"$(nproc)"
     make install
 
     echo "Emacs $VERSION installation complete."
@@ -258,7 +258,7 @@ clean_all() {
     clean
     if [ -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
         echo "Removing $LOADS_DIR/$PACKAGE_DIR ..."
-        rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+        rm -rf "${LOADS_DIR:?}/${PACKAGE_DIR:?}"
     fi
     echo "Emacs full clean complete."
 }
@@ -315,7 +315,7 @@ extract_package() {
         echo "Extracting package directory..."
         if [ -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
             echo "Removing existing $LOADS_DIR/$PACKAGE_DIR..."
-            rm -rf "$LOADS_DIR/$PACKAGE_DIR"
+            rm -rf "${LOADS_DIR:?}/${PACKAGE_DIR:?}"
         fi
         tar -xzf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR"
         echo "Package directory extracted to $LOADS_DIR/$PACKAGE_DIR"
