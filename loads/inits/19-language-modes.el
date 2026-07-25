@@ -265,28 +265,66 @@ brace-catch-brace) に対応する。")
 必ずこのラッパ経由で呼ぶ。"
     (save-excursion (syntax-ppss pos)))
 
+  (defun my/c-ts--backward-token ()
+    "point の直前の識別子（`::' を含む）を返し、その先頭へ移動する.
+呼び出し側で `save-excursion' すること。区切り文字の直後では空文字列を返す。"
+    (skip-chars-backward " \t\n")
+    (let ((end (point)))
+      (skip-chars-backward "A-Za-z0-9_:")
+      (buffer-substring-no-properties (point) end)))
+
   (defun my/c-ts--non-indenting-open-p (pos)
     "POS の開き括弧をインデント段数へ数えないなら non-nil.
-google-c-style の (innamespace . 0) に合わせ namespace ブロックだけ除外する
-\(`extern \"C\"' は google-c-style が指定しておらず cc-mode 既定の + になる)。"
+google-c-style の (innamespace . 0) に合わせ namespace 本体の波括弧だけ除外する
+\(`extern \"C\"' は google-c-style が指定しておらず cc-mode 既定の + になる)。
+行頭ではなく `{' の直前の語を見るため、`namespace ns { class C {' の内側や
+`namespace alias = t; class C {' を namespace 本体と取り違えない。`{' を次行へ
+置いた配置、無名 namespace、`namespace a::b {' にも対応する。"
     (and (eq (char-after pos) ?\{)
          (save-excursion
            (goto-char pos)
-           (beginning-of-line)
-           (looking-at-p "[ \t]*\\(?:inline[ \t]+\\)?namespace\\_>"))))
+           (let ((name (my/c-ts--backward-token)))
+             (or (equal name "namespace")               ; 無名 namespace
+                 (and (string-match-p "\\`[A-Za-z_][A-Za-z0-9_:]*\\'" name)
+                      (equal (my/c-ts--backward-token) "namespace")))))))
 
-  (defun my/c-ts-error-context-p (node parent bol)
-    "構文木が壊れていて既定規則が桁を決められない文脈なら non-nil.
-`treesit--indent-1' は BOL に開始位置を持つノードが無い場合（＝空行）、NODE へ
-nil、PARENT へ `treesit-node-on' の結果を渡す。ERROR 状態の空行では PARENT が
-root になり (parent-is \"ERROR\") では捕まらないため、木の破損を直接見る。
-コメント・文字列の中と preproc 行はベース側の専用規則へ譲る。"
+  (defun my/c-ts--toplevel-error-p (pos)
+    "POS が root 直下の ERROR ノードに属するなら non-nil.
+波括弧が 2 段以上開いた入力途中では、tree-sitter が末尾側をまとめて root 直下の
+ERROR へ落とすため、既定の規則が桁 0 しか返せなくなる。関数本体の中だけが
+壊れている場合（ERROR がより内側にある）は既定の規則が正しい桁を出せるので、
+ここでは拾わない。
+
+判定は POS そのものではなく直前のコードトークンで行う。コメントは ERROR の外側へ
+付くことがあり、POS の直前がコメントだと壊れた木を見落とすため。"
+    (let* ((probe (save-excursion
+                    (goto-char pos)
+                    (forward-comment (- (point-max)))
+                    (max (point-min) (1- (point)))))
+           (err (treesit-parent-until
+                 (treesit-node-at probe)
+                 (lambda (n) (equal (treesit-node-type n) "ERROR"))
+                 t)))
+      (and err
+           (let ((up (treesit-node-parent err)))
+             (and up (null (treesit-node-parent up)))))))
+
+  (defun my/c-ts-error-context-p (_node parent bol)
+    "入力途中の木の壊れで既定規則が桁を決められない文脈なら non-nil.
+次の 2 つで発火する。
+
+1. root 直下の ERROR が末尾を飲み込んでいる（`my/c-ts--toplevel-error-p'）。
+   `treesit--indent-1' は BOL に開始位置を持つノードが無い場合（＝空行）、NODE へ
+   nil、PARENT へ `treesit-node-on' の結果を渡す。この状態の PARENT は root に
+   なるため (parent-is \"ERROR\") では捕まらない。
+2. PARENT が ERROR そのもの（従来の (parent-is \"ERROR\") 相当）。
+
+木の内側だけが壊れている場合は、既定の規則が正しい桁を出せるので譲る。
+コメント・文字列の中と preproc 行もベース側の専用規則へ譲る。"
     (and (not (nth 8 (my/c-ts--ppss bol)))
          (not (save-excursion (goto-char bol) (looking-at-p "[ \t]*#")))
-         (if node
-             (treesit-parent-until
-              node (lambda (n) (equal (treesit-node-type n) "ERROR")) t)
-           (and parent (treesit-node-check parent 'has-error)))))
+         (or (my/c-ts--toplevel-error-p bol)
+             (equal (treesit-node-type parent) "ERROR"))))
 
   (defun my/c-ts-error-offset (_node _parent bol)
     "BOL の括弧の深さからインデント桁を算出する（行頭が閉じ括弧なら 1 段戻す）."

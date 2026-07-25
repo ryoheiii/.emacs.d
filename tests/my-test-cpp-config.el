@@ -255,7 +255,17 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
                    (0 . "namespace ns {\n")
                    (4 . "namespace ns {\nclass C {\n")
                    ;; extern \"C\" は google-c-style が指定せず cc-mode 既定の +
-                   (4 . "extern \"C\" {\n")))
+                   (4 . "extern \"C\" {\n")
+                   ;; namespace 本体の `{' だけを除外する。`{' の直前の語で判定するため
+                   ;; 同じ行に続く別の `{' や namespace 別名を取り違えない
+                   (4 . "namespace ns { class C {\n")
+                   (4 . "namespace alias = target; class C {\n")
+                   ;; `{' を次行へ置いた配置でも namespace 本体と判定する
+                   (0 . "namespace ns\n{\n")
+                   ;; 直前がコメントでも壊れた木を見落とさないこと
+                   ;; （コメントは ERROR の外側へ付くことがある）
+                   (8 . "int f() {\n    if (x) {\n        // c\n")
+                   (8 . "int f() {\n    if (x) {\n        /* c */\n")))
     (with-temp-buffer
       (c++-ts-mode)
       (insert text)
@@ -263,6 +273,33 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
       (treesit-indent)
       (should (equal (cons (current-indentation) text)
                      (cons expected text))))))
+
+(ert-deftest my-test-cpp-config-c-ts-error-indent-scope ()
+  "壊れているのが木の内側だけなら既定規則へ譲ること.
+桁を肩代わりするのは root 直下の ERROR が末尾を飲み込んだ場合と、PARENT が
+ERROR そのものの場合に限る。関数本体の中だけが壊れていて既定の規則が正しい桁を
+出せるなら、そちらを使う。"
+  :tags '(:cpp-config)
+  (skip-unless (my/treesit-cc-grammar-ready-p 'cpp))
+  (require 'c-ts-mode)
+  ;; (期待する桁 対象行（0 起点） . バッファ内容)
+  (pcase-dolist (`(,expected ,line . ,text)
+                 '((8 2 . "int f() {\n    if (x)\n\n        broken = ;\n}")
+                   (8 2 . "int f() {\n    while (x)\n\n        broken = ;\n}")
+                   ;; for だけは PARENT 自体が ERROR になり既定の規則も桁を
+                   ;; 決められない。波括弧が無い本体は括弧の深さから見えないため
+                   ;; 4 になる（cc-mode は 8）。移行前からの既知の差分。
+                   (4 2 . "int f() {\n    for (i)\n\n        broken = ;\n}")
+                   ;; 壊れていない木の空行（対照）
+                   (8 2 . "int f() {\n    if (x) {\n\n        y;\n    }\n}")))
+    (with-temp-buffer
+      (c++-ts-mode)
+      (insert text)
+      (goto-char (point-min))
+      (forward-line line)
+      (treesit-indent)
+      (should (equal (list (current-indentation) line text)
+                     (list expected line text))))))
 
 (ert-deftest my-test-cpp-config-c-ts-error-indent-preserves-point ()
   "ERROR 状態のインデント判定が point を動かさないこと.
@@ -281,7 +318,25 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
       (should (= (point) origin))
       (my/c-ts-error-offset nil nil bol)
       (should (= (point) origin))
+      (my/c-ts--non-indenting-open-p (1+ (string-match "{" (buffer-string))))
+      (should (= (point) origin)))))
+
+(ert-deftest my-test-cpp-config-c-ts-error-context-preserves-point ()
+  "ERROR 判定（木を見る経路）が point を動かさないこと.
+`my/c-ts--toplevel-error-p' は `forward-comment' で戻るため文法が要る。"
+  :tags '(:cpp-config)
+  (skip-unless (my/treesit-cc-grammar-ready-p 'cpp))
+  (require 'c-ts-mode)
+  (with-temp-buffer
+    (c++-ts-mode)
+    (insert "int f() {\n    if (x) {\n        // c\n        y;")
+    (goto-char (point-max))
+    (let ((origin (point))
+          (bol (line-beginning-position)))
+      (should-not (= origin bol))
       (my/c-ts-error-context-p nil nil bol)
+      (should (= (point) origin))
+      (my/c-ts--toplevel-error-p bol)
       (should (= (point) origin)))))
 
 (ert-deftest my-test-cpp-config-c-ts-error-offset ()
@@ -295,10 +350,18 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
                    (12 . "int f() {\n    if (x) {\n        while (y) {\n")
                    ;; 行頭が閉じ括弧なら 1 段戻す
                    (4 . "int f() {\n    if (x) {\n}")
-                   ;; namespace は数えない。入れ子でも同じ
+                   ;; namespace は数えない。入れ子・無名・`::' 付き・次行の `{' も同じ
                    (0 . "namespace ns {\n")
                    (0 . "namespace a {\nnamespace b {\n")
+                   (0 . "namespace {\n")
+                   (0 . "namespace a::b {\n")
+                   (0 . "inline namespace v1 {\n")
+                   (0 . "namespace ns\n{\n")
                    (4 . "namespace ns {\nclass C {\n")
+                   ;; namespace 本体以外の `{' は数える（直前の語で判定する）
+                   (4 . "namespace ns { class C {\n")
+                   (4 . "namespace alias = target; class C {\n")
+                   (4 . "struct namespace_holder {\n")
                    ;; extern \"C\" は数える
                    (4 . "extern \"C\" {\n")))
     (with-temp-buffer
