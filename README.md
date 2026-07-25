@@ -263,10 +263,12 @@ make test
 読み込まれない。
 
 このため `var/` 配下は一時ルートへ展開されず、`make test` から見た
-tree-sitter 文法は常に「未導入」になる。C/C++ のスタイル検査は
-cc-mode 側（`my-test-cpp-config-google-style`）が走り、ts 側
-（`my-test-cpp-config-c-ts-indent-google-equivalent`）は skip される。
-ts 側を実際に走らせる場合は、文法を置いたディレクトリを
+tree-sitter 文法は通常「未導入」になる（システムの共有ライブラリ検索パスに
+文法が置かれている場合は導入済みとして扱われる）。C/C++ のスタイル検査は
+文法の可用性で排他になっており、未導入なら cc-mode 側
+（`my-test-cpp-config-google-style`）、導入済みなら ts 側
+（`my-test-cpp-config-c-ts-indent-google-equivalent`）が走る。
+ts 側を明示的に走らせる場合は、文法を置いたディレクトリを
 `treesit-extra-load-path` へ加えた状態で ERT を実行する。
 
 `test-tty-live` は `script`（util-linux）と `timeout` を使う Linux 前提の

@@ -75,32 +75,52 @@ nil にすると文法があっても cc-mode を使い続ける。")
   (and buffer-file-name
        (not (string-match-p my/cc-non-source-regexp buffer-file-name))))
 
-;; auto-mode から呼ばれる振り分け関数（組み込みの c-or-c++-mode と同じ形）
+(defun my/treesit-cc-grammar-ready-p (lang)
+  "LANG の文法が使える状態なら non-nil.
+treesit-language-available-p は treesit.el をロードせず警告も出さない."
+  (and (fboundp 'treesit-available-p)
+       (treesit-available-p)
+       (treesit-language-available-p lang)))
+
+(defun my/treesit-cc-ready-p (lang)
+  "LANG で ts モードを使ってよいなら non-nil."
+  (and my/use-treesit-for-cc (my/treesit-cc-grammar-ready-p lang)))
+
+;; auto-mode から呼ばれる振り分け関数（組み込みの c-or-c++-mode と同じ形）。
+;; 可用性はここで毎回判定するため、`my/use-treesit-for-cc' を後から nil にしても効く。
 (defun my/c-mode-dispatch ()
   "実 C ソースなら `c-ts-mode'、流用ファイルなら `c-mode' を有効にする."
   (interactive)
-  (if (my/cc-real-source-p) (c-ts-mode) (c-mode)))
+  (if (and (my/treesit-cc-ready-p 'c) (my/cc-real-source-p))
+      (c-ts-mode)
+    (c-mode)))
 
 (defun my/c++-mode-dispatch ()
   "実 C++ ソースなら `c++-ts-mode'、流用ファイルなら `c++-mode' を有効にする."
   (interactive)
-  (if (my/cc-real-source-p) (c++-ts-mode) (c++-mode)))
+  (if (and (my/treesit-cc-ready-p 'cpp) (my/cc-real-source-p))
+      (c++-ts-mode)
+    (c++-mode)))
 
-(defun my/treesit-cc-ready-p (lang)
-  "LANG の文法が揃い ts モードを使ってよいなら non-nil.
-treesit-language-available-p は treesit.el をロードせず警告も出さない."
-  (and my/use-treesit-for-cc
-       (fboundp 'treesit-available-p)
-       (treesit-available-p)
-       (treesit-language-available-p lang)))
+(defconst my/treesit-cc-remap-entries
+  '((c-mode   c   my/c-mode-dispatch)
+    (c++-mode cpp my/c++-mode-dispatch))
+  "(cc-mode 側のモード 文法 振り分け関数) の対応。")
 
-;; c-ts-mode.el はロード時に major-mode-remap-defaults を書き換えるが、
-;; major-mode-remap-alist の方が優先されるため、ここでの指定が常に勝つ。
-;; C と C++ は独立に判定する（片方の文法だけある環境でも壊さない）。
-(when (my/treesit-cc-ready-p 'c)
-  (add-to-list 'major-mode-remap-alist '(c-mode . my/c-mode-dispatch)))
-(when (my/treesit-cc-ready-p 'cpp)
-  (add-to-list 'major-mode-remap-alist '(c++-mode . my/c++-mode-dispatch)))
+(defun my/treesit-cc-apply-remap ()
+  "文法が使える言語だけ `major-mode-remap-alist' へ振り分け関数を登録する.
+C と C++ は独立に判定する（片方の文法だけある環境でも壊さない）。
+`my/use-treesit-for-cc' が nil でも登録する。c-ts-mode.el はロード時に
+`major-mode-remap-defaults' を書き換えるため、登録しておかないと off が
+迂回されるうえ、.log/.cfg のような流用ファイルまで ts へ回ってしまう。
+`major-mode-remap-alist' は defaults より優先されるため、ここでの指定が常に勝つ。"
+  (pcase-dolist (`(,mode ,lang ,dispatch) my/treesit-cc-remap-entries)
+    (if (my/treesit-cc-grammar-ready-p lang)
+        (setf (alist-get mode major-mode-remap-alist) dispatch)
+      (setq major-mode-remap-alist
+            (assq-delete-all mode major-mode-remap-alist)))))
+
+(my/treesit-cc-apply-remap)
 
 (use-package c-ts-mode
   :straight nil

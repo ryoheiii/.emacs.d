@@ -14,7 +14,7 @@
 ;; が担当する（どちらか一方が必ず走る）。
 (ert-deftest my-test-cpp-config-google-style ()
   :tags '(:cpp-config)
-  (skip-unless (not (my/treesit-cc-ready-p 'cpp)))
+  (skip-unless (not (my/treesit-cc-grammar-ready-p 'cpp)))
   (let ((file (make-temp-file "my-test-cpp-config-" nil ".cpp"))
         buffer)
     (unwind-protect
@@ -108,11 +108,11 @@ NO-CLANGD が non-nil なら clangd 不在環境を模擬する。"
 ;; 文法が無い環境（会社環境・CI）では cc-mode へ自動フォールバックすることが
 ;; この機能の前提であるため、フォールバック側を最優先で固定する。
 (ert-deftest my-test-cpp-config-treesit-fallback ()
-  "文法が無い環境では remap を登録せず cc-mode のまま動作する."
+  "cpp 文法が無い環境では c++-mode の remap を登録せず cc-mode のまま動作する.
+C と C++ は独立に判定するため、ここでは cpp 側だけを検査する."
   :tags '(:cpp-config)
-  (skip-unless (not (my/treesit-cc-ready-p 'cpp)))
-  (should-not (assq 'c-mode major-mode-remap-alist))
-  (should-not (assq 'c++-mode major-mode-remap-alist))
+  (skip-unless (not (my/treesit-cc-grammar-ready-p 'cpp)))
+  (should-not (alist-get 'c++-mode major-mode-remap-alist))
   (let ((file (make-temp-file "my-test-treesit-fallback-" nil ".cpp"))
         buffer)
     (unwind-protect
@@ -124,12 +124,33 @@ NO-CLANGD が non-nil なら clangd 不在環境を模擬する。"
         (kill-buffer buffer))
       (delete-file file))))
 
+(ert-deftest my-test-cpp-config-treesit-remap-matrix ()
+  "文法の有無ごとに remap の登録先が独立して決まる（環境非依存）."
+  :tags '(:cpp-config)
+  (pcase-dolist (`(,c-ok ,cpp-ok ,c-expect ,cpp-expect)
+                 '((nil nil nil                nil)
+                   (t   nil my/c-mode-dispatch nil)
+                   (nil t   nil                my/c++-mode-dispatch)
+                   (t   t   my/c-mode-dispatch my/c++-mode-dispatch)))
+    (let ((major-mode-remap-alist '((c-mode . stale) (c++-mode . stale))))
+      (cl-letf (((symbol-function 'my/treesit-cc-grammar-ready-p)
+                 (lambda (lang) (pcase lang ('c c-ok) ('cpp cpp-ok) (_ nil)))))
+        (my/treesit-cc-apply-remap))
+      (should (eq (alist-get 'c-mode major-mode-remap-alist) c-expect))
+      (should (eq (alist-get 'c++-mode major-mode-remap-alist) cpp-expect)))))
+
 (ert-deftest my-test-cpp-config-treesit-opt-out ()
   "`my/use-treesit-for-cc' を nil にすると文法があっても ts を使わない."
   :tags '(:cpp-config)
-  (let ((my/use-treesit-for-cc nil))
-    (should-not (my/treesit-cc-ready-p 'c))
-    (should-not (my/treesit-cc-ready-p 'cpp))))
+  (cl-letf (((symbol-function 'my/treesit-cc-grammar-ready-p) (lambda (_lang) t)))
+    (let ((my/use-treesit-for-cc nil))
+      (should-not (my/treesit-cc-ready-p 'c))
+      (should-not (my/treesit-cc-ready-p 'cpp))
+      ;; remap 登録後に nil へ変えても振り分け関数が cc-mode を選ぶこと
+      (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.c")
+                  'c-mode))
+      (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.cpp")
+                  'c++-mode)))))
 
 (defun my-test-cpp-config--dispatch (dispatcher file)
   "FILE を訪問中として DISPATCHER を実行し、選ばれたモード関数名を返す."
@@ -145,25 +166,27 @@ NO-CLANGD が non-nil なら clangd 不在環境を模擬する。"
     called))
 
 (ert-deftest my-test-cpp-config-treesit-dispatch ()
-  "実ソースだけ ts モードへ回し、cc-mode を流用しているファイルは除外する."
+  "実ソースだけ ts モードへ回し、cc-mode を流用しているファイルは除外する.
+文法の有無に依存しないよう可用性判定はスタブする."
   :tags '(:cpp-config)
-  ;; 実 C/C++ ソース → ts モード
-  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.c")
-              'c-ts-mode))
-  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.cpp")
-              'c++-ts-mode))
-  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.h")
-              'c++-ts-mode))
-  ;; ログ閲覧用の流用 (.log/.cfg) と Squirrel (.nut) は cc-mode のまま
-  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.log")
-              'c-mode))
-  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.cfg")
-              'c-mode))
-  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.nut")
-              'c++-mode))
-  ;; ファイルに紐付かないバッファも cc-mode 側へ倒す
-  (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch nil) 'c-mode))
-  (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch nil) 'c++-mode)))
+  (cl-letf (((symbol-function 'my/treesit-cc-ready-p) (lambda (_lang) t)))
+    ;; 実 C/C++ ソース → ts モード
+    (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.c")
+                'c-ts-mode))
+    (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.cpp")
+                'c++-ts-mode))
+    (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.h")
+                'c++-ts-mode))
+    ;; ログ閲覧用の流用 (.log/.cfg) と Squirrel (.nut) は cc-mode のまま
+    (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.log")
+                'c-mode))
+    (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch "/tmp/sample.cfg")
+                'c-mode))
+    (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch "/tmp/sample.nut")
+                'c++-mode))
+    ;; ファイルに紐付かないバッファも cc-mode 側へ倒す
+    (should (eq (my-test-cpp-config--dispatch #'my/c-mode-dispatch nil) 'c-mode))
+    (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch nil) 'c++-mode))))
 
 (ert-deftest my-test-cpp-config-treesit-grammar-dir-isolated ()
   "文法の配置先は var/package/ 配下へ隔離し、リポジトリ直下へ置かない."
@@ -177,7 +200,7 @@ NO-CLANGD が non-nil なら clangd 不在環境を模擬する。"
 (ert-deftest my-test-cpp-config-c-ts-indent-google-equivalent ()
   "ts モードのインデントが google-c-style 相当（offset 4）になること."
   :tags '(:cpp-config)
-  (skip-unless (my/treesit-cc-ready-p 'cpp))
+  (skip-unless (my/treesit-cc-grammar-ready-p 'cpp))
   (require 'c-ts-mode)
   (with-temp-buffer
     (c++-ts-mode)
