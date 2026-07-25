@@ -321,9 +321,6 @@ Always respond in Japanese.")
         "C-c J m" "set-model"
         "C-c J c" "cancel"
         "C-c J q" "reset"))
-
-    ;; org-mode は tab-width 8 を要求する（copilot-chat の org フロントエンド等で警告抑止）
-    (add-hook 'org-mode-hook (lambda () (setq tab-width 8)))
     )
   )
 

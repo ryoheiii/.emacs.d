@@ -6,9 +6,17 @@
 
 ;;;;; [Group] Org - Org 関係 ;;;;;
 ;;; Org - org 設定
+;; org-mode は tab-width 8 を前提にする（構造化テキストの桁がずれる）。
+;; 一方 19-language-modes.el の `my/text-mode-setup' は text-mode 派生へ
+;; tab-width 2 を設定し、org-mode もその対象になる。org 側で 8 へ戻す。
+(defun my/org-mode-setup ()
+  "Org モード用の設定。text-mode 側で変更された `tab-width' を org の前提へ戻す。"
+  (setq tab-width 8))
+
 (use-package org
   :straight nil
-  :hook ((org-mode . visual-line-mode))  ; 自動改行の有効化
+  :hook ((org-mode . visual-line-mode)   ; 自動改行の有効化
+         (org-mode . my/org-mode-setup))
   :defer t
   :custom
   (org-return-follows-link t)            ; Returnキーでリンク先を開く
