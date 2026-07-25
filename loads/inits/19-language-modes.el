@@ -61,8 +61,9 @@
 ;;
 ;; ts モードには c-toggle-auto-hungry-state が無いため、自動改行と連続スペース
 ;; 一括削除は組み込み機能で再現する（my/c-ts-mode-setup を参照）。
-;; 残る差分: 波括弧が閉じていない入力途中のインデントは概算になる
-;; （構文が揃えば cc-mode + google-c-style と完全に一致する）。
+;; 波括弧が閉じていない入力途中は構文木が ERROR になるため、桁は括弧の深さから
+;; 算出する（my/c-ts-error-context-p を参照）。構文が揃えば cc-mode +
+;; google-c-style と完全に一致する。
 (defvar my/use-treesit-for-cc t
   "Non-nil なら文法が揃っている C/C++ で ts モードを使う。
 nil にすると文法があっても cc-mode を使い続ける。")
@@ -252,35 +253,48 @@ brace-catch-brace) に対応する。")
     (electric-layout-local-mode 1)                  ; auto-newline 相当
     (setq indent-tabs-mode nil))
 
-  (defun my/c-ts--goto-previous-code-line ()
-    "直前の非空行の行末（末尾空白を除く）へ移動する。無ければ nil を返す."
-    (let (found)
-      (while (and (not found) (zerop (forward-line -1)))
-        (unless (looking-at-p "[ \t]*$")
-          (setq found t)))
-      (when found
-        (end-of-line)
-        (skip-chars-backward " \t")
-        t)))
+  ;; --- 入力途中（ERROR 状態）のインデント -------------------------------------
+  ;; 波括弧が 2 段以上開いていると、tree-sitter は木全体を ERROR へ落とす
+  ;; （1 段なら MISSING "}" で復旧する）。既定の規則はこのとき桁 0 へ倒すため、
+  ;; 改行するたびに行頭へ張り付く。括弧の深さから桁を算出して代替する。
+  ;; 完成したコードでは ERROR が出ないため、通常のインデント結果へは影響しない。
+  (defun my/c-ts--ppss (pos)
+    "POS の構文状態を返す.
+`syntax-ppss' は `parse-partial-sexp' の副作用で point を POS へ残す。
+インデント関数から素で呼ぶと以降の自己挿入が行頭へ入りバッファが壊れるため、
+必ずこのラッパ経由で呼ぶ。"
+    (save-excursion (syntax-ppss pos)))
 
-  (defun my/c-ts-error-anchor (_node _parent bol)
-    "ERROR ノードの基準位置として直前の非空行のインデント位置を返す."
-    (save-excursion
-      (goto-char bol)
-      (if (my/c-ts--goto-previous-code-line)
-          (progn (back-to-indentation) (point))
-        (point-min))))
+  (defun my/c-ts--non-indenting-open-p (pos)
+    "POS の開き括弧をインデント段数へ数えないなら non-nil.
+google-c-style の (innamespace . 0) に合わせ namespace ブロックだけ除外する
+\(`extern \"C\"' は google-c-style が指定しておらず cc-mode 既定の + になる)。"
+    (and (eq (char-after pos) ?\{)
+         (save-excursion
+           (goto-char pos)
+           (beginning-of-line)
+           (looking-at-p "[ \t]*\\(?:inline[ \t]+\\)?namespace\\_>"))))
+
+  (defun my/c-ts-error-context-p (node parent bol)
+    "構文木が壊れていて既定規則が桁を決められない文脈なら non-nil.
+`treesit--indent-1' は BOL に開始位置を持つノードが無い場合（＝空行）、NODE へ
+nil、PARENT へ `treesit-node-on' の結果を渡す。ERROR 状態の空行では PARENT が
+root になり (parent-is \"ERROR\") では捕まらないため、木の破損を直接見る。
+コメント・文字列の中と preproc 行はベース側の専用規則へ譲る。"
+    (and (not (nth 8 (my/c-ts--ppss bol)))
+         (not (save-excursion (goto-char bol) (looking-at-p "[ \t]*#")))
+         (if node
+             (treesit-parent-until
+              node (lambda (n) (equal (treesit-node-type n) "ERROR")) t)
+           (and parent (treesit-node-check parent 'has-error)))))
 
   (defun my/c-ts-error-offset (_node _parent bol)
-    "直前の非空行がブロックを開いていれば 1 段下げる（行頭が閉じ括弧なら据え置き）."
-    (let ((offset (if (boundp 'c-ts-mode-indent-offset) c-ts-mode-indent-offset 4)))
-      (save-excursion
-        (goto-char bol)
-        (cond
-         ((save-excursion (goto-char bol) (looking-at-p "[ \t]*[)}]")) 0)
-         ((not (my/c-ts--goto-previous-code-line)) 0)
-         ((memq (char-before) '(?\{ ?\()) offset)
-         (t 0)))))
+    "BOL の括弧の深さからインデント桁を算出する（行頭が閉じ括弧なら 1 段戻す）."
+    (let* ((offset (if (boundp 'c-ts-mode-indent-offset) c-ts-mode-indent-offset 4))
+           (depth (seq-count (lambda (pos) (not (my/c-ts--non-indenting-open-p pos)))
+                             (nth 9 (my/c-ts--ppss bol))))
+           (closing (save-excursion (goto-char bol) (looking-at-p "[ \t]*[)}]"))))
+      (* offset (max 0 (if closing (1- depth) depth)))))
 
   (defun my/c-ts-mode-indent-style ()
     "k&r をベースに google-c-style 相当の差分を前置した indent 規則を返す.
@@ -293,16 +307,14 @@ brace-catch-brace) に対応する。")
                    (alist-get 'k&r (c-ts-mode--indent-styles
                                     (if (derived-mode-p 'c++-ts-mode) 'cpp 'c))))))
       (append
-       `(;; 入力途中で波括弧が 2 段以上開いていると、tree-sitter は木全体を ERROR に
-         ;; 落とす（1 段なら MISSING "}" で復旧する）。既定の規則はこのとき桁 0 へ
-         ;; 倒すため、改行するたびに行頭へ張り付く。直前の非空行を基準にした概算へ
-         ;; 差し替える（cc-mode の挙動に相当）。完成したコードでは ERROR が出ない
-         ;; ため、通常のインデント結果には影響しない。
-         ((parent-is "ERROR") my/c-ts-error-anchor my/c-ts-error-offset)
+       `(;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く。
+         ;; ERROR 状態でも access_specifier は照合できるため ERROR 規則より前へ置く
+         ;; （順序を逆にすると入力途中だけ 1 段深くなる）。
+         ((node-is "access_specifier") parent-bol ,half)
+         ;; 入力途中で構文木が壊れている間の桁（`my/c-ts-error-context-p' を参照）
+         (my/c-ts-error-context-p column-0 my/c-ts-error-offset)
          ;; google-c-style の (innamespace . 0): namespace 本体をインデントしない
          ((n-p-gp nil "declaration_list" "namespace_definition") parent-bol 0)
-         ;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く
-         ((node-is "access_specifier") parent-bol ,half)
          ;; google-c-style の (case-label . +): case を switch から 1 段下げる
          ((node-is "case_statement") standalone-parent ,offset))
        base)))
