@@ -59,7 +59,8 @@ tty での動作を第一級として扱い、退行（デグレ）を絶対に�
 
 ```sh
 # Emacs ビルドに必要な依存パッケージをインストール
-./emacs-setup.sh --setup
+# --gui no のときだけ GUI パッケージを除外する（gtk3/lucid/pgtk は既定と同じ）
+./emacs-setup.sh --setup [--gui <gtk3|lucid|pgtk|no>]
 
 # インストール可能な Emacs バージョンを一覧表示
 ./emacs-setup.sh --list
@@ -70,10 +71,11 @@ tty での動作を第一級として扱い、退行（デグレ）を絶対に�
 # ローカルへインストールした Emacs をアンインストール
 ./emacs-setup.sh --uninstall
 
-# 自動生成ファイルを削除（キャッシュ、履歴、バックアップ）※パッケージは保持
+# var/ 配下の生成物とユーザー操作履歴を削除 ※パッケージは保持
+# ミニバッファ履歴・カーソル位置・undo 履歴など復元不能なデータを含む
 ./emacs-setup.sh --clean
 
-# パッケージを含むすべての自動生成ファイルを削除
+# 上記に加えてパッケージも削除
 ./emacs-setup.sh --clean-all
 
 # straight.el パッケージのアーカイブ／復元
