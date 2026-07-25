@@ -149,6 +149,21 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 
 straight.el による Git ベースのパッケージ管理。`use-package` と `straight-use-package-by-default t` の組み合わせにより `:straight t` は暗黙的に適用される。
 
+### 変更検出の方式
+
+起動時間を優先し、`early-init.el` で `straight-check-for-modifications` を
+`(check-on-save find-when-checking only-once)` に設定している。既定の `find-at-startup` は
+毎起動で `loads/straight/repos` 配下を `find(1)` で全走査するため、これを外している。
+
+Emacs 内で完結する操作（ファイル保存、`M-x straight-pull-all`、`M-x straight-freeze-versions`、
+`M-x straight-thaw-versions`）は変更が自動記録されるため、通常の運用に影響はない。
+
+一方、**Emacs の外**からパッケージを書き換えた場合は自動検出されない。次のときは
+`M-x straight-check-all` を実行してから利用する。
+
+- シェルから `loads/straight/repos/` 配下を直接 `git` 操作した
+- `./emacs-setup.sh --extract-package` でアーカイブを展開した
+
 ``` sh
 # パッケージのアーカイブ（バックアップ）
 ./emacs-setup.sh --packing-package
@@ -235,6 +250,7 @@ snapshot のカナリアレーンを実行する。snapshot の失敗は non-blo
 
 - ターミナル利用時は `xterm-256color` を設定
 - straight.el の不整合時: `M-x straight-rebuild-all` または `--clean-all` で再構築
+- Emacs 外でパッケージを書き換えた後にビルドが古いままのとき: `M-x straight-check-all`（「4. パッケージ管理」の変更検出の方式を参照）
 - バッチモードでの起動検証: `make test-startup`
 
 ``` sh
