@@ -20,7 +20,9 @@ EMACS_TEST_OPTIONS = \
 	--eval "(setq native-comp-jit-compilation nil)" \
 	--eval "(setq use-package-expand-minimally t)" \
 	--eval "(setq use-package-verbose 'errors)" \
-	--eval "(setq my-straight-base-dir-override \"$(STRAIGHT_DIR)/../\")"
+	--eval "(setq my-straight-base-dir-override \"$(STRAIGHT_DIR)/../\")" \
+	--eval "(defvar my-test--recorded-warnings nil)" \
+	--eval "(advice-add 'display-warning :before (lambda (type message &optional level &rest _) (push (list type message level) my-test--recorded-warnings)))"
 
 .PHONY: all prepare-straight lint test-unit test-startup test-keybinding
 .PHONY: test-cpp-config test-invariants test-tty
