@@ -5,18 +5,18 @@
 set -Eeuo pipefail
 
 ##### 設定 #####
-EMACS_DIR="$HOME/.emacs.d"
-LOADS_DIR="$EMACS_DIR/loads"
-PACKAGE_DIR="straight"
+readonly EMACS_DIR="$HOME/.emacs.d"
+readonly LOADS_DIR="$EMACS_DIR/loads"
+readonly PACKAGE_DIR="straight"
 # install-emacs
-DL_DIR="$HOME/.local/downloads"
-EMACS_SRC_DIR="$DL_DIR/emacs"
-EMACS_INSTALL_PREFIX="$HOME/.local"
+readonly DL_DIR="$HOME/.local/downloads"
+readonly EMACS_SRC_DIR="$DL_DIR/emacs"
+readonly EMACS_INSTALL_PREFIX="$HOME/.local"
 # clean
-VAR_DIR="$EMACS_DIR/var"
+readonly VAR_DIR="$EMACS_DIR/var"
 # packing/extract_package
-PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"
-PACKAGE_TARGET=("repos" "versions/default.el")
+readonly PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"
+readonly PACKAGE_TARGET=("repos" "versions/default.el")
 # 取得元。環境変数で上書きできる。
 # 接頭辞は Emacs 本体の EMACS_UNIBYTE 等と衝突しないよう EMACS_SETUP_ で揃える。
 EMACS_SETUP_MIRROR_URL="${EMACS_SETUP_MIRROR_URL:-https://ftp.jaist.ac.jp/pub/GNU/emacs}"
@@ -47,19 +47,32 @@ usage() {
 Usage: $0 [options]...
 
 Options:
-  -s, --setup               Install required dependencies for Emacs.
+  -s, --setup [-g|--gui <gtk3|lucid|pgtk|no>]
+                            Install required dependencies for Emacs.
+                            Only "no" changes the result: it skips the GUI
+                            packages. gtk3 / lucid / pgtk are equivalent to
+                            the default (install everything).
   -l, --list                List available Emacs versions for installation.
-  -i <ver>, --install <ver> [--gui <gtk3|lucid|pgtk|no>]
+  -i <ver>, --install <ver> [-g|--gui <gtk3|lucid|pgtk|no>]
                             Install Emacs <ver> with optional GUI backend.
   -u, --uninstall           Uninstall the locally installed Emacs.
-  -c, --clean               Remove Emacs auto generated files (excluding packages).
-  -C, --clean-all           Remove all Emacs auto generated files (including packages).
+  -c, --clean               Remove generated files under var/ (packages kept).
+                            This includes unrecoverable user data such as
+                            minibuffer history, cursor positions and undo
+                            history — not just caches.
+  -C, --clean-all           Same as --clean, and also removes the packages.
   -p, --packing-package     Archive the package directory ($PACKAGE_DIR).
   -x, --extract-package     Extract the package archive to .emacs.d/loads/$PACKAGE_DIR.
   -h, --help                Show this help message.
 
+Environment:
+  EMACS_SETUP_MIRROR_URL    Download mirror  (default: ftp.jaist.ac.jp)
+  EMACS_SETUP_UPSTREAM_URL  Fallback source  (default: ftp.gnu.org)
+  EMACS_SETUP_INDEX_URL     Index for --list (default: \$EMACS_SETUP_MIRROR_URL/)
+
 Examples:
   $0 --setup
+  $0 --setup --gui no            # Skip GUI dependencies (terminal only).
   $0 --list
   $0 --install 30.1              # Install Emacs version 30.1.
   $0 --uninstall
@@ -69,6 +82,30 @@ Examples:
   $0 --extract-package
 EOF
     exit "$code"
+}
+
+##### 実行前チェック #####
+# 必要なコマンドはアクションごとに異なる。一律に確認すると、
+# --help や --clean のように何も要らないアクションまで環境依存で失敗する。
+require_commands() {
+    local missing=() cmd
+    for cmd in "$@"; do
+        command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+    done
+    if [ "${#missing[@]}" -gt 0 ]; then
+        echo "Error: 次のコマンドが必要です: ${missing[*]}" >&2
+        exit 1
+    fi
+}
+
+# apt-get 前提の処理は Linux 専用である。スクリプト全体は拒否しない
+# （--clean や --packing-package は他の環境でも動く）。
+require_linux() {
+    if [ "$(uname)" != Linux ]; then
+        echo "Error: この操作は Linux (Debian/Ubuntu) 専用です。" >&2
+        echo "       macOS では homebrew-emacs-plus などを利用してください。" >&2
+        exit 1
+    fi
 }
 
 ##### GUI オプションの検証 #####
@@ -90,6 +127,11 @@ validate_gui_toolkit() {
 setup_env() {
     local gui="${1:-gtk3}"
     validate_gui_toolkit "$gui"
+
+    # gcc は build-essential で導入する対象そのものなので事前チェックに含めない。
+    # 順序は macOS ガード → sudo/apt 系の確認 → build-essential → gcc 検出。
+    require_linux
+    require_commands sudo apt-get apt-cache
 
     echo "Setting up Emacs environment..."
 
@@ -231,6 +273,7 @@ parse_emacs_version_list() {
 }
 
 list_emacs_versions() {
+    require_commands curl grep sort
     echo "Fetching available Emacs versions..." >&2
     local html
     if ! html=$(curl -sf --connect-timeout 10 --max-time 60 "$EMACS_SETUP_INDEX_URL"); then
@@ -282,6 +325,9 @@ download_emacs_tarball() {
 ##### Emacs インストール #####
 # 参考: https://myemacs.readthedocs.io/ja/latest/build.html
 install_emacs() {
+    require_linux
+    require_commands wget tar make nproc
+
     local VERSION="$1"
     local GUI="${2:-gtk3}"  # GUIオプション、デフォルトは gtk3
     [ -z "$VERSION" ] && { echo "Error: No Emacs version specified." >&2; usage; }
@@ -295,7 +341,7 @@ install_emacs() {
     TAR_FILE="emacs-$VERSION.tar.gz"
     download_emacs_tarball "$TAR_FILE"
 
-    tar xvf "$TAR_FILE" --transform="s/^emacs-$VERSION/emacs/"
+    tar xf "$TAR_FILE" --transform="s/^emacs-$VERSION/emacs/"
 
     # ビルドとインストール
     cd emacs
@@ -422,6 +468,8 @@ run_package_build() {
 # errexit による終了で発火せず、まさに漏れる経路を塞げない。
 # トラップをサブシェルへ閉じ込め、他のアクションのトラップと干渉させない。
 packing_package() {
+    require_commands tar mktemp
+
     if [ ! -d "$LOADS_DIR/$PACKAGE_DIR" ]; then
         echo "Error: Package directory does not exist. Skipping archive." >&2
         exit 1
@@ -464,6 +512,8 @@ packing_package() {
 # 一時ディレクトリは $LOADS_DIR 配下へ作る。別ファイルシステムだと
 # フェーズ B の rename が跨げないため。
 extract_package() {
+    require_commands tar mktemp
+
     local live="$LOADS_DIR/$PACKAGE_DIR"
     local backup="$LOADS_DIR/$PACKAGE_DIR.bak"
     local staging staged target had_live=no

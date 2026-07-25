@@ -833,6 +833,44 @@ else
 fi
 
 echo ""
+echo "=== 実行前チェックとヘルプ ==="
+
+# macOS を模擬しても、コマンドを必要としないアクションは動き続ける
+MACOS_STUB="$(harness_mktemp)"
+cat > "$MACOS_STUB/uname" <<'UNAMESTUB'
+#!/bin/bash
+printf 'Darwin\n'
+UNAMESTUB
+chmod +x "$MACOS_STUB/uname"
+
+macos_problems=""
+PATH="$MACOS_STUB:$PATH" "$SCRIPT" --setup >/dev/null 2>&1 \
+    && macos_problems="$macos_problems setupが通った"
+PATH="$MACOS_STUB:$PATH" "$SCRIPT" --install 30.2 >/dev/null 2>&1 \
+    && macos_problems="$macos_problems installが通った"
+PATH="$MACOS_STUB:$PATH" "$SCRIPT" --help >/dev/null 2>&1 \
+    || macos_problems="$macos_problems helpが落ちた"
+PATH="$MACOS_STUB:$PATH" "$SCRIPT" --clean >/dev/null 2>&1 \
+    || macos_problems="$macos_problems cleanが落ちた"
+if [ -z "$macos_problems" ]; then
+    record_pass "non-Linux blocks only apt/build actions"
+else
+    record_fail "non-Linux blocks only apt/build actions —$macos_problems"
+fi
+
+HELP_TEXT="$("$SCRIPT" --help 2>/dev/null)"
+help_problems=""
+echo "$HELP_TEXT" | grep -q -- '-g|--gui' || help_problems="$help_problems -g未記載"
+echo "$HELP_TEXT" | grep -q -- '--setup \[-g' || help_problems="$help_problems setup--gui未記載"
+echo "$HELP_TEXT" | grep -qi 'undo' || help_problems="$help_problems clean説明が不十分"
+echo "$HELP_TEXT" | grep -q 'EMACS_SETUP_MIRROR_URL' || help_problems="$help_problems 環境変数未記載"
+if [ -z "$help_problems" ]; then
+    record_pass "help documents the actual interface"
+else
+    record_fail "help documents the actual interface —$help_problems"
+fi
+
+echo ""
 echo "=== 構文チェック ==="
 if bash -n "$SCRIPT" 2>/dev/null; then
     record_pass "bash -n syntax check"
