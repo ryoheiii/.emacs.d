@@ -25,7 +25,7 @@ globs: ["**/*"]
 - タスク専用 worktree 内でエージェントのセッションを開始する。
 - セッション中に同じ worktree のブランチを切り替えない。
 - 別ブランチの作業は、別 worktree と別セッションへ分離する。
-- PR マージ後は `git worktree remove <worktree>` で削除し、`git worktree prune` で管理情報を掃除する。
+- マージ後の worktree 削除は「マージ後の後片付け」に従う。
 
 ## コミットとマージ
 
@@ -34,6 +34,42 @@ globs: ["**/*"]
 - デフォルトブランチへは必ず `git merge --no-ff` でマージコミットを作る。
 - fast-forward マージを行わない。
 - マージコミットには `Merge branch '<ブランチ名>'` と変更概要を含める。
+
+## マージ後の後片付け
+
+マージが完了したら、同じ作業の中で必ず後片付けまで行う。後回しにしない。
+`/x-ship` を使わず手動でマージした場合も同じ手順を適用する。
+
+1. マージ済みローカルブランチを削除する。
+
+   ```sh
+   git branch -d <ブランチ名>
+   ```
+
+2. リモートへ push 済みのブランチは、対応するリモートブランチも削除する。
+
+   ```sh
+   git push origin --delete <ブランチ名>
+   ```
+
+3. タスク用 worktree を削除する。
+
+   ```sh
+   git worktree remove <worktree パス>
+   git worktree prune
+   ```
+
+4. 残骸が無いことを確認する。
+
+   ```sh
+   git branch --merged main
+   git worktree list
+   ```
+
+- `git branch -D` による強制削除を行わない。`-d` が拒否する場合は未マージであり、
+  原因を調べてユーザーへ報告する。
+- 未マージのブランチ、および今回のタスク以外のブランチは削除しない。
+- 削除したブランチと worktree を完了報告へ記載する。
 
 ## PR の記載事項
 
