@@ -10,7 +10,8 @@
 ;; 今後の削除フェーズでは、削除したパッケージをこの表へ追記する。
 (defconst my-test-packages--banned-features
   '(paradox amx smooth-scroll affe
-    diminish smart-mode-line volatile-highlights highlight-symbol)
+    diminish smart-mode-line volatile-highlights highlight-symbol
+    undo-fu flyspell-correct-popup)
   "起動直後にロードされていてはならない削除済み feature。")
 
 (ert-deftest my-test-packages-banned-features ()
@@ -27,7 +28,6 @@
     tramp
     consult
     which-key
-    undo-fu
     doom-modeline)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 
