@@ -185,15 +185,30 @@ make test
 | `make test` | lint からセットアップスクリプトまでを fail-fast で一括実行 |
 | `make lint` | Git 追跡中の設定ファイルを一時ディレクトリへ byte compile（警告は表示、エラーは失敗） |
 | `make test-unit` | early-init.el のパスヘルパー |
-| `make test-startup` | フル起動と init-loader エラーログ |
+| `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
 | `make test-keybinding` | C-t タグナビゲーションの固定キーバインド |
 | `make test-cpp-config` | C/C++ スタイル・eglot 起動条件・検索経路・起動時性能設定 |
+| `make test-deferred` | `:defer N` 遅延パッケージの `:config` とグローバルモード有効化 |
+| `make test-invariants` | グローバルモードのフック登録と feature ロード状態の不変条件 |
+| `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |
+| `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・C-t 表） |
 | `make test-setup` | 隔離した HOME でのセットアップスクリプト |
 | `make clean-test` | tests/ 配下の byte compile 生成物を削除 |
 
 起動検査とキーバインド検査は、Git 追跡ファイルだけを展開した一時ルートで
 実行する。実行時データは一時ルートへ隔離され、ローカル専用の未追跡設定は
 読み込まれない。
+
+`test-tty-live` は `script`（util-linux）と `timeout` を使う Linux 前提の
+ターゲットで、実際の起動ライフサイクル（after-init → tty 端末初期化 →
+emacs-startup → window-setup）を pty 上で再現して検証する。注意点:
+
+- 非 Linux 環境では明示エラーで失敗する（`make test` のフル実行は Linux 前提。
+  macOS では個別ターゲットで代替する）
+- straight のビルドキャッシュを対話セッションと共有するため、対話 Emacs を
+  起動したままの実行は避ける
+- コールドキャッシュ時は先に `make test-startup` 等の batch 系ターゲットで
+  ビルドを温めてから実行する（timeout 180 秒のため）
 
 GitHub Actions は push と pull request で Emacs 30.2 の安定レーンと
 snapshot のカナリアレーンを実行する。snapshot の失敗は non-blocking とする。
