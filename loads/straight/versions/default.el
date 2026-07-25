@@ -56,7 +56,6 @@
  ("pandoc-mode" . "8f46da90228a9ce22de24da234ba53860257640a")
  ("perfect-margin" . "d38a2ff6b89dde81da03e8f4a83c0cad2baade0e")
  ("popon" . "bf8174cb7e6e8fe0fe91afe6b01b6562c4dc39da")
- ("popup-el" . "45a0b759076ce4139aba36dde0a2904136282e73")
  ("popwin" . "f7a39759180fa88f3890c3c5f35379ab086e04fa")
  ("prescient.el" . "87e2d2f2ddf24f591a5f70cc90d2afb4537caa18")
  ("pulsar" . "6d5bd05c578571d4ada9f93fe0d5ac7070dccfff")
