@@ -125,6 +125,15 @@
                             (my-set-loads "")))
 ;; 'package.el' を無効化
 (setq package-enable-at-startup nil)
+;; パッケージ変更検出を保存時フックへ切り替える
+;; 既定値 (find-at-startup find-when-checking only-once) は起動経路で find(1) を発行し、
+;; loads/straight/repos 配下を同期走査するため、リポジトリ規模に比例して入力がブロックされる
+;; (実測: 26,170 ファイル / 1.9 GB を 0.43〜1.94 秒。コールドキャッシュではさらに伸びる)。
+;; check-on-save は before-save-hook で変更を記録する方式で、straight.el が Windows で使う既定でもある。
+;; find-when-checking は残すため、M-x straight-check-all による手動の全走査は従来どおり使える。
+;; bootstrap.el が本変数を見て straight-live-modifications-mode を切り替えるので、
+;; 必ず bootstrap のロードより前に設定する。
+(setq straight-check-for-modifications '(check-on-save find-when-checking only-once))
 ;; 'straight.el' のインストール
 (defvar bootstrap-version)
 (let ((bootstrap-file
