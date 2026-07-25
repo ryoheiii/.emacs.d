@@ -36,6 +36,17 @@
   (dolist (feature my-test-packages--deferred-features)
     (should-not (featurep feature))))
 
+;;;;; [Group] Packages - 起動時ブロッキング ;;;;;
+;; find-at-startup は loads/straight/repos 配下を同期走査するため、起動が
+;; リポジトリ規模とページキャッシュの温度に比例してブロックする。
+;; 変更検出そのものは check-on-save と find-when-checking で担保する。
+(ert-deftest my-test-packages-no-find-at-startup ()
+  :tags '(:invariant)
+  (should (boundp 'straight-check-for-modifications))
+  (should-not (memq 'find-at-startup straight-check-for-modifications))
+  ;; 手動チェック手段 (M-x straight-check-all) を失っていないこと
+  (should (memq 'find-when-checking straight-check-for-modifications)))
+
 ;;;;; [Group] Packages - ライブラリ解決先 ;;;;;
 (defun my-test-packages--straight-build-p (library)
   "LIBRARY の解決先が straight/build 配下なら non-nil を返す。"
