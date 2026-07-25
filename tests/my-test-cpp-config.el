@@ -284,6 +284,20 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
     (c++-mode)
     (insert "int f() {}")
     (should (eq (my/c-ts-layout-close-brace) 'after)))
+  ;; 前置引数付きの self-insert では改行しない（cc-mode の電気コマンドと同じ）
+  (with-temp-buffer
+    (c++-mode)
+    (insert "int x;")
+    (let ((current-prefix-arg 2))
+      (should-not (my/c-ts-layout-semi))
+      (should-not (my/c-ts-layout-open-brace))
+      (should-not (my/c-ts-layout-close-brace))))
+  (with-temp-buffer
+    (c++-mode)
+    (insert "  public:")
+    (should (eq (my/c-ts-layout-colon) 'after))
+    (let ((current-prefix-arg 1))
+      (should-not (my/c-ts-layout-colon))))
   ;; 文字列・コメントの中では改行しない
   ;; （C の文字列は行をまたげないため、閉じていない文字列は cc-mode の
   ;;   syntax-propertize がリテラル扱いしない。閉じた文字列で検証する）
@@ -373,7 +387,21 @@ helper の直接呼び出しでは electric-layout / electric-indent との連�
     (insert "int x;\n    ")
     (call-interactively (key-binding (kbd "DEL")))
     (should (equal (buffer-substring-no-properties (point-min) (point-max))
-                   "int x;"))))
+                   "int x;")))
+  ;; 前置引数付きの実入力は cc-mode と同じく素通しになること
+  (pcase-dolist (`(,ch ,n . ,expected)
+                 '((?\; 1 . "int x;")
+                   (?\; 2 . "int x;;")
+                   (?\{ 1 . "int x{")
+                   (?\} 1 . "int x}")
+                   (?\: 2 . "int x::")))
+    (with-temp-buffer
+      (c++-ts-mode)
+      (insert "int x")
+      (let ((last-command-event ch) (current-prefix-arg n))
+        (call-interactively (or (key-binding (vector ch)) #'self-insert-command)))
+      (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                     expected)))))
 
 ;;;;; [Group] C++ Config - 補完フォールバック段 ;;;;;
 (ert-deftest my-test-cpp-config-irony-server-prefix ()

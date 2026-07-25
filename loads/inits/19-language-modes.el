@@ -172,8 +172,12 @@ cc-mode の `c-semi&comma-inside-parenlist' 相当（for の区切りで改行�
       (and open (eq (char-after open) ?\())))
 
   (defun my/c-ts-layout-inhibit-p ()
-    "リテラル内・行途中では自動改行しない."
-    (or (my/c-ts-in-literal-p) (my/c-ts-before-nonblank-p)))
+    "リテラル内・行途中・前置引数付きでは自動改行しない.
+前置引数付きの self-insert は cc-mode の電気コマンドも素通しにする
+（`C-u 2 ;' は `;;' を入れるだけで改行しない）。"
+    (or current-prefix-arg
+        (my/c-ts-in-literal-p)
+        (my/c-ts-before-nonblank-p)))
 
   (defun my/c-ts-layout-open-brace ()
     "`{' の後ろで改行する."
@@ -193,7 +197,7 @@ cc-mode の `c-semi&comma-inside-parenlist' 相当（for の区切りで改行�
     "アクセス指定子の `:' でだけ改行する.
 google-c-style の (access-label after) / (case-label) に合わせ、
 case ラベル・三項演算子・スコープ解決演算子では改行しない。"
-    (unless (my/c-ts-in-literal-p)
+    (unless (my/c-ts-layout-inhibit-p)
       (save-excursion
         (beginning-of-line)
         (when (looking-at "[ \t]*\\(public\\|private\\|protected\\)[ \t]*:[ \t]*$")
@@ -209,7 +213,7 @@ brace-catch-brace) に対応する。")
   (defun my/c-ts-pre-layout-fixups ()
     "自動改行の直前に走らせる整形（cc-mode の `c-cleanup-list' 相当）.
 `electric-layout'（深さ 40）と `electric-indent'（深さ 60）より先に走る必要がある。"
-    (unless (my/c-ts-in-literal-p)
+    (unless (or current-prefix-arg (my/c-ts-in-literal-p))
       (let ((line (buffer-substring-no-properties (line-beginning-position) (point))))
         (cond
          ;; `}' の後ろへ入れた改行を、次行が `;' / else / while / catch なら取り消す
