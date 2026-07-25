@@ -206,9 +206,13 @@ straight.el による Git ベースのパッケージ管理。`use-package` と 
 - `M-x straight-thaw-versions` でリビジョンを戻した
   （`straight-vc-git-check-out-commit` はチェックアウト成功時に変更記録を通らない）
 - シェルから `loads/straight/repos/` 配下を直接 `git` 操作した
-- `./emacs-setup.sh --extract-package` でアーカイブを展開した
 
 CI の `make straight-thaw` は、この理由からターゲット内で `straight-check-all` まで実行する。
+
+`./emacs-setup.sh --extract-package` は展開後に `straight-rebuild-all` を実行するため、
+手動の `straight-check-all` は不要である。`straight-rebuild-all` は変更検出を経由せず
+全パッケージを無条件に再ビルドし、ビルドキャッシュの mtime も更新するため、
+以降のセッションで検出漏れが起きる経路が無い。
 
 ``` sh
 # パッケージのアーカイブ（バックアップ）
