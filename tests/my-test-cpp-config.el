@@ -232,6 +232,82 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
       (should (= (funcall column-of "case 1:") 12))
       (should (= (funcall column-of "break;") 16)))))
 
+;;;;; [Group] C++ Config - ts モードの入力途中（ERROR 状態）のインデント ;;;;;
+;; 波括弧が 2 段以上開いていると tree-sitter は木全体を ERROR へ落とし、既定の
+;; 規則は桁 0 へ倒す。括弧の深さから算出する経路を固定する。
+
+(ert-deftest my-test-cpp-config-c-ts-error-indent ()
+  "構文木が ERROR の入力途中でも cc-mode + google-c-style と同じ桁になること."
+  :tags '(:cpp-config)
+  (skip-unless (my/treesit-cc-grammar-ready-p 'cpp))
+  (require 'c-ts-mode)
+  ;; (最後の行の期待値 . バッファ内容)
+  (pcase-dolist (`(,expected . ,text)
+                 '(;; 空行では node が nil・parent が root になる。(parent-is "ERROR")
+                   ;; では捕まらないため、ここが桁 0 へ落ちていた
+                   (8 . "int f() {\n    if (x) {\n")
+                   (8 . "int f() {\n    if (x) {\n        y;\n")
+                   ;; 行頭の閉じ波括弧は 1 段戻す
+                   (4 . "int f() {\n    if (x) {\n        y;\n}")
+                   ;; access_specifier は ERROR 状態でも半段（規則の順序が効く）
+                   (2 . "class A {\n    public:")
+                   ;; namespace 本体はインデントしない (innamespace . 0)
+                   (0 . "namespace ns {\n")
+                   (4 . "namespace ns {\nclass C {\n")
+                   ;; extern \"C\" は google-c-style が指定せず cc-mode 既定の +
+                   (4 . "extern \"C\" {\n")))
+    (with-temp-buffer
+      (c++-ts-mode)
+      (insert text)
+      (goto-char (point-max))
+      (treesit-indent)
+      (should (equal (cons (current-indentation) text)
+                     (cons expected text))))))
+
+(ert-deftest my-test-cpp-config-c-ts-error-indent-preserves-point ()
+  "ERROR 状態のインデント判定が point を動かさないこと.
+`syntax-ppss' は POS を渡すと point を POS へ残す。インデント関数が巻き戻さないと
+以降の自己挿入が行頭へ入りバッファが壊れるため、専用ラッパで閉じ込めている。"
+  :tags '(:cpp-config)
+  (with-temp-buffer
+    ;; 構文テーブルだけを使う経路なので文法の有無に依存しない
+    (c++-mode)
+    (insert "int f() {if (x) {y;")
+    (goto-char (point-max))
+    (let ((origin (point))
+          (bol (line-beginning-position)))
+      (should-not (= origin bol))          ; 移動が起きれば検出できる配置
+      (my/c-ts--ppss bol)
+      (should (= (point) origin))
+      (my/c-ts-error-offset nil nil bol)
+      (should (= (point) origin))
+      (my/c-ts-error-context-p nil nil bol)
+      (should (= (point) origin)))))
+
+(ert-deftest my-test-cpp-config-c-ts-error-offset ()
+  "括弧の深さから桁を算出し、namespace の波括弧だけ段数へ数えないこと."
+  :tags '(:cpp-config)
+  ;; (期待する桁 . バッファ内容)。point-max の行を対象にする
+  (pcase-dolist (`(,expected . ,text)
+                 '((0 . "int x = 1;\n")
+                   (4 . "int f() {\n")
+                   (8 . "int f() {\n    if (x) {\n")
+                   (12 . "int f() {\n    if (x) {\n        while (y) {\n")
+                   ;; 行頭が閉じ括弧なら 1 段戻す
+                   (4 . "int f() {\n    if (x) {\n}")
+                   ;; namespace は数えない。入れ子でも同じ
+                   (0 . "namespace ns {\n")
+                   (0 . "namespace a {\nnamespace b {\n")
+                   (4 . "namespace ns {\nclass C {\n")
+                   ;; extern \"C\" は数える
+                   (4 . "extern \"C\" {\n")))
+    (with-temp-buffer
+      (c++-mode)
+      (insert text)
+      (goto-char (point-max))
+      (should (equal (cons (my/c-ts-error-offset nil nil (line-beginning-position)) text)
+                     (cons expected text))))))
+
 ;;;;; [Group] C++ Config - ts モードの自動改行と hungry delete ;;;;;
 ;; cc-mode の c-toggle-auto-hungry-state 相当を組み込み機能で再現している。
 ;; 判定は構文テーブルと行内容だけを見るため、文法が無い環境でも検証できる
@@ -367,7 +443,15 @@ helper の直接呼び出しでは electric-layout / electric-indent との連�
                    ("try {a;} catch (...) {b;}"
                     . "try {\n    a;\n} catch (...) {\n    b;\n}\n")
                    ("do {a;} while (b);"    . "do {\n    a;\n} while (b);\n")
-                   ("int f(int a, int b);"  . "int f(int a, int b);\n")))
+                   ("int f(int a, int b);"  . "int f(int a, int b);\n")
+                   ;; 入力途中で木が ERROR へ落ちる 2 段以上のネスト。
+                   ;; 括弧の深さから桁を算出する経路が効いていないと崩れる
+                   ("int f() {int x = 1;if (x) {x++;} else {x--;}return x;}"
+                    . "int f() {\n    int x = 1;\n    if (x) {\n        x++;\n\
+    } else {\n        x--;\n    }\n    return x;\n}\n")
+                   ;; access_specifier は ERROR 状態でも半段 (access-label . /)
+                   ("class A {public:int b_;private:int c_;};"
+                    . "class A {\n  public:\n    int b_;\n  private:\n    int c_;\n};\n")))
     (with-temp-buffer
       (c++-ts-mode)
       (my-test-cpp-config--type input)
