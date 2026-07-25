@@ -21,7 +21,7 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 | `custom/` | `custom.el`、YASnippet、Markdown 表示用 CSS／JS などのカスタムデータ |
 | `var/hist/` | 履歴、ブックマーク、TRAMP 永続化、transient の実行時データ |
 | `var/backup/` | 自動保存・バックアップファイルの実行時生成先 |
-| `var/package/` | `eln-cache` などネイティブコンパイル成果物の実行時生成先 |
+| `var/package/` | `eln-cache` などネイティブコンパイル成果物と `tree-sitter/`（文法ライブラリ）の実行時生成先 |
 | `tests/` | ERT による回帰テストと起動コスト計測ハーネス。`Makefile` の各ターゲットが参照する |
 | `docs/eval/` | 設計判断の根拠となる実測結果と生ログ |
 

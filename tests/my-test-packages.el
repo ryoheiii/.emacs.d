@@ -29,13 +29,37 @@
     consult
     which-key
     doom-modeline
-    multiple-cursors)
+    multiple-cursors
+    ;; c-ts-mode.el はロード時に treesit-ready-p を呼び、文法不在の環境で
+    ;; 起動時警告を出す。起動経路では絶対にロードしない。
+    c-ts-mode)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 
 (ert-deftest my-test-packages-deferred-features ()
   :tags '(:invariant)
   (dolist (feature my-test-packages--deferred-features)
     (should-not (featurep feature))))
+
+;;;;; [Group] Packages - ts モードのフック parity ;;;;;
+;; c-ts-mode / c++-ts-mode は derived-mode-p 上は c-mode / c++-mode の派生だが、
+;; 親モードのフックは実行されない。ts モードへ切り替わった環境でも C-t タグ
+;; ナビゲーション・LSP 自動起動・補完フォールバックを失わないよう、cc-mode 側と
+;; 同じフックが個別に登録されていることを固定する。
+(defconst my-test-packages--ts-mode-hook-entries
+  '(ggtags-mode                 ; C-t タグナビゲーション (ggtags-mode-map)
+    my/eglot-cc-maybe-ensure    ; clangd + CDB がある環境の LSP 自動起動
+    my/irony-maybe-enable       ; 非 LSP 環境の補完フォールバック
+    hs-minor-mode               ; コード折りたたみ
+    smart-newline-mode          ; 改行時のインデント調整
+    my/c-ts-mode-setup)         ; C-c c = compile / indent-tabs-mode nil
+  "c-ts-mode-hook / c++-ts-mode-hook に登録されていなければならない関数。")
+
+(ert-deftest my-test-packages-ts-mode-hook-parity ()
+  :tags '(:invariant)
+  (dolist (hook '(c-ts-mode-hook c++-ts-mode-hook))
+    (should (boundp hook))
+    (dolist (fn my-test-packages--ts-mode-hook-entries)
+      (should (memq fn (default-value hook))))))
 
 ;;;;; [Group] Packages - 起動時ブロッキング ;;;;;
 ;; find-at-startup は loads/straight/repos 配下を同期走査するため、起動が

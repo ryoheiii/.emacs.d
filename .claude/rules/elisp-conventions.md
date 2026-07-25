@@ -26,6 +26,24 @@ globs: ["**/*.el"]
 - GUI 限定宣言を追加・変更した場合は、`tests/my-test-tty.el` の
   `my-test-tty--gui-only-features` と `tests/my-test-tty-live.el` の対応する検査を更新する。
 
+## C/C++ モードのフック parity
+
+C/C++ は tree-sitter 文法が導入済みなら `c-ts-mode` / `c++-ts-mode`、無ければ
+`c-mode` / `c++-mode` を使う（`loads/inits/19-language-modes.el`）。
+両系統が並行して存在することを前提に宣言を書く。
+
+- `c-ts-mode` / `c++-ts-mode` は `derived-mode-p` 上は `c-mode` / `c++-mode` の派生だが、
+  **親モードのフックは実行されない**。C/C++ 用の `:hook` を追加・変更する場合は、
+  cc-mode 系と ts 系の 4 モードすべてへ登録する。
+- 併せて `tests/my-test-packages.el` の `my-test-packages--ts-mode-hook-entries` を更新する。
+- `derived-mode-p` で C 系を判定して cc-mode の関数（`c-beginning-of-defun` など）を
+  呼ぶ分岐は、ts モードを先に振り分けて汎用関数へ倒す。ts バッファでは
+  `derived-mode-p` が真になる一方、cc-mode の内部状態が無いためエラーになる。
+- `c-ts-mode` を起動経路で `require` しない。文法不在の環境で警告が出て
+  `make test-startup` が失敗する。可用性判定には `treesit-language-available-p` を使い、
+  `use-package c-ts-mode` には `:no-require t` を付けてバイトコンパイル時の先読みも止める。
+- 文法が無い環境で cc-mode へフォールバックする経路を壊さない。
+
 ## 命名と配置
 
 - 設定ファイルは `NN-name.el` とし、2 桁の番号で読み込み順を制御する。

@@ -29,7 +29,9 @@
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :straight t
-  :hook ((c++-mode c-mode cc-mode emacs-lisp-mode lisp-mode) . smart-newline-mode)
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  :hook ((c++-mode c-mode cc-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
+         . smart-newline-mode)
   :bind (("C-m" . smart-newline))
   )
 
@@ -41,19 +43,52 @@
   )
 
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
+;; C/C++ 補完の三段フォールバックの 2 段目。
+;;   1. clangd + compile_commands.json/.clangd あり → eglot (18-built-in-package.el)
+;;   2. irony-server 実体あり                        → irony (ここ)
+;;   3. どちらも無い                                  → cape + ggtags (28-corfu.el / 本ファイル)
+;; irony-server が未導入の環境では irony 自体をロードせず 3 段目へ落とす。
+;; 導入するには M-x irony-install-server（cmake と libclang が必要）。
+;; eglot 管理下では 18-built-in-package.el の my/eglot-cc-suppress-irony が irony を止める。
 (use-package irony
   :straight t
   :defer t
-  :after cc-mode
-  :hook ((c-mode . irony-mode)
-         (c++-mode . irony-mode)
-         (irony-mode . irony-cdb-autosetup-compile-options))
+  :preface
+  ;; :custom より前に評価される節。導入先を 1 箇所で決めて可用性判定と共有する
+  (defconst my/irony-server-prefix (my-set-history "irony")
+    "irony-server の導入先。`irony-server-install-prefix' と一致させる。")
+  :hook ((c-mode      . my/irony-maybe-enable)
+         (c++-mode    . my/irony-maybe-enable)
+         (c-ts-mode   . my/irony-maybe-enable)
+         (c++-ts-mode . my/irony-maybe-enable)
+         (irony-mode  . irony-cdb-autosetup-compile-options))
   :custom
-  ;; Irony モードのインストール場所とオプションファイルの設定
-  (irony-server-install-prefix    (my-set-history "irony"))
-  (irony-server-options-directory (my-set-history "irony"))
+  ;; irony-server の導入先 (実体は <prefix>/bin/irony-server)
+  (irony-server-install-prefix my/irony-server-prefix)
+  :init
+  (defun my/irony-server-available-p ()
+    "irony-server の実体が見つかるなら non-nil.
+irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
+（導入先の bin/ を優先しつつ PATH 上の実体と Windows の .exe も拾う）。"
+    (let ((exec-path (cons (expand-file-name "bin" my/irony-server-prefix) exec-path)))
+      (and (executable-find "irony-server") t)))
+
+  (defun my/irony-maybe-enable ()
+    "irony-server が導入済みの環境でだけ `irony-mode' を有効にする.
+未導入の環境では irony をロードせず、cape + ggtags のフォールバックに任せる。"
+    (when (my/irony-server-available-p)
+      (irony-mode 1)))
   :config
-  ;; irony-server 未インストール時に CAPF エラーを抑制する
+  ;; ts モードでも irony を使えるようにする（既定は cc-mode 系のみ）。
+  ;; irony--lang-compile-option は major-mode を assq で引くため、言語対応も
+  ;; 併せて登録しないと clang へ渡す -x が落ちる（.h が C 扱いになる）。
+  (dolist (entry '((c-ts-mode   . "c")
+                   (c++-ts-mode . "c++")))
+    (add-to-list 'irony-supported-major-modes (car entry))
+    (unless (assq (car entry) irony-lang-compile-option-alist)
+      (add-to-list 'irony-lang-compile-option-alist entry)))
+
+  ;; irony-server が壊れている場合に CAPF エラーを抑制する
   (defvar my/irony-capf-warned nil
     "Non-nil なら irony CAPF エラー警告は表示済み.")
 
@@ -143,8 +178,12 @@
 (use-package ggtags
   :straight t
   :defer t
-  :hook ((c-mode   . ggtags-mode)
-         (c++-mode . ggtags-mode))
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  ;; （C-t タグナビゲーションの不変条件を ts モードでも維持するために必須）
+  :hook ((c-mode      . ggtags-mode)
+         (c++-mode    . ggtags-mode)
+         (c-ts-mode   . ggtags-mode)
+         (c++-ts-mode . ggtags-mode))
   :bind (:map ggtags-mode-map
               ("C-t d"   . my/gtags-find-definition)     ; 関数の定義場所の検索 (define)
               ("C-t C-d" . my/gtags-find-definition)
@@ -267,13 +306,20 @@
     (interactive)
     (let* ((symbol (symbol-overlay-get-symbol))
            (new-name (read-string (format "Rename '%s' to: " symbol)))
+           ;; ts モードは derived-mode-p 上は c-mode/c++-mode の派生だが cc-mode の
+           ;; 内部状態を持たない。c-beginning-of-defun が使えないため先に振り分け、
+           ;; treesit が設定する beginning-of-defun-function 経由の汎用関数を使う。
            (start (cond
+                   ((derived-mode-p 'c-ts-mode 'c++-ts-mode)
+                    (save-excursion (beginning-of-defun) (point)))
                    ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
                     (save-excursion (c-beginning-of-defun) (point)))
                    ((derived-mode-p 'python-mode)
                     (save-excursion (python-nav-beginning-of-defun) (point)))
                    (t (point-min)))) ;; その他のモードではファイル全体
            (end (cond
+                 ((derived-mode-p 'c-ts-mode 'c++-ts-mode)
+                  (save-excursion (end-of-defun) (point)))
                  ((derived-mode-p 'c-mode 'c++-mode 'objc-mode)
                   (save-excursion (c-end-of-defun) (point)))
                  ((derived-mode-p 'python-mode)
