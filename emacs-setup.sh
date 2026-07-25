@@ -30,14 +30,20 @@ EMACS_SETUP_INDEX_URL="${EMACS_SETUP_INDEX_URL:-$EMACS_SETUP_MIRROR_URL/}"
 validate_version() {
     local ver="$1"
     if [[ ! "$ver" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-        echo "Error: Invalid version format '$ver'. Expected format: NN.N or NN.N.N (e.g., 30.1, 29.4.1)"
+        echo "Error: Invalid version format '$ver'. Expected format: NN.N or NN.N.N (e.g., 30.1, 29.4.1)" >&2
         exit 1
     fi
 }
 
 ##### ヘルプ #####
+# --help（正常系）は stdout、エラー経路からの呼び出しは stderr へ出す。
+# エラーメッセージだけを stderr にしても、ヘルプ本文が stdout に出ていては
+# 「エラー時に stdout が空」にならない。
 usage() {
-    cat << EOF
+    local code="${1:-1}"
+    local fd=1
+    [ "$code" -eq 0 ] || fd=2
+    cat >&"$fd" << EOF
 Usage: $0 [options]...
 
 Options:
@@ -62,7 +68,7 @@ Examples:
   $0 --packing-package
   $0 --extract-package
 EOF
-    exit "${1:-1}"
+    exit "$code"
 }
 
 ##### GUI オプションの検証 #####
@@ -278,8 +284,8 @@ download_emacs_tarball() {
 install_emacs() {
     local VERSION="$1"
     local GUI="${2:-gtk3}"  # GUIオプション、デフォルトは gtk3
-    [ -z "$VERSION" ] && { echo "Error: No Emacs version specified."; usage; }
-    [ -d "$EMACS_SRC_DIR" ] && { echo "Emacs is already installed. Run 'uninstall' first."; exit 1; }
+    [ -z "$VERSION" ] && { echo "Error: No Emacs version specified." >&2; usage; }
+    [ -d "$EMACS_SRC_DIR" ] && { echo "Emacs is already installed. Run 'uninstall' first." >&2; exit 1; }
 
     echo "Installing Emacs $VERSION ..."
 
@@ -554,7 +560,7 @@ extract_package() {
 }
 
 ##### メイン処理 #####
-[ $# -eq 0 ] && { echo "Error: No action specified."; usage; }
+[ $# -eq 0 ] && { echo "Error: No action specified." >&2; usage; }
 ACTION="$1"; shift
 case "$ACTION" in
     -s|--setup)
@@ -586,19 +592,19 @@ case "$ACTION" in
             case "$1" in
                 -g|--gui)
                     if [[ $# -lt 2 || "$2" == -* ]]; then
-                        echo "Error: --gui requires a value (gtk3, lucid, pgtk, no)."
+                        echo "Error: --gui requires a value (gtk3, lucid, pgtk, no)." >&2
                         exit 1
                     fi
                     GUI_TOOLKIT="$2"
                     shift 2
                     ;;
                 -*)
-                    echo "Error: Unknown option '$1' for --install."
+                    echo "Error: Unknown option '$1' for --install." >&2
                     usage
                     ;;
                 *)
                     if [[ -n "$EMACS_VERSION" ]]; then
-                        echo "Error: Multiple version arguments specified ('$EMACS_VERSION' and '$1')."
+                        echo "Error: Multiple version arguments specified ('$EMACS_VERSION' and '$1')." >&2
                         exit 1
                     fi
                     EMACS_VERSION="$1"
@@ -608,7 +614,7 @@ case "$ACTION" in
         done
 
         if [ -z "$EMACS_VERSION" ]; then
-            echo "Error: No Emacs version specified for install."
+            echo "Error: No Emacs version specified for install." >&2
             usage
         fi
         validate_version "$EMACS_VERSION"
@@ -621,5 +627,5 @@ case "$ACTION" in
     -p|--packing-package) packing_package ;;
     -x|--extract-package) extract_package ;;
     -h|--help)            usage 0 ;;
-    *) echo "Error: Invalid argument '$ACTION'"; usage ;;
+    *) echo "Error: Invalid argument '$ACTION'" >&2; usage ;;
 esac

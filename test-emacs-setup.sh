@@ -805,6 +805,34 @@ assert_exit "clean succeeds"     0  --clean
 assert_exit "clean-all succeeds" 0  --clean-all
 
 echo ""
+echo "=== 出力先の分離 ==="
+
+assert_stderr_only() {
+    local desc="$1"; shift
+    local out err
+    out="$("$SCRIPT" "$@" 2>/dev/null)"
+    err="$("$SCRIPT" "$@" 2>&1 >/dev/null)"
+    if [ -z "$out" ] && [ -n "$err" ]; then
+        record_pass "$desc"
+    else
+        record_fail "$desc — stdout=[$out]"
+    fi
+}
+
+assert_stderr_only "invalid version writes only to stderr"  --install abc
+assert_stderr_only "unknown option writes only to stderr"   --invalid
+assert_stderr_only "missing archive writes only to stderr"  --extract-package
+
+# --help は正常系なので stdout に出す（退行させない）
+HELP_OUT="$("$SCRIPT" --help 2>/dev/null)"
+HELP_RC=$?
+if [ "$HELP_RC" -eq 0 ] && echo "$HELP_OUT" | grep -q 'Usage:'; then
+    record_pass "help writes to stdout with exit 0"
+else
+    record_fail "help writes to stdout with exit 0 (exit=$HELP_RC)"
+fi
+
+echo ""
 echo "=== 構文チェック ==="
 if bash -n "$SCRIPT" 2>/dev/null; then
     record_pass "bash -n syntax check"
