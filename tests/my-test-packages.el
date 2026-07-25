@@ -39,13 +39,25 @@
 ;;;;; [Group] Packages - 起動時ブロッキング ;;;;;
 ;; find-at-startup は loads/straight/repos 配下を同期走査するため、起動が
 ;; リポジトリ規模とページキャッシュの温度に比例してブロックする。
-;; 変更検出そのものは check-on-save と find-when-checking で担保する。
+;; 代替の検出経路まで含めて固定しないと、find-at-startup を外しただけで
+;; 変更が一切検出されない状態でもテストが緑のままになる。
 (ert-deftest my-test-packages-no-find-at-startup ()
   :tags '(:invariant)
   (should (boundp 'straight-check-for-modifications))
   (should-not (memq 'find-at-startup straight-check-for-modifications))
+  ;; 代替の自動検出 (保存時フック) が設定されていること
+  (should (memq 'check-on-save straight-check-for-modifications))
   ;; 手動チェック手段 (M-x straight-check-all) を失っていないこと
   (should (memq 'find-when-checking straight-check-for-modifications)))
+
+;; check-on-save は bootstrap.el が straight-live-modifications-mode を
+;; 有効化して初めて機能する。bootstrap より後で設定しても無効になるため、
+;; 変数値だけでなくモードの実効状態を検査する。
+(ert-deftest my-test-packages-live-modifications-enabled ()
+  :tags '(:invariant)
+  (should (bound-and-true-p straight-live-modifications-mode))
+  (should (memq #'straight-register-file-modification
+                (default-value 'before-save-hook))))
 
 ;;;;; [Group] Packages - ライブラリ解決先 ;;;;;
 (defun my-test-packages--straight-build-p (library)
