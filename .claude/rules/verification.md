@@ -22,6 +22,21 @@ make test-startup
 終了コードと標準エラーを確認する。init-loader のエラーログが非空の場合は
 `make test-startup` が非ゼロ終了するため、警告を無条件に成功扱いしない。
 
+`make test` を実行しない場合は、変更範囲に対応する次のターゲットを追加で実行する。
+全ターゲットの一覧と検証内容は `README.md` の回帰テスト節を正本とする。
+
+| 変更範囲 | 追加で実行するターゲット |
+|---|---|
+| 設定ファイルの構文・byte compile 警告 | `make lint` |
+| `early-init.el` のパスヘルパー、バックアップ先 | `make test-unit` |
+| C-t タグナビゲーションのキーバインド | `make test-keybinding` |
+| C/C++ 設定（スタイル、eglot 起動条件、検索経路） | `make test-cpp-config` |
+| `:defer` 付きパッケージ宣言 | `make test-deferred` |
+| グローバルモードのフック登録、feature のロード状態 | `make test-invariants` |
+
+`make clean-test` は `tests/` 配下の byte compile 生成物を削除する補助ターゲットである。
+`make straight-thaw` は CI 専用で、`CI=true` 以外の環境では実行できない。
+
 ## 2. tty (`emacs -nw`) 検証
 
 日常利用は `emacs -nw` である。表示、モードライン、キーバインド、補完、

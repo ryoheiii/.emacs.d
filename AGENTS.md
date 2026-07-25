@@ -67,6 +67,9 @@ tty での動作を第一級として扱い、退行（デグレ）を絶対に�
 # 指定バージョンの Emacs をビルド・インストール（GUI オプション: gtk3, lucid, pgtk, no）
 ./emacs-setup.sh --install <バージョン> [--gui <バックエンド>]
 
+# ローカルへインストールした Emacs をアンインストール
+./emacs-setup.sh --uninstall
+
 # 自動生成ファイルを削除（キャッシュ、履歴、バックアップ）※パッケージは保持
 ./emacs-setup.sh --clean
 
