@@ -155,8 +155,16 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
   文法が導入済みでも cc-mode のままにする。
 - ts モードのインデントは google-c-style 相当（offset 4、namespace 非インデント、
   アクセス指定子は半段、case は 1 段）へ揃えてある。
-- **既知の使用感差分**: `c-toggle-auto-hungry-state` 相当が ts モードには存在しないため、
-  自動改行と連続スペースの一括削除は ts モードでは効かない。
+- `c-toggle-auto-hungry-state` は ts モードに存在しないため、組み込み機能で再現している。
+  - 自動改行: `electric-layout-mode` で
+    `{` の後 / `}` の前後 / `;` の後 / アクセス指定子の `:` の後 に改行する。
+    `}` の次行が `;` / `else` / `while` のときは 1 行へ戻す
+    （google-c-style の `c-cleanup-list` 相当）。
+  - hungry delete: DEL を `backward-delete-char-untabify`（`'all`）へ差し替える。
+    コメント・文字列の中と前置引数付きでは通常の 1 文字削除に戻る。
+- **既知の使用感差分**: 波括弧が 2 段以上開いている入力途中は tree-sitter が木全体を
+  `ERROR` に落とすため、インデントが概算になる（直前の行を基準にした近似で、
+  既定の桁 0 よりは近い）。構文が揃えば cc-mode + google-c-style と完全に一致する。
 
 **補完バックエンド**
 

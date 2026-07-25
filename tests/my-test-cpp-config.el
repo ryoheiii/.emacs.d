@@ -232,6 +232,83 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
       (should (= (funcall column-of "case 1:") 12))
       (should (= (funcall column-of "break;") 16)))))
 
+;;;;; [Group] C++ Config - ts モードの自動改行と hungry delete ;;;;;
+;; cc-mode の c-toggle-auto-hungry-state 相当を組み込み機能で再現している。
+;; 判定は構文テーブルと行内容だけを見るため、文法が無い環境でも検証できる
+;; （c++-mode バッファを使う）。
+(ert-deftest my-test-cpp-config-c-ts-hungry-delete ()
+  "連続する空白と改行をまとめて削除し、リテラル内では 1 文字に留める."
+  :tags '(:cpp-config)
+  (with-temp-buffer
+    (c++-mode)
+    (insert "int x;\n    ")
+    (my/c-ts-hungry-delete-backward)
+    (should (equal (buffer-string) "int x;")))
+  (with-temp-buffer
+    (c++-mode)
+    (insert "/* comment    ")
+    (my/c-ts-hungry-delete-backward)
+    (should (equal (buffer-string) "/* comment   ")))
+  ;; 前置引数付きは通常の 1 文字削除へ戻す
+  (with-temp-buffer
+    (c++-mode)
+    (insert "int x;\n    ")
+    (my/c-ts-hungry-delete-backward t)
+    (should (equal (buffer-string) "int x;\n   "))))
+
+(ert-deftest my-test-cpp-config-c-ts-layout-rules ()
+  "自動改行の規則がリテラルとアクセス指定子を正しく区別する."
+  :tags '(:cpp-config)
+  (with-temp-buffer
+    (c++-mode)
+    (insert "int x;")
+    (should (eq (my/c-ts-layout-after) 'after))
+    (should (eq (my/c-ts-layout-around) 'around)))
+  ;; 文字列・コメントの中では改行しない
+  ;; （C の文字列は行をまたげないため、閉じていない文字列は cc-mode の
+  ;;   syntax-propertize がリテラル扱いしない。閉じた文字列で検証する）
+  (with-temp-buffer
+    (c++-mode)
+    (insert "const char* s = \"a;b\";\n")
+    (goto-char (point-min))
+    (should (search-forward ";" nil t))   ; 文字列内の `;' の直後
+    (should-not (my/c-ts-layout-after))
+    (should-not (my/c-ts-layout-around)))
+  (with-temp-buffer
+    (c++-mode)
+    (insert "// a;b\nint x;\n")
+    (goto-char (point-min))
+    (should (search-forward ";" nil t))   ; コメント内の `;' の直後
+    (should-not (my/c-ts-layout-after))
+    (should-not (my/c-ts-layout-around)))
+  ;; コロンはアクセス指定子のときだけ改行する
+  (pcase-dolist (`(,line . ,expected)
+                 '(("  public:"          . after)
+                   ("  private:"         . after)
+                   ("  protected:"       . after)
+                   ("    case 1:"        . nil)
+                   ("  int a = b ? c :"  . nil)
+                   ("  std::"            . nil)))
+    (with-temp-buffer
+      (c++-mode)
+      (insert line)
+      (should (eq (my/c-ts-layout-colon) expected)))))
+
+(ert-deftest my-test-cpp-config-c-ts-brace-cleanup ()
+  "`}' の後ろの改行を `;' / else / while のときだけ取り消す."
+  :tags '(:cpp-config)
+  (pcase-dolist (`(,input . ,expected)
+                 '(("class A {\n}\n;"   . "class A {\n};")
+                   ("if (a) {\n}\nelse" . "if (a) {\n} else")
+                   ("do {\n}\nwhile"    . "do {\n} while")
+                   ;; 直前が `}' でなければ触らない
+                   ("int a;\n;"         . "int a;\n;")))
+    (with-temp-buffer
+      (c++-mode)
+      (insert input)
+      (my/c-ts-pre-layout-fixups)
+      (should (equal (buffer-string) expected)))))
+
 ;;;;; [Group] C++ Config - 補完フォールバック段 ;;;;;
 (ert-deftest my-test-cpp-config-irony-server-prefix ()
   "irony の導入先は var/hist/ 配下で、可用性判定と同じ場所を指すこと."

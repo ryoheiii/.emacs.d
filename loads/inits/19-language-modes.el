@@ -59,8 +59,10 @@
 ;; 文法をビルドできない環境では何も起きず cc-mode のまま動作する（フォールバック）。
 ;; 文法の導入は 18-built-in-package.el の M-x my/treesit-install-c-grammars で行う。
 ;;
-;; 既知の使用感差分: c-toggle-auto-hungry-state 相当が ts モードには存在しないため、
-;; 自動改行と連続スペース一括削除は ts モードでは無効になる。
+;; ts モードには c-toggle-auto-hungry-state が無いため、自動改行と連続スペース
+;; 一括削除は組み込み機能で再現する（my/c-ts-mode-setup を参照）。
+;; 残る差分: 波括弧が閉じていない入力途中のインデントは概算になる
+;; （構文が揃えば cc-mode + google-c-style と完全に一致する）。
 (defvar my/use-treesit-for-cc t
   "Non-nil なら文法が揃っている C/C++ で ts モードを使う。
 nil にすると文法があっても cc-mode を使い続ける。")
@@ -135,10 +137,108 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
   (c-ts-mode-indent-offset 4)
   (c-ts-mode-indent-style #'my/c-ts-mode-indent-style)
   :init
+  ;; --- c-toggle-auto-hungry-state 相当 ---------------------------------
+  ;; ts モードには cc-mode の auto-newline / hungry delete が無い。
+  ;; cc-mode + google-c-style の実挙動に合わせて組み込み機能で再現する
+  ;; （外部パッケージを増やさず tty でもそのまま動く）。
+  (defun my/c-ts-in-literal-p ()
+    "point がコメントまたは文字列の中なら non-nil（cc-mode の `c-in-literal' 相当）."
+    (nth 8 (syntax-ppss)))
+
+  (defun my/c-ts-hungry-delete-backward (&optional arg)
+    "直前の空白をまとめて削除する（cc-mode の hungry delete 相当）.
+改行も対象にする点まで `c-hungry-delete-backwards' に合わせる。
+ARG 付き、リージョン選択中、コメント・文字列の中では通常の削除に戻す。"
+    (interactive "P")
+    (if (or arg (use-region-p) (my/c-ts-in-literal-p))
+        (call-interactively #'delete-backward-char)
+      (let ((backward-delete-char-untabify-method 'all))
+        (backward-delete-char-untabify 1))))
+
+  ;; electric-layout は挿入位置の文脈を見ないため、規則側でリテラルを除外する
+  (defun my/c-ts-layout-after ()
+    "リテラル外なら文字の後ろで改行する."
+    (unless (my/c-ts-in-literal-p) 'after))
+
+  (defun my/c-ts-layout-around ()
+    "リテラル外なら文字の前後で改行する."
+    (unless (my/c-ts-in-literal-p) 'around))
+
+  (defun my/c-ts-pre-layout-fixups ()
+    "自動改行の直前に走らせる整形（cc-mode の電気コマンド相当）.
+`electric-layout'（深さ 40）と `electric-indent'（深さ 60）より先に走る必要がある。"
+    (unless (my/c-ts-in-literal-p)
+      (let ((line (buffer-substring-no-properties (line-beginning-position) (point))))
+        (cond
+         ;; c-cleanup-list の (brace-else-brace defun-close-semi) 相当。
+         ;; `}' の後ろへ入れた改行を、次行が `;' / `else' / `while' なら取り消す
+         ((string-match "\\`[ \t]*\\(;\\|else\\|while\\)\\'" line)
+          (let ((sep (if (string= (match-string 1 line) ";") "" " "))
+                (token (save-excursion (back-to-indentation) (point))))
+            (save-excursion
+              (goto-char token)
+              (skip-chars-backward " \t\n")
+              (when (eq (char-before) ?\})
+                (delete-region (point) token)
+                (insert sep)))))
+         ))))
+
+  (defun my/c-ts-layout-colon ()
+    "アクセス指定子の `:' でだけ改行する.
+google-c-style の (access-label after) / (case-label) に合わせ、
+case ラベル・三項演算子・スコープ解決演算子では改行しない。"
+    (unless (my/c-ts-in-literal-p)
+      (save-excursion
+        (beginning-of-line)
+        (when (looking-at "[ \t]*\\(public\\|private\\|protected\\)[ \t]*:[ \t]*$")
+          'after))))
+
+  (defconst my/c-ts-electric-layout-rules
+    '((?\{ . my/c-ts-layout-after)
+      (?\} . my/c-ts-layout-around)
+      (?\; . my/c-ts-layout-after)
+      (?\: . my/c-ts-layout-colon))
+    "ts モードの自動改行規則。cc-mode + google-c-style の実挙動に対応させる。")
+
   (defun my/c-ts-mode-setup ()
     "C/C++ ts モード共通の設定（cc-mode 側の `my/cc-mode-setup' と対応）."
-    (local-set-key (kbd "C-c c") 'compile) ; コンパイル
+    (local-set-key (kbd "C-c c") 'compile)          ; コンパイル
+    (local-set-key (kbd "DEL") 'my/c-ts-hungry-delete-backward) ; hungry delete 相当
+    (setq-local electric-layout-rules my/c-ts-electric-layout-rules)
+    ;; cleanup は electric-layout (深さ 40) より先に走らせる
+    (add-hook 'post-self-insert-hook #'my/c-ts-pre-layout-fixups -10 t)
+    (electric-layout-local-mode 1)                  ; auto-newline 相当
     (setq indent-tabs-mode nil))
+
+  (defun my/c-ts--goto-previous-code-line ()
+    "直前の非空行の行末（末尾空白を除く）へ移動する。無ければ nil を返す."
+    (let (found)
+      (while (and (not found) (zerop (forward-line -1)))
+        (unless (looking-at-p "[ \t]*$")
+          (setq found t)))
+      (when found
+        (end-of-line)
+        (skip-chars-backward " \t")
+        t)))
+
+  (defun my/c-ts-error-anchor (_node _parent bol)
+    "ERROR ノードの基準位置として直前の非空行のインデント位置を返す."
+    (save-excursion
+      (goto-char bol)
+      (if (my/c-ts--goto-previous-code-line)
+          (progn (back-to-indentation) (point))
+        (point-min))))
+
+  (defun my/c-ts-error-offset (_node _parent bol)
+    "直前の非空行がブロックを開いていれば 1 段下げる（行頭が閉じ括弧なら据え置き）."
+    (let ((offset (if (boundp 'c-ts-mode-indent-offset) c-ts-mode-indent-offset 4)))
+      (save-excursion
+        (goto-char bol)
+        (cond
+         ((save-excursion (goto-char bol) (looking-at-p "[ \t]*[)}]")) 0)
+         ((not (my/c-ts--goto-previous-code-line)) 0)
+         ((memq (char-before) '(?\{ ?\()) offset)
+         (t 0)))))
 
   (defun my/c-ts-mode-indent-style ()
     "k&r をベースに google-c-style 相当の差分を前置した indent 規則を返す.
@@ -151,7 +251,13 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
                    (alist-get 'k&r (c-ts-mode--indent-styles
                                     (if (derived-mode-p 'c++-ts-mode) 'cpp 'c))))))
       (append
-       `(;; google-c-style の (innamespace . 0): namespace 本体をインデントしない
+       `(;; 入力途中で波括弧が 2 段以上開いていると、tree-sitter は木全体を ERROR に
+         ;; 落とす（1 段なら MISSING "}" で復旧する）。既定の規則はこのとき桁 0 へ
+         ;; 倒すため、改行するたびに行頭へ張り付く。直前の非空行を基準にした概算へ
+         ;; 差し替える（cc-mode の挙動に相当）。完成したコードでは ERROR が出ない
+         ;; ため、通常のインデント結果には影響しない。
+         ((parent-is "ERROR") my/c-ts-error-anchor my/c-ts-error-offset)
+         ;; google-c-style の (innamespace . 0): namespace 本体をインデントしない
          ((n-p-gp nil "declaration_list" "namespace_definition") parent-bol 0)
          ;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く
          ((node-is "access_specifier") parent-bol ,half)
