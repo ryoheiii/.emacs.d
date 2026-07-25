@@ -2,8 +2,9 @@
 # マシン固有の trust 判断、writable roots、モデル設定は ~/.codex/config.toml に置き、
 # このリポジトリへは持ち込まない。
 #
-# 注意: Codex CLI のサンドボックスは .codex/ 配下への自己書き込みを拒否する。
-# このファイルの変更は、ユーザーまたは Codex 以外のエージェントが明示的に行う。
+# 注意: 下の 2 値は承認プロンプトとサンドボックス保護を無効化する。この設定では
+# .codex/ 配下への自己書き込みも防げないため、値の変更は緩める方向も安全側へ戻す方向も
+# ユーザーの明示指示がある場合だけ行う。背景と運用は .codex/README.md を参照する。
 
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
