@@ -54,9 +54,13 @@
 
 ## 2. 初回起動後の設定
 
+いずれも任意である。実行しなくても設定は動作し、利用できない機能は自動的に
+フォールバックする（「C/C++ の段階構成」を参照）。
+
 | 項目 | 手順 |
 |---|---|
-| Irony サーバー（非 LSP 環境） | C/C++ ファイルを開いて `M-x irony-install-server` |
+| tree-sitter 文法（C/C++） | `M-x my/treesit-install-c-grammars`（`git` と C コンパイラが必要）。導入後の再起動で ts モードへ切り替わる |
+| Irony サーバー（非 LSP 環境） | C/C++ ファイルを開いて `M-x irony-install-server`（`cmake` と libclang が必要） |
 | Migemo 辞書 | `loads/inits/32-navigation.el` で辞書パスを確認 |
 | Nerd-icons フォント | `M-x nerd-icons-install-fonts` |
 
@@ -84,7 +88,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `custom/` | `custom.el`、YASnippet スニペット、Markdown 表示用 CSS/JS |
 | `var/hist/` | 履歴、ブックマーク、TRAMP、transient |
 | `var/backup/` | 自動保存・バックアップ |
-| `var/package/` | eln-cache（ネイティブコンパイル） |
+| `var/package/` | eln-cache（ネイティブコンパイル）、`tree-sitter/`（文法ライブラリ） |
 | `tests/` | ERT による回帰テストと起動コスト計測ハーネス |
 | `docs/eval/` | 設計判断の根拠となる実測結果と生ログ |
 
@@ -129,9 +133,43 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | バッファ内補完 | Corfu + Cape |
 | テーマ | doom-themes (doom-dracula) + doom-modeline |
 | Git | Magit + diff-hl + difftastic |
-| C/C++ | cc-mode, google-c-style, eglot + clangd（CDB/.clangd 検出時）、ggtags（フォールバック）、irony（非 LSP 補完） |
+| C/C++ | cc-mode + google-c-style / c-ts-mode（文法導入時）、eglot + clangd（CDB/.clangd 検出時）、ggtags、irony（非 LSP 補完） |
 | 日本語入力 | Mozc, Migemo, TR-ime (Windows) |
 | Undo | vundo + undo-fu-session |
+
+### C/C++ の段階構成
+
+セットアップの自由度が低い環境（社内環境など）でも動くよう、C/C++ 関連は
+**使える機構を自動選択し、使えなければ 1 段下へフォールバックする**構成にしている。
+どの段でも `C-t` タグナビゲーションと補完 UI（Corfu）は同じように使える。
+
+**メジャーモード**
+
+| 条件 | 使われるモード |
+|---|---|
+| tree-sitter 文法（`c` / `cpp`）が導入済み | `c-ts-mode` / `c++-ts-mode` |
+| 文法が無い、または `my/use-treesit-for-cc` が `nil` | `c-mode` / `c++-mode`（cc-mode + google-c-style） |
+
+- 判定は `c` と `cpp` で独立して行う。片方だけ導入した環境でも壊れない。
+- `.log` / `.cfg`（ログ閲覧用に c-mode を流用）と `.nut`（Squirrel）は C/C++ ではないため、
+  文法が導入済みでも cc-mode のままにする。
+- ts モードのインデントは google-c-style 相当（offset 4、namespace 非インデント、
+  アクセス指定子は半段、case は 1 段）へ揃えてある。
+- **既知の使用感差分**: `c-toggle-auto-hungry-state` 相当が ts モードには存在しないため、
+  自動改行と連続スペースの一括削除は ts モードでは効かない。
+
+**補完バックエンド**
+
+| 段 | 条件 | 使われる補完 |
+|---|---|---|
+| 1 | `clangd` があり `compile_commands.json` または `.clangd` を持つ | eglot（LSP） |
+| 2 | 1 が不成立で `irony-server` が導入済み | irony |
+| 3 | どちらも無い | cape（dabbrev / keyword / file）+ ggtags |
+
+- eglot 管理下のバッファでは irony を自動的に止める（CAPF の競合防止）。
+- `irony-server` が未導入の環境では irony をロードしない。導入は `M-x irony-install-server`。
+- タグ検索（`C-t d` など）は eglot 管理下では xref へ委譲し、見つからなければ
+  `global` コマンドへフォールバックする（`loads/site-elisp/my-gtags.el`）。
 
 ### パスヘルパー関数
 
@@ -212,9 +250,9 @@ make test
 | `make test-unit` | early-init.el のパスヘルパー |
 | `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
 | `make test-keybinding` | C-t タグナビゲーションの固定キーバインド |
-| `make test-cpp-config` | C/C++ スタイル・eglot 起動条件・検索経路・起動時性能設定 |
+| `make test-cpp-config` | C/C++ スタイル・eglot 起動条件・検索経路・起動時性能設定・tree-sitter 段階移行・irony ゲート |
 | `make test-deferred` | `:defer N` 遅延パッケージの `:config` とグローバルモード有効化 |
-| `make test-invariants` | グローバルモードのフック登録と feature ロード状態の不変条件 |
+| `make test-invariants` | グローバルモードのフック登録・feature ロード状態・ts モードのフック parity |
 | `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |
 | `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・C-t 表） |
 | `make test-setup` | 隔離した HOME でのセットアップスクリプト |
@@ -223,6 +261,13 @@ make test
 起動検査とキーバインド検査は、Git 追跡ファイルだけを展開した一時ルートで
 実行する。実行時データは一時ルートへ隔離され、ローカル専用の未追跡設定は
 読み込まれない。
+
+このため `var/` 配下は一時ルートへ展開されず、`make test` から見た
+tree-sitter 文法は常に「未導入」になる。C/C++ のスタイル検査は
+cc-mode 側（`my-test-cpp-config-google-style`）が走り、ts 側
+（`my-test-cpp-config-c-ts-indent-google-equivalent`）は skip される。
+ts 側を実際に走らせる場合は、文法を置いたディレクトリを
+`treesit-extra-load-path` へ加えた状態で ERT を実行する。
 
 `test-tty-live` は `script`（util-linux）と `timeout` を使う Linux 前提の
 ターゲットで、実際の起動ライフサイクル（after-init → tty 端末初期化 →
