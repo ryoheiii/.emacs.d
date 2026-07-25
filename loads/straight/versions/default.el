@@ -17,7 +17,6 @@
  ("emacs-dashboard" . "676be25d9b0382bd3253c9119b258a28cdcfc5fb")
  ("emacs-hide-mode-line" . "ddd154f1e04d666cd004bf8212ead8684429350d")
  ("emacs-neotree" . "3178805a0942696d1e5162575d9cab43d14b7970")
- ("emacs-undo-fu" . "b4ce5ed20c1cf0591e497e6998a7634a172726fa")
  ("emacs-undo-fu-session" . "92d733a5b162a70c572fac17b9f9e872426df547")
  ("emacsmirror-mirror" . "72ef10d4bff3ad62ccf8bcd6dc462d3ed2e23f8e")
  ("embark" . "e0238889b1c946514fd967d21d70599af9c4e887")
