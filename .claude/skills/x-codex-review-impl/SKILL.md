@@ -95,8 +95,11 @@ Focus on:
   :straight nil for built-ins, path helpers instead of hardcoded paths,
   module numbering responsibilities, Japanese comments
 - invariant violations: the fixed C-t tag-navigation keybindings must not change
+- tty regressions: the primary usage is a terminal (`emacs -nw`); GUI-only code must
+  stay guarded (`:if (display-graphic-p)`), terminal alternatives (corfu-terminal,
+  xclip) must keep working, and no GUI-only assumption may leak into shared config
 - startup-performance impact
-- test gaps (make test / make test-startup coverage)
+- test gaps (make test / make test-startup / make test-tty / make test-tty-live coverage)
 - conflicts between uncommitted changes and committed branch changes
 
 Be concrete and actionable.
@@ -127,6 +130,7 @@ bash .claude/scripts/codex-review.sh /tmp/x-impl-prompt-<REVIEW_ID>.txt /tmp/x-i
 2. 修正範囲に対応するテストを実行し、結果を `/tmp/x-impl-tests-<REVIEW_ID>.txt` に保存する。
    `.claude/rules/verification.md` に従い選択する（最小: `make test-startup`、
    キーバインド変更: `make test-keybinding`、C/C++ 設定: `make test-cpp-config`、
+   tty へ影響する変更: `make test-tty` と `make test-tty-live`、
    広範な変更: `make test`）。
 3. Step 1c を再実行して差分を取り直す。
 4. 再レビュープロンプトを書く。ヘッダを `Re-review the updated implementation.` に変え、

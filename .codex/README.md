@@ -7,6 +7,9 @@
 - このリポジトリの全エージェント共通ルールの正本は、リポジトリルートの `AGENTS.md` である。
 - 状況依存の詳細ルールは `.claude/rules/*.md` にある。Codex もこれらを読み取り参照する。
 - 単一情報源を保つため、共通ルールを `.codex/` 配下へミラーしない。
+- とくに `AGENTS.md` の「【最優先】CLI (`emacs -nw`) 前提」は必ず適用する。
+  日常利用は端末の `emacs -nw` であり、tty の退行を許さず、tty へ影響する変更では
+  `make test-tty` と `make test-tty-live` を実行する。
 
 ## `.claude/` の扱い
 

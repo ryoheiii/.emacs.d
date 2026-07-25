@@ -22,12 +22,32 @@ make test-startup
 終了コードと標準エラーを確認する。init-loader のエラーログが非空の場合は
 `make test-startup` が非ゼロ終了するため、警告を無条件に成功扱いしない。
 
-## 2. パッケージのリビルド
+## 2. tty (`emacs -nw`) 検証
+
+日常利用は `emacs -nw` である。表示、モードライン、キーバインド、補完、
+クリップボード、端末初期化、GUI 分岐に影響する変更では次を必ず実行する。
+
+```sh
+# 非 GUI 分岐のロード条件（batch）
+make test-tty
+
+# 実 pty での emacs -nw 起動ライフサイクル
+make test-tty-live
+```
+
+- `make test-startup` だけでは tty 固有の退行を検出できない。GUI 分岐へ触れた
+  場合は GUI 側だけの確認で完了としない。
+- `test-tty-live` は Linux と `script`、`timeout` を必要とする。実行条件と
+  注意点（対話 Emacs との straight ビルドキャッシュ共有、コールドキャッシュ時の
+  事前ウォームアップ）は `README.md` の回帰テスト節を参照する。
+- 実行できない環境では成功扱いにせず、理由と代替確認を報告する。
+
+## 3. パッケージのリビルド
 
 パッケージ宣言、straight の recipe、コンパイル状態へ影響する場合は、必要に応じて `straight-rebuild-all` を付けたバッチリビルドを実行する。
 単なる文書変更では実行しない。
 
-## 3. セットアップスクリプトのテスト
+## 4. セットアップスクリプトのテスト
 
 `test-emacs-setup.sh` が存在し、`emacs-setup.sh` または関連するセットアップ動作を変更した場合は、次を実行する。
 
@@ -35,7 +55,7 @@ make test-startup
 make test-setup
 ```
 
-## 4. 差分確認
+## 5. 差分確認
 
 - `git status --porcelain` で変更対象を列挙する。
 - `git status --porcelain --ignored` で ignore 対象も確認し、リポジトリルート直下へ意図しない生成物が増えていないことを確かめる。
