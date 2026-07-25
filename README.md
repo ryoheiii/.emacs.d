@@ -6,6 +6,7 @@
 ## 動作環境
 
 - Emacs 30.x 以上
+- `make lint` に [shellcheck](https://www.shellcheck.net/) が必要（CI の ubuntu-latest には同梱）
 - Linux (Debian/Ubuntu) / WSL2 / macOS (Emacs 設定のみ。emacs-setup.sh は未対応)
 - パッケージ管理: [straight.el](https://github.com/radian-software/straight.el)（`package.el` は不使用）
 - 主用途は端末上の `emacs -nw`（CLI モード）。GUI でも動作するが、tty での動作維持を
@@ -19,7 +20,14 @@
 
 ``` sh
 ./emacs-setup.sh --setup
+
+# GUI 依存を入れない（端末専用の環境向け）
+./emacs-setup.sh --setup --gui no
 ```
+
+`--gui` は `no` を指定したときだけ GUI パッケージ（X11 群、画像ライブラリなど）を
+除外する。`gtk3` / `lucid` / `pgtk` を指定しても既定（すべて導入）と同じ結果になる。
+TLS など GUI に依存しない依存は `--gui no` でも導入される。
 
 ### Emacs のインストール
 
@@ -43,12 +51,19 @@
 ### クリーンアップ
 
 ``` sh
-# キャッシュ・履歴・バックアップを削除（パッケージは保持）
+# var/ 配下の生成物とユーザー操作履歴を削除（パッケージは保持）
 ./emacs-setup.sh --clean
 
-# パッケージを含むすべての自動生成ファイルを削除
+# 上記に加えてパッケージも削除
 ./emacs-setup.sh --clean-all
 ```
+
+**`--clean` は復元できないデータを消す。** 削除対象は再生成可能なものだけではない。
+
+| 種別 | 例 |
+|---|---|
+| 再生成可能 | `var/package/` のネイティブコンパイルキャッシュ、`var/backup/` |
+| **復元不可能** | ミニバッファ履歴（savehist）、カーソル位置（places）、最近使ったファイル、undo 履歴（undo-fu-session） |
 
 ---
 
@@ -250,7 +265,7 @@ make test
 | ターゲット | 検証内容 |
 |---|---|
 | `make test` | lint からセットアップスクリプトまでを fail-fast で一括実行 |
-| `make lint` | Git 追跡中の設定ファイルを一時ディレクトリへ byte compile（警告は表示、エラーは失敗） |
+| `make lint` | Git 追跡中のシェルスクリプトを shellcheck、設定ファイルを一時ディレクトリへ byte compile（byte compile の警告は表示、エラーは失敗） |
 | `make test-unit` | early-init.el のパスヘルパー |
 | `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
 | `make test-keybinding` | C-t タグナビゲーションの固定キーバインド |
@@ -259,7 +274,7 @@ make test
 | `make test-invariants` | グローバルモードのフック登録・feature ロード状態・ts モードのフック parity |
 | `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |
 | `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・C-t 表） |
-| `make test-setup` | 隔離した HOME でのセットアップスクリプト |
+| `make test-setup` | 隔離した HOME で `test-emacs-setup.sh` を実行（引数パース、`--list` の抽出、ダウンロードの原子性、パッケージ復元のトランザクション、サンドボックスガード） |
 | `make clean-test` | tests/ 配下の byte compile 生成物を削除 |
 
 起動検査とキーバインド検査は、Git 追跡ファイルだけを展開した一時ルートで
