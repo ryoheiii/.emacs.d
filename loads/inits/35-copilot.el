@@ -152,8 +152,13 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
 
   ;;;;; [Group] Copilot - インライン補完 ;;;;;
   ;;; Copilot - GitHub Copilot によるインライン補完
+  ;; copilot.el リポジトリは独自の copilot-chat.el を同梱しており、そのまま
+  ;; ビルドすると chep/copilot-chat.el と同名 feature (copilot-chat) が二重になる。
+  ;; どちらがロードされるかは load-path 順に依存し、非互換な実装が選ばれ得るため
+  ;; 同梱版を recipe から除外する（Chat は chep 版に一本化する）。
   (use-package copilot
-    :straight (:host github :repo "copilot-emacs/copilot.el" :files ("*.el"))
+    :straight (:host github :repo "copilot-emacs/copilot.el"
+                     :files ("*.el" (:exclude "copilot-chat.el")))
     :hook (prog-mode . my/copilot-maybe-enable)
     :bind (;; copilot-mode OFF 時もトグルできるようグローバルに配置
            ("C-c j m" . copilot-mode)                             ; モード ON/OFF
