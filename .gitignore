@@ -29,3 +29,6 @@ plan.md
 .claude/settings.local.json
 .claude/review-state/
 .claude/worktrees/
+
+# ベンチ計測の一時生成物
+.bench/
