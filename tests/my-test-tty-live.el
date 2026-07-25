@@ -47,15 +47,25 @@
   '(pulsar
     spacious-padding
     nerd-icons-completion
-    nerd-icons-dired
-    nyan-mode
-    corfu-popupinfo)
+    nyan-mode)
   "全タイマー発火後の tty セッションでロードされてはならない feature。")
+
+;; nerd-icons-dired / corfu-popupinfo は :hook トリガー型のため、ガードを外しても
+;; 対象モードを開くまで feature はロードされず featurep では検出できない。
+;; そこで「tty ではフック登録自体が行われない」ことを検査する。
+(defconst my-test-tty-live--gui-only-hook-guards
+  '((nerd-icons-dired-mode . dired-mode-hook)
+    (corfu-popupinfo-mode . corfu-mode-hook))
+  "tty ではフックへ登録されてはならない (関数 . フック変数) の組。")
 
 (ert-deftest my-test-tty-live-gui-only-features-not-loaded ()
   :tags '(:tty-live)
   (dolist (feature my-test-tty-live--gui-only-features)
-    (should-not (featurep feature))))
+    (should-not (featurep feature)))
+  (dolist (entry my-test-tty-live--gui-only-hook-guards)
+    (let ((hook (cdr entry)))
+      (should-not (and (boundp hook)
+                       (memq (car entry) (symbol-value hook)))))))
 
 ;;;;; [Group] TTY Live - モードライン ;;;;;
 ;; doom-modeline-icon の :custom (display-graphic-p) は doom-modeline ロード後に
@@ -179,6 +189,16 @@
                           (ert-stats-skipped stats))
                   failures))
 
+          (unless (= (ert-stats-completed-unexpected stats) 0)
+            (push (format "ERT に予期しない結果があります: %d"
+                          (ert-stats-completed-unexpected stats))
+                  failures))
+
+          ;; 最終描画と待機を先に済ませ、この区間で発生した警告も
+          ;; 直後の最終検査で取りこぼさず fail-closed にする。
+          (redisplay t)
+          (sit-for 0.5)
+
           (let ((warnings (my-test-startup-check-warnings)))
             (when warnings
               (dolist (warning warnings)
@@ -192,17 +212,10 @@
                             (length warnings))
                     failures)))
 
-          (unless (= (ert-stats-completed-unexpected stats) 0)
-            (push (format "ERT に予期しない結果があります: %d"
-                          (ert-stats-completed-unexpected stats))
-                  failures))
-
           (setq failures (nreverse failures))
           (dolist (failure failures)
             (princ (format "tty-live 失敗: %s\n" failure)
                    #'external-debugging-output))
-          (redisplay t)
-          (sit-for 0.5)
           (kill-emacs (if failures 1 0)))
       (error
        (princ (format "tty-live ランナーエラー: %S\n" err)

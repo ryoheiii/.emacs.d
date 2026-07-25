@@ -28,6 +28,13 @@
     (kill-emacs 1)))
 
 ;;;;; [Group] Startup - 起動時警告検査 ;;;;;
+;; レコーダー(EMACS_TEST_OPTIONS / tty shim が注入)の欠落は「警告なし」と
+;; 区別できず false green になるため、未導入自体を fail-closed で検出する。
+(unless (and (boundp 'my-test--recorded-warnings)
+             (advice-member-p 'my-test--record-warning 'display-warning))
+  (message "起動回帰テスト: 警告レコーダーが未導入です(ハーネスの注入を確認)")
+  (kill-emacs 1))
+
 ;; 許容項目を追加する場合は、テスト環境固有で警告を除去できない理由を直前に記載する。
 (defconst my-test-startup--warning-allowlist
   ;; Emacs 31(CI の snapshot)では corfu が corfu-terminal の不要を警告するが、
@@ -47,7 +54,7 @@
 
 (defun my-test-startup-check-warnings ()
   "記録済みの起動時警告から許可されていない警告を返す。"
-  (when (bound-and-true-p my-test--recorded-warnings)
+  (when (boundp 'my-test--recorded-warnings)
     (seq-remove #'my-test-startup--warning-allowed-p
                 my-test--recorded-warnings)))
 

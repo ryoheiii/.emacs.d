@@ -22,7 +22,8 @@ EMACS_TEST_OPTIONS = \
 	--eval "(setq use-package-verbose 'errors)" \
 	--eval "(setq my-straight-base-dir-override \"$(STRAIGHT_DIR)/../\")" \
 	--eval "(defvar my-test--recorded-warnings nil)" \
-	--eval "(advice-add 'display-warning :before (lambda (type message &optional level &rest _) (push (list type message level) my-test--recorded-warnings)))"
+	--eval "(defun my-test--record-warning (type message &optional level &rest _) (push (list type message level) my-test--recorded-warnings))" \
+	--eval "(advice-add 'display-warning :before 'my-test--record-warning)"
 
 .PHONY: all prepare-straight lint test-unit test-startup test-keybinding
 .PHONY: test-cpp-config test-invariants test-tty test-tty-live
@@ -59,9 +60,9 @@ cat > "$$test_root/early-init.el" <<'MY_TTY_EARLY_INIT'
 (setq native-comp-jit-compilation nil)
 ;; 起動時警告の構造化レコーダー(my-test-startup-check-warnings が照合する)
 (defvar my-test--recorded-warnings nil)
-(advice-add 'display-warning :before
-            (lambda (type message &optional level &rest _)
-              (push (list type message level) my-test--recorded-warnings)))
+(defun my-test--record-warning (type message &optional level &rest _)
+  (push (list type message level) my-test--recorded-warnings))
+(advice-add 'display-warning :before #'my-test--record-warning)
 (load (expand-file-name "my-tty-early-init-real.el" user-emacs-directory) nil t)
 MY_TTY_EARLY_INIT
 mkdir -p "$$test_root/xdg-cache"
