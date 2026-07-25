@@ -85,6 +85,8 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `var/hist/` | 履歴、ブックマーク、TRAMP、transient |
 | `var/backup/` | 自動保存・バックアップ |
 | `var/package/` | eln-cache（ネイティブコンパイル） |
+| `tests/` | ERT による回帰テストと起動コスト計測ハーネス |
+| `docs/eval/` | 設計判断の根拠となる実測結果と生ログ |
 
 ### モジュール構成
 
@@ -231,6 +233,36 @@ emacs-startup → window-setup）を pty 上で再現して検証する。注意
   起動したままの実行は避ける
 - コールドキャッシュ時は先に `make test-startup` 等の batch 系ターゲットで
   ビルドを温めてから実行する（timeout 180 秒のため）
+
+### 起動コストの計測
+
+起動時間の内訳を実 pty で測るハーネスを `tests/` に置く。`make` ターゲットではなく
+直接実行する（回帰テストではないため `make test` には含めない）。
+
+``` sh
+# 現行設定を 15 有効試行（ウォームアップ 3 回は破棄）
+tests/my-bench-run.sh now  15 .bench/out
+
+# emacs -Q -nw の下限
+tests/my-bench-run.sh bare 15 .bench/out
+
+# 中央値と IQR で集計
+tests/my-bench-summarize.sh .bench/out
+```
+
+`tests/my-bench-startup.el` が `window-setup-hook` 到達（t1）と遅延ロード完了（t3）の
+経過時間、および `use-package` 宣言ごとのコストを外部／組み込みへ分類して出力する。
+`use-package-compute-statistics` を使うため計測用パッケージの追加は不要である。
+
+注意点:
+
+- **worktree で計測しない。** パッケージキャッシュを実体からコピーすると実環境と
+  異なる結果が出ることがある（`docs/eval/7-elpaca-ceiling/CORRECTION.md`）
+- 修正前後を比較する場合は `git checkout <rev> -- <file>` で作業ツリーを一時的に戻し、
+  同一ハーネス・同一キャッシュで測る（ハーネスは作業ツリーの差分を取り込む）
+- `emacs-init-time` は `after-init-hook` の直前で止まるため、この設定の主要コストを
+  計測窓の外へ出す。判断には使わない
+- 出力先の `.bench/` は gitignored
 
 GitHub Actions は push と pull request で Emacs 30.2 の安定レーンと
 snapshot のカナリアレーンを実行する。snapshot の失敗は non-blocking とする。
