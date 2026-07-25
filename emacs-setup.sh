@@ -1,6 +1,8 @@
 #!/bin/bash
 
-set -e
+# -E は現時点では no-op だが、将来 ERR トラップを足したときに
+# 関数・コマンド置換・サブシェル内で発火させるために必要になる。
+set -Eeuo pipefail
 
 ##### 設定 #####
 EMACS_DIR="$HOME/.emacs.d"
@@ -15,6 +17,13 @@ VAR_DIR="$EMACS_DIR/var"
 # packing/extract_package
 PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"
 PACKAGE_TARGET=("repos" "versions/default.el")
+# 取得元。環境変数で上書きできる。
+# 接頭辞は Emacs 本体の EMACS_UNIBYTE 等と衝突しないよう EMACS_SETUP_ で揃える。
+EMACS_SETUP_MIRROR_URL="${EMACS_SETUP_MIRROR_URL:-https://ftp.jaist.ac.jp/pub/GNU/emacs}"
+EMACS_SETUP_UPSTREAM_URL="${EMACS_SETUP_UPSTREAM_URL:-https://ftp.gnu.org/gnu/emacs}"
+# 一覧の取得先はダウンロード元と別変数にする。curl は file:// でディレクトリの
+# 中身を返さないため、テストからファイルを直接指定できる必要がある。
+EMACS_SETUP_INDEX_URL="${EMACS_SETUP_INDEX_URL:-$EMACS_SETUP_MIRROR_URL/}"
 
 
 ##### バリデーション #####
@@ -158,14 +167,39 @@ setup_env() {
 }
 
 ##### インストール可能な Emacs バージョンを取得 #####
+# 標準入力の HTML からバージョンを抽出する。ネットワークに依存しないため
+# fixture を使ったオフラインテストができる。
+#
+# 正規表現の要点:
+#   - \K と先読みを使う。grep -oP は capture group を出力へ反映しないため、
+#     グループ化しても "30.2.tar.gz" のように余計な文字が残ってしまう。
+#   - .tar.gz へ直結する形だけを許す。emacs-21.4a のような文字サフィックス版を
+#     "21.4" と誤抽出すると、どのミラーにも存在しない幽霊バージョンが一覧に出る。
+#     validate_version も英字付きを弾くため、一覧から除外するのが整合する。
+parse_emacs_version_list() {
+    local versions
+    # grep が 0 件マッチで 1 を返すと pipefail によりパイプライン全体が失敗する。
+    # 裸の代入は errexit の免除対象ではないため、|| true を付けないと
+    # 下の空チェックへ到達せずスクリプトが無言で終了する。
+    versions=$(grep -oP 'emacs-\K[0-9]+\.[0-9]+(?:\.[0-9]+)?(?=\.tar\.gz)' \
+        | sort -V | uniq) || true
+    if [ -z "$versions" ]; then
+        return 1
+    fi
+    printf '%s\n' "$versions"
+}
+
 list_emacs_versions() {
-    echo "Fetching available Emacs versions..."
+    echo "Fetching available Emacs versions..." >&2
     local html
-    if ! html=$(curl -sf https://ftp.gnu.org/gnu/emacs/); then
+    if ! html=$(curl -sf --connect-timeout 10 --max-time 60 "$EMACS_SETUP_INDEX_URL"); then
         echo "Error: バージョン一覧の取得に失敗しました。" >&2
         exit 1
     fi
-    echo "$html" | grep -oP 'emacs-\d+\.\d+(?:\.\d+)?' | sed 's/emacs-//' | sort -V | uniq
+    if ! printf '%s\n' "$html" | parse_emacs_version_list; then
+        echo "Error: バージョン情報を抽出できませんでした（ページ形式が変わった可能性があります）。" >&2
+        exit 1
+    fi
 }
 
 ##### Emacs インストール #####

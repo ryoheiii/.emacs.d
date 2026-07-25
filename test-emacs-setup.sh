@@ -187,6 +187,58 @@ assert_guard "guard rejects .emacs.d symlinked into real home" 1 "" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SYMLINKED"
 
 echo ""
+echo "=== --list のバージョン抽出 ==="
+
+FIXTURE_INDEX="$TEST_DIR/tests/fixtures/emacs-index.html"
+
+assert_list_output() {
+    local desc="$1" expected="$2" index_url="$3"
+    local actual
+    actual="$(EMACS_SETUP_INDEX_URL="$index_url" "$SCRIPT" --list 2>/dev/null)"
+    if [ "$actual" = "$expected" ]; then
+        record_pass "$desc"
+    else
+        record_fail "$desc — expected [$expected] got [$actual]"
+    fi
+}
+
+# fixture には 21.4a / 23.2b / 23.3b（両ミラーで 404 になる幽霊バージョン）と
+# emacs-lisp-intro-2.04（無関係なアーカイブ）を含めてある。
+assert_list_output "list extracts versions from fixture" \
+    "$(printf '23.4\n24.5\n28.1\n29.4\n30.2')" \
+    "file://$FIXTURE_INDEX"
+
+LIST_GHOSTS="$(EMACS_SETUP_INDEX_URL="file://$FIXTURE_INDEX" "$SCRIPT" --list 2>/dev/null \
+    | grep -cE '^(21\.4|23\.2|23\.3)$')"
+if [ "$LIST_GHOSTS" -eq 0 ]; then
+    record_pass "list excludes ghost versions"
+else
+    record_fail "list excludes ghost versions — $LIST_GHOSTS 件が混入"
+fi
+
+EMPTY_INDEX="$(harness_mktemp)/empty.html"
+: > "$EMPTY_INDEX"
+LIST_EMPTY_ERR="$(EMACS_SETUP_INDEX_URL="file://$EMPTY_INDEX" "$SCRIPT" --list 2>&1 >/dev/null)"
+EMACS_SETUP_INDEX_URL="file://$EMPTY_INDEX" "$SCRIPT" --list >/dev/null 2>&1
+LIST_EMPTY_RC=$?
+if [ "$LIST_EMPTY_RC" -ne 0 ] && echo "$LIST_EMPTY_ERR" | grep -q "抽出できませんでした"; then
+    record_pass "list fails loudly on empty index"
+else
+    record_fail "list fails loudly on empty index (exit=$LIST_EMPTY_RC, err=$LIST_EMPTY_ERR)"
+fi
+
+# 既定の取得先が組み立てられることを検査する。fixture テストは URL を上書きするため、
+# これが無いと既定経路の破損を検出できない。
+LIST_STUB="$(harness_mktemp)"
+make_stub_bin "$LIST_STUB" curl
+PATH="$LIST_STUB:$PATH" "$SCRIPT" --list >/dev/null 2>&1
+if grep -q 'ftp.jaist.ac.jp/pub/GNU/emacs/' "$LIST_STUB/calls.log" 2>/dev/null; then
+    record_pass "list uses the default mirror index url"
+else
+    record_fail "list uses the default mirror index url — $(cat "$LIST_STUB/calls.log" 2>/dev/null)"
+fi
+
+echo ""
 echo "=== --uninstall の契約 ==="
 
 # ダミーのソースツリーと prefix 成果物を用意し、make uninstall の成否ごとに
