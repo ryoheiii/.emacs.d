@@ -67,8 +67,11 @@
   (irony-server-install-prefix my/irony-server-prefix)
   :init
   (defun my/irony-server-available-p ()
-    "irony-server の実体が導入済みなら non-nil."
-    (file-executable-p (expand-file-name "bin/irony-server" my/irony-server-prefix)))
+    "irony-server の実体が見つかるなら non-nil.
+irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
+（導入先の bin/ を優先しつつ PATH 上の実体と Windows の .exe も拾う）。"
+    (let ((exec-path (cons (expand-file-name "bin" my/irony-server-prefix) exec-path)))
+      (and (executable-find "irony-server") t)))
 
   (defun my/irony-maybe-enable ()
     "irony-server が導入済みの環境でだけ `irony-mode' を有効にする.
@@ -76,9 +79,14 @@
     (when (my/irony-server-available-p)
       (irony-mode 1)))
   :config
-  ;; ts モードでも irony を使えるようにする（既定は cc-mode 系のみ）
-  (dolist (mode '(c-ts-mode c++-ts-mode))
-    (add-to-list 'irony-supported-major-modes mode))
+  ;; ts モードでも irony を使えるようにする（既定は cc-mode 系のみ）。
+  ;; irony--lang-compile-option は major-mode を assq で引くため、言語対応も
+  ;; 併せて登録しないと clang へ渡す -x が落ちる（.h が C 扱いになる）。
+  (dolist (entry '((c-ts-mode   . "c")
+                   (c++-ts-mode . "c++")))
+    (add-to-list 'irony-supported-major-modes (car entry))
+    (unless (assq (car entry) irony-lang-compile-option-alist)
+      (add-to-list 'irony-lang-compile-option-alist entry)))
 
   ;; irony-server が壊れている場合に CAPF エラーを抑制する
   (defvar my/irony-capf-warned nil

@@ -243,9 +243,28 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
   ;; (irony 未ロードを固定する :invariant とは別プロセスで動くため安全)。
   (require 'irony)
   (should (equal irony-server-install-prefix my/irony-server-prefix))
-  ;; ts モードでも irony を有効化できること
+  ;; ts モードでも irony を有効化でき、clang へ渡す言語指定も落ちないこと
   (should (memq 'c-ts-mode irony-supported-major-modes))
-  (should (memq 'c++-ts-mode irony-supported-major-modes)))
+  (should (memq 'c++-ts-mode irony-supported-major-modes))
+  (should (equal (alist-get 'c-ts-mode irony-lang-compile-option-alist) "c"))
+  (should (equal (alist-get 'c++-ts-mode irony-lang-compile-option-alist) "c++")))
+
+(ert-deftest my-test-cpp-config-irony-server-detection ()
+  "irony-server の探索は導入先の bin/ を見る（PATH 上の実体も拾える）."
+  :tags '(:cpp-config)
+  ;; PATH 上に実体があると「不在」の検査が成立しないため、その環境では skip する
+  (skip-unless (not (executable-find "irony-server")))
+  (let* ((root (make-temp-file "my-test-irony-" t))
+         (bin (expand-file-name "bin" root))
+         (exe (expand-file-name "irony-server" bin)))
+    (unwind-protect
+        (let ((my/irony-server-prefix root))
+          (should-not (my/irony-server-available-p))
+          (make-directory bin)
+          (with-temp-file exe (insert "#!/bin/sh\n"))
+          (set-file-modes exe #o755)
+          (should (my/irony-server-available-p)))
+      (delete-directory root t))))
 
 (ert-deftest my-test-cpp-config-irony-gate ()
   "irony-server 実体が無い環境では irony-mode を有効化しない."
