@@ -580,6 +580,9 @@ install_emacs() {
             CONFIG_OPTS+=("--with-pgtk")
             ;;
         no)
+            # 【未検証】この経路の実ビルドは確認していない。回帰テストは
+            # --setup の apt パッケージ選択をスタブで検査するだけで、
+            # --install は実ビルドを伴うため CI でも make test-setup でも走らない。
             CONFIG_OPTS+=("--without-x")
             ;;
         *)
@@ -713,6 +716,11 @@ clean_all() {
 }
 
 ##### パッケージビルド #####
+# straight-rebuild-all は変更検出を経由せず全パッケージを無条件に再ビルドし、
+# ビルドキャッシュの mtime も更新する。このため --extract-package の後に
+# 手動の straight-check-all は要らない。
+# 【根拠の限界】これは straight.el の実装読解に基づく判断で、動的検証はしていない。
+# 想定と違っていた場合は M-x straight-check-all の手動実行で回復できる。
 run_package_build() {
     emacs --batch \
         --eval "(setq user-emacs-directory \"$EMACS_DIR\")" \
