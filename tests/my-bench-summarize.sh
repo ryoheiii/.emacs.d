@@ -30,7 +30,10 @@ echo "# 起動コスト計測結果"
 echo
 echo "計測日時: $(date -Iseconds)"
 echo "ホスト: $(uname -sr)"
-echo "Emacs: $(${EMACS:-emacs} --version | head -1)"
+# head へパイプすると、読み手の早期終了で emacs が SIGPIPE を受け pipefail が拾う。
+# 取得と解析を分け、1 行目の切り出しはパラメータ展開で行う。
+EMACS_VERSION="$(${EMACS:-emacs} --version)" || EMACS_VERSION="(バージョンを取得できませんでした)"
+echo "Emacs: ${EMACS_VERSION%%$'\n'*}"
 echo
 
 echo "## wall time (ms, プロセス外側)"
@@ -82,4 +85,5 @@ grep -h "MY_BENCH pkg " "$OUT_DIR"/raw/now-[0-9]*.log 2>/dev/null | tr -d '\r' \
                  med = (n % 2) ? a[(n+1)/2] : (a[n/2] + a[n/2+1]) / 2
                  printf "%.6f %s\n", med, k
                } }' \
-  | sort -rn | head -12
+  | sort -rn \
+  | awk 'NR <= 12'   # head だと出力がパイプバッファを超えたとき sort が SIGPIPE で落ちる
