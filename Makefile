@@ -32,7 +32,7 @@ EMACS_TEST_OPTIONS = \
 	--eval "(advice-add 'display-warning :before 'my-test--record-warning)"
 
 .PHONY: all prepare-straight lint test-unit test-startup test-keybinding
-.PHONY: test-cpp-config test-invariants test-tty test-tty-live
+.PHONY: test-cpp-config test-deferred test-invariants test-tty test-tty-live
 .PHONY: test-setup test clean-test straight-thaw
 
 all: test
