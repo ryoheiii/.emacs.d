@@ -796,16 +796,30 @@ fi
 echo ""
 echo "=== --setup --gui ==="
 
+# --setup の失敗も calls.log の不在も、握り潰すと呼び出し側が空文字を受け取る。
+# 空文字どうしの比較は下の gtk3 検査で成立してしまうため、どちらも非ゼロで返す。
 setup_calls_for_gui() {
     local dir="$1"; shift
     make_setup_stubs "$dir" yes
-    PATH="$dir:$PATH" "$SCRIPT" --setup "$@" >/dev/null 2>&1
-    cat "$dir/calls.log" 2>/dev/null
+    if ! PATH="$dir:$PATH" "$SCRIPT" --setup "$@" >/dev/null 2>&1; then
+        return 1
+    fi
+    cat "$dir/calls.log"
 }
 
-SETUP_DEFAULT_LOG="$(setup_calls_for_gui "$(harness_mktemp)")"
-SETUP_NOGUI_LOG="$(setup_calls_for_gui "$(harness_mktemp)" --gui no)"
-SETUP_GTK3_LOG="$(setup_calls_for_gui "$(harness_mktemp)" --gui gtk3)"
+# 一時ディレクトリはコマンド置換の外で受ける。$(setup_calls_for_gui "$(harness_mktemp)")
+# の形では harness_mktemp の失敗を検査できず、harness_fatal の exit も
+# コマンド置換のサブシェルしか止められない。
+SETUP_DEFAULT_DIR="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+SETUP_NOGUI_DIR="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+SETUP_GTK3_DIR="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+
+SETUP_DEFAULT_LOG="$(setup_calls_for_gui "$SETUP_DEFAULT_DIR")" \
+    || harness_fatal "--setup（既定）のスタブ実行に失敗しました。"
+SETUP_NOGUI_LOG="$(setup_calls_for_gui "$SETUP_NOGUI_DIR" --gui no)" \
+    || harness_fatal "--setup --gui no のスタブ実行に失敗しました。"
+SETUP_GTK3_LOG="$(setup_calls_for_gui "$SETUP_GTK3_DIR" --gui gtk3)" \
+    || harness_fatal "--setup --gui gtk3 のスタブ実行に失敗しました。"
 
 gui_problems=""
 echo "$SETUP_DEFAULT_LOG" | grep -q 'xorg-dev' || gui_problems="$gui_problems 既定でGUI未導入"
@@ -825,7 +839,9 @@ else
     record_fail "setup --gui no keeps TLS support"
 fi
 
-if [ "$SETUP_DEFAULT_LOG" = "$SETUP_GTK3_LOG" ]; then
+# 非空を先に検査する。両辺が空でも = は成立するため、これが無いと
+# ログを取れなかった場合に「一致した」として PASS してしまう。
+if [ -n "$SETUP_DEFAULT_LOG" ] && [ "$SETUP_DEFAULT_LOG" = "$SETUP_GTK3_LOG" ]; then
     record_pass "setup --gui gtk3 matches the default"
 else
     record_fail "setup --gui gtk3 matches the default"
