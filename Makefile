@@ -31,7 +31,7 @@ EMACS_TEST_OPTIONS = \
 	--eval "(defun my-test--record-warning (type message &optional level &rest _) (push (list type message level) my-test--recorded-warnings))" \
 	--eval "(advice-add 'display-warning :before 'my-test--record-warning)"
 
-.PHONY: all prepare-straight lint test-unit test-startup test-keybinding
+.PHONY: all prepare-straight lint lint-sh lint-el test-unit test-startup test-keybinding
 .PHONY: test-cpp-config test-deferred test-invariants test-tty test-tty-live
 .PHONY: test-setup test clean-test straight-thaw
 
@@ -93,15 +93,22 @@ prepare-straight:
 	@mkdir -p "$(STRAIGHT_REPOS)" "$(STRAIGHT_BUILD)" "$(STRAIGHT_VERSIONS)"
 
 # シェルスクリプトは shellcheck、Elisp は byte compile で検査する。
+# 両者は依存も所要時間も独立しているためターゲットを分け、lint は集約とする。
+# 分けることで、環境分離を検査する tests/my-test-guards.sh が byte compile を
+# 巻き込まずに lint-sh だけを叩ける。
+lint: lint-sh lint-el
+
 # shellcheck は straight のロード環境を必要としないため、prepare_test_root を
-# 経由せず作業ツリーのファイルを直接検査する（Elisp 側も実体は作業ツリーのファイル）。
+# 経由せず作業ツリーのファイルを直接検査する。
 # lint の結果を環境から切り離す。個人設定で変わると再現しなくなる。
-# --norc: shellcheck は検査対象のディレクトリから上へ .shellcheckrc を探し、
-#   見つからなければ $HOME のものを使う（見つけた 1 つだけを使い、マージしない）。
+# --norc: shellcheck は検査対象のディレクトリから上へ .shellcheckrc（およびドット
+#   無しの shellcheckrc）を探し、見つからなければ $HOME のものを使う
+#   （見つけた 1 つだけを使い、マージしない）。
 # env -u SHELLCHECK_OPTS: この環境変数の中身はコマンドラインの前へ置かれるため、
 #   --norc では防げない。SHELLCHECK_OPTS=--enable=all で optional チェックが
 #   復活し、--exclude= で既定チェックを黙らせることもできる。
-lint: | prepare-straight
+# この 2 つが外されていないことは make test-guards が故障注入で検査する。
+lint-sh:
 	@command -v shellcheck >/dev/null || { \
 		printf '%s\n' "lint: shellcheck コマンドが必要です" >&2; \
 		exit 1; \
@@ -110,6 +117,10 @@ lint: | prepare-straight
 	mapfile -t sh_sources < <($(GIT) ls-files -- '*.sh'); \
 	test "$${#sh_sources[@]}" -gt 0; \
 	env -u SHELLCHECK_OPTS shellcheck --norc -x "$${sh_sources[@]}"
+
+# Elisp は一時ルートへ展開した early-init.el / init.el を読み込んでから、
+# 作業ツリーの設定ファイルを一時ディレクトリへ byte compile する。
+lint-el: | prepare-straight
 	@set -eu -o pipefail; \
 	$(prepare_test_root) \
 	lint_dir="$$(mktemp -d)"; \
