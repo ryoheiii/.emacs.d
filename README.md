@@ -98,7 +98,7 @@ TLS など GUI に依存しない依存は `--gui no` でも導入される。
 | tree-sitter 文法（C/C++） | `M-x my/treesit-install-c-grammars`（`git` と C コンパイラが必要）。再起動で ts モードへ切り替わる | cc-mode で動作する |
 | Node.js（Copilot 用） | `./emacs-setup.sh --setup-node` | Copilot 関連を一切読み込まない |
 | Copilot language server | `M-x copilot-install-server` → `M-x copilot-login` | `copilot-mode` を有効化しない |
-| irony サーバー（非 LSP 環境の補完） | `M-x load-library RET irony` の後に `M-x irony-install-server`（`cmake` と libclang が必要） | cape + ggtags へフォールバックする |
+| irony サーバー（非 LSP 環境の補完） | `M-x irony-install-server`（`cmake` と libclang が必要） | cape + ggtags へフォールバックする |
 | Nerd Font | `M-x nerd-icons-install-fonts` | GUI のアイコン表示のみ影響。tty では既定で無効 |
 | Migemo 辞書 | `--setup` の `cmigemo` に同梱。パスは `/usr/share/cmigemo/utf-8/migemo-dict` | ローマ字での日本語検索が無効になる |
 | clangd（C/C++ の LSP） | `sudo apt install clangd` | irony、無ければ cape + ggtags へフォールバックする |

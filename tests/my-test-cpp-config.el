@@ -579,6 +579,17 @@ helper の直接呼び出しでは electric-layout / electric-indent との連�
                      expected)))))
 
 ;;;;; [Group] C++ Config - 補完フォールバック段 ;;;;;
+(ert-deftest my-test-cpp-config-irony-install-server-reachable ()
+  "irony 未導入の環境でも M-x irony-install-server へ到達できること.
+irony 本体の irony-install-server には autoload cookie が無く、かつ
+my/irony-maybe-enable がサーバー未導入時のロードを止めるため、
+:commands の autoload が無いと新規環境からサーバーを導入できなくなる。"
+  :tags '(:cpp-config)
+  (should (commandp 'irony-install-server))
+  ;; irony を未ロードのまま呼べること（他テストが require 済みなら autoload は解決済み）
+  (unless (featurep 'irony)
+    (should (autoloadp (symbol-function 'irony-install-server)))))
+
 (ert-deftest my-test-cpp-config-irony-server-prefix ()
   "irony の導入先は var/hist/ 配下で、可用性判定と同じ場所を指すこと."
   :tags '(:cpp-config)
