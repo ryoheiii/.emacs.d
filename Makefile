@@ -33,7 +33,7 @@ EMACS_TEST_OPTIONS = \
 
 .PHONY: all prepare-straight lint lint-sh lint-el test-unit test-startup test-keybinding
 .PHONY: test-cpp-config test-deferred test-invariants test-tty test-tty-live
-.PHONY: test-setup test clean-test straight-thaw
+.PHONY: test-setup test-guards test clean-test straight-thaw
 
 all: test
 
@@ -233,6 +233,15 @@ test-setup:
 	trap 'find "$$test_home" -depth -delete' EXIT; \
 	EMACS_SETUP_TEST_SANDBOX=1 HOME="$$test_home" ./test-emacs-setup.sh
 
+# テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査する。
+# 子として test-emacs-setup.sh を何度も起動するため、test-setup と同じ隔離 HOME を渡す。
+test-guards:
+	@set -eu; \
+	test_home="$$(mktemp -d)"; \
+	test -n "$$test_home"; \
+	trap 'find "$$test_home" -depth -delete' EXIT; \
+	EMACS_SETUP_TEST_SANDBOX=1 HOME="$$test_home" MAKE="$(MAKE)" ./tests/my-test-guards.sh
+
 test:
 	+@$(MAKE) lint
 	+@$(MAKE) test-unit
@@ -244,6 +253,7 @@ test:
 	+@$(MAKE) test-tty
 	+@$(MAKE) test-tty-live
 	+@$(MAKE) test-setup
+	+@$(MAKE) test-guards
 
 # CI の部分一致キャッシュを lockfile のリビジョンへ揃える。
 # thaw 中の対話プロンプト（例: straight.el 自身のブランチ正規化確認）は
