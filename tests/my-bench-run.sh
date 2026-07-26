@@ -103,39 +103,98 @@ MY_BARE_RUNNER
 }
 
 #### 1 試行 ####
+# 十進数（整数または小数）であることを検査する。
+# glob の case では "." 単体を通してしまうため正規表現で数字を 1 桁以上要求する。
+is_decimal() {
+  [[ $1 =~ ^[0-9]+([.][0-9]+)?$ ]]
+}
+
 # 成功時は経過ミリ秒を stdout へ出す。無効試行なら空を返して非ゼロ終了。
+#
+# この関数は if ms="$(run_trial …)" と run_trial … || true の両方、つまり条件文脈から
+# 呼ばれる。条件文脈で呼ばれた関数の中では errexit が効かないため、set -e に依存せず
+# すべての失敗を明示分岐する。exit は使わない（コマンド置換のサブシェルしか止まらない）。
 run_trial() {
   local idx="$1"
   local log="$OUT_DIR/raw/${MODE}-${idx}.log"
-  local load start end
+  local load start end verdict
 
-  load="$(awk '{print $1}' /proc/loadavg)"
-  if awk -v l="$load" -v m="$LOADAVG_MAX" 'BEGIN{exit !(l>m)}'; then
-    echo "invalid: loadavg=$load > $LOADAVG_MAX" > "$log"
+  # awk の失敗を握り潰すと load が空になり、下の比較が「閾値以下」＝有効試行へ倒れる。
+  if ! load="$(awk '{print $1}' /proc/loadavg)"; then
+    return 1
+  fi
+  # 非数値のまま awk へ渡すと数値比較ではなく文字列比較になり、やはり有効試行へ倒れる。
+  # 閾値側も利用者が上書きできるため同じ検査を掛ける。
+  if ! is_decimal "$load" || ! is_decimal "$LOADAVG_MAX"; then
+    return 1
+  fi
+  # 判定は awk に出力させて受ける。終了ステータスだけを見る形では
+  # 「awk 自体が失敗した」と「閾値以下だった」を区別できない。
+  # awk は判定文字列を出しつつ非ゼロ終了しうるので、代入自体も明示分岐する。
+  if ! verdict="$(awk -v l="$load" -v m="$LOADAVG_MAX" \
+      'BEGIN{ if (l > m) print "high"; else print "ok" }')"; then
+    return 1
+  fi
+  case "$verdict" in
+    high)
+      # 診断ログは best-effort。書けなくても無効試行であることは変わらない。
+      echo "invalid: loadavg=$load > $LOADAVG_MAX" > "$log" || true
+      return 1
+      ;;
+    ok) ;;
+    *) return 1 ;;
+  esac
+
+  if ! start="$(date +%s%N)"; then
+    return 1
+  fi
+  if ! is_decimal "$start"; then
     return 1
   fi
 
-  start="$(date +%s%N)"
   if ! timeout "$TRIAL_TIMEOUT" script -qec "$BENCH_ROOT/run-bench.sh" /dev/null > "$log" 2>&1; then
-    echo "invalid: nonzero-exit-or-timeout" >> "$log"
+    echo "invalid: nonzero-exit-or-timeout" >> "$log" || true
     return 1
   fi
-  end="$(date +%s%N)"
+
+  if ! end="$(date +%s%N)"; then
+    return 1
+  fi
+  if ! is_decimal "$end"; then
+    return 1
+  fi
+  if [ "$end" -lt "$start" ]; then
+    return 1
+  fi
 
   if ! grep -q "MY_BENCH t1_window_setup=" "$log"; then
-    echo "invalid: probe-line-missing" >> "$log"
+    echo "invalid: probe-line-missing" >> "$log" || true
     return 1
   fi
   if [ "$MODE" = now ] && ! grep -q "MY_BENCH end" "$log"; then
-    echo "invalid: probe-incomplete" >> "$log"
+    echo "invalid: probe-incomplete" >> "$log" || true
     return 1
   fi
 
-  echo "loadavg=$load" >> "$log"
-  echo "$(( (end - start) / 1000000 ))"
+  # ここから先は有効試行として扱う。計測値の根拠になるログを残せない試行は破棄する。
+  if ! echo "loadavg=$load" >> "$log"; then
+    return 1
+  fi
+  # 現状は最終コマンドの終了ステータスが関数の戻り値になるため暗黙に伝播するが、
+  # 後ろへ 1 行足された瞬間に失われる。明示分岐で固定する。
+  if ! printf '%s\n' "$(( (end - start) / 1000000 ))"; then
+    return 1
+  fi
 }
 
 #### 実行 ####
+# MY_BENCH_LIB_ONLY=1 で source すると、ここまでの関数定義だけを読み込んで実行しない。
+# tests/my-test-guards.sh が run_trial の fail-closed を故障注入で検査するための入口。
+# 実行を止めるだけであり、いかなる検査も無効化しない。
+if [ "${MY_BENCH_LIB_ONLY:-0}" = 1 ]; then
+  return 0
+fi
+
 setup_bench_root
 [ "$MODE" = bare ] && setup_bare_runner
 
