@@ -31,8 +31,12 @@ make test
 CI は runner 同梱版を使わず、`.github/workflows/test.yml` で **0.11.0 を明示導入**する。
 同梱版はバージョンが固定されず、`ubuntu-latest` の実体が上がるとチェック集合が変わって
 無関係な変更が落ちるためである。バージョンを上げるときは同ファイルの
-`SHELLCHECK_VERSION` を変更し、ローカルの shellcheck も同じ版へ揃えてから
-`make lint` が通ることを確認する。
+`SHELLCHECK_VERSION` と `SHELLCHECK_SHA256` を両方更新し、ローカルの shellcheck も
+同じ版へ揃えてから `make lint` が通ることを確認する。
+
+`make lint` は `--norc` と `env -u SHELLCHECK_OPTS` を付けて実行する。
+`.shellcheckrc` と `SHELLCHECK_OPTS` はどちらも検査内容を書き換えるため、
+個人環境によって結果が変わらないようにしている。
 
 ## 変更範囲ごとの最小検証
 

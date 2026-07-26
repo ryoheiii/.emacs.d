@@ -95,9 +95,12 @@ prepare-straight:
 # シェルスクリプトは shellcheck、Elisp は byte compile で検査する。
 # shellcheck は straight のロード環境を必要としないため、prepare_test_root を
 # 経由せず作業ツリーのファイルを直接検査する（Elisp 側も実体は作業ツリーのファイル）。
+# lint の結果を環境から切り離す。個人設定で変わると再現しなくなる。
 # --norc: shellcheck は検査対象のディレクトリから上へ .shellcheckrc を探し、
-# 見つからなければ $HOME のものを使う。開発者個人の設定（enable=all など）で
-# 結果が変わると lint が再現しなくなるため、rc を一切読まない。
+#   見つからなければ $HOME のものを使う（見つけた 1 つだけを使い、マージしない）。
+# env -u SHELLCHECK_OPTS: この環境変数の中身はコマンドラインの前へ置かれるため、
+#   --norc では防げない。SHELLCHECK_OPTS=--enable=all で optional チェックが
+#   復活し、--exclude= で既定チェックを黙らせることもできる。
 lint: | prepare-straight
 	@command -v shellcheck >/dev/null || { \
 		printf '%s\n' "lint: shellcheck コマンドが必要です" >&2; \
@@ -106,7 +109,7 @@ lint: | prepare-straight
 	@set -eu -o pipefail; \
 	mapfile -t sh_sources < <($(GIT) ls-files -- '*.sh'); \
 	test "$${#sh_sources[@]}" -gt 0; \
-	shellcheck --norc -x "$${sh_sources[@]}"
+	env -u SHELLCHECK_OPTS shellcheck --norc -x "$${sh_sources[@]}"
 	@set -eu -o pipefail; \
 	$(prepare_test_root) \
 	lint_dir="$$(mktemp -d)"; \

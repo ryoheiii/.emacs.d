@@ -15,7 +15,8 @@ globs: ["**/*.sh", "Makefile"]
   両辺が空になりうる比較（`[ "$A" = "$B" ]`、既定値 0 が入る `-eq`）で成功側へ倒れる形を書かない。
 - 取得と解析を分ける。`cmd | parser` は前段の失敗を後段の成功で覆い隠す
   （`find … | wc -l` は find 失敗時も `0` を出す）。
-- `|| true` は理由をコメントに書いたうえで使う。
+- `|| true` は、失敗を無視してよい理由が読み取れる形で使う。直後の空検査で受ける、
+  診断出力の best-effort である、などが自明でない場合はコメントを添える。
 - `test-emacs-setup.sh` へ `set -e` を**追加しない**。`((PASS++))` は `PASS=0` のとき
   終了ステータス 1 を返すため、最初の PASS でスイート全体が落ちる。
 - `harness_fatal` のような `exit` する関数は、コマンド置換の外で呼ぶ。
@@ -32,15 +33,22 @@ globs: ["**/*.sh", "Makefile"]
 
 ## shellcheck
 
-`make lint` は `shellcheck --norc -x` を実行する。既定チェックのみを採用し、
-optional チェック（`-o all` / `-S style`）は常用しない。
+`make lint` は `env -u SHELLCHECK_OPTS shellcheck --norc -x` を実行する。
+既定チェックのみを採用し、optional チェック（`-o all` / `--enable=all`）は常用しない。
+`-S`（`--severity`）は報告する最低 severity の指定であって optional の有効化ではない。
+既定が最低の `style` なので、既定チェックはすべて報告される。
 
 - 公式が optional を "subjective or stylistic" と位置づけ、`-o all` を
   「デバッグ／評価目的」と明記している。
-- `--norc` を付けるのは、shellcheck が検査対象のディレクトリから上へ `.shellcheckrc` を探し、
-  無ければ `$HOME` のものを使い、しかも見つけた 1 つだけを採用する（マージしない）ため。
-  個人設定で lint 結果が変わらないようにする。この方針上、リポジトリへ `.shellcheckrc` は置かない。
-- CI は runner 同梱版ではなく、`.github/workflows/test.yml` で版を固定して導入する。
+- lint の結果は環境から切り離す。入力経路は 2 つあり、両方を塞ぐ必要がある。
+  - `.shellcheckrc`: 検査対象のディレクトリから上へ探し、無ければ `$HOME` のものを使う。
+    見つけた 1 つだけを採用しマージしない。→ `--norc`
+  - `SHELLCHECK_OPTS`: 中身がコマンドラインの前へ置かれる。`--norc` では防げず、
+    `--enable=all` で optional が復活し、`--exclude=` で既定チェックを黙らせられる。
+    → `env -u SHELLCHECK_OPTS`
+- 上記の方針上、リポジトリへ `.shellcheckrc` は置かない。
+- CI は runner 同梱版ではなく、`.github/workflows/test.yml` で版と配布物の SHA-256 を
+  固定して導入し、解決先の絶対パスと版を検査する。
 
 optional チェックの個別方針は次のとおり。
 
@@ -63,5 +71,7 @@ optional チェックの個別方針は次のとおり。
 | `test-emacs-setup.sh` の `LIST_GHOSTS=` | `grep -c` が 0 件マッチで終了 1 を返しつつ `0` を出力するため、`--list` の破損が隠れて成功側へ倒れる | 直前の `assert_list_output` が版一覧を実値で検査する二重防御がある |
 | `test-emacs-setup.sh` の `tar -tzf … \| grep -q` | 部分出力後に `tar` が失敗しても `grep` が一致すれば成功する | 検査の主張は「該当パスが一覧に現れること」であり、一致した時点で成立している |
 | `tests/my-bench-run.sh` の `run_trial` | 条件文脈で呼ばれるが、内部の `awk` / `date` / ログ書き込みが未ガード | 計測ハーネスであり失敗は試行の破棄に留まる。回帰テストではなく `make test` からも呼ばれない |
+| `test-emacs-setup.sh` のガード群 | 偽 PASS を塞ぐガードそのものを検査する恒久テストが無い。ガードを外しても通常の実行は全件 PASS のまま通る | 導入時は故障注入で「外すと偽 PASS に戻る」ことを確認した。恒久テスト化には失敗を注入できる仕組みが要る |
+| `make lint` の環境分離 | `--norc` と `env -u SHELLCHECK_OPTS` が外されても、通常の実行では気づけない | 同上。Makefile の該当行にコメントで理由を残している |
 
 この一覧は「確認した範囲」の記録である。ここに無い箇所が規約を満たす保証にはならない。
