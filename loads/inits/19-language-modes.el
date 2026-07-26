@@ -206,10 +206,11 @@ case ラベル・三項演算子・スコープ解決演算子では改行しな
 
   ;; --- cleanup（cc-mode の c-cleanup-list 相当）--------------------------------
   (defconst my/c-ts-close-brace-followers-regexp
-    "\\`[ \t]*\\(;\\|else\\|while\\|catch\\)\\'"
+    "\\`[ \t]*\\(;\\|,\\|else\\|while\\|catch\\)\\'"
     "`}' の直後の改行を取り消す語。
-google-c-style の (defun-close-semi brace-else-brace brace-elseif-brace
-brace-catch-brace) に対応する。")
+google-c-style の (defun-close-semi list-close-comma brace-else-brace
+brace-elseif-brace brace-catch-brace) に対応する。
+`;' と `,' は `}' へ直付けし、語の場合は空白 1 個を挟む。")
 
   (defun my/c-ts-pre-layout-fixups ()
     "自動改行の直前に走らせる整形（cc-mode の `c-cleanup-list' 相当）.
@@ -219,7 +220,7 @@ brace-catch-brace) に対応する。")
         (cond
          ;; `}' の後ろへ入れた改行を、次行が `;' / else / while / catch なら取り消す
          ((string-match my/c-ts-close-brace-followers-regexp line)
-          (let ((sep (if (string= (match-string 1 line) ";") "" " "))
+          (let ((sep (if (member (match-string 1 line) '(";" ",")) "" " "))
                 (token (save-excursion (back-to-indentation) (point))))
             (save-excursion
               (goto-char token)

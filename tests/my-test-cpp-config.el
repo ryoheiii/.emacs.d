@@ -468,17 +468,20 @@ ERROR そのものの場合に限る。関数本体の中だけが壊れてい�
       (should (eq (my/c-ts-layout-colon) expected)))))
 
 (ert-deftest my-test-cpp-config-c-ts-brace-cleanup ()
-  "`}' の後ろの改行を `;' / else / while / catch のときだけ取り消す."
+  "`}' の後ろの改行を `;' / `,' / else / while / catch のときだけ取り消す."
   :tags '(:cpp-config)
   (pcase-dolist (`(,input . ,expected)
                  '(("class A {\n}\n;"      . "class A {\n};")
                    ("if (a) {\n}\nelse"    . "if (a) {\n} else")
                    ("do {\n}\nwhile"       . "do {\n} while")
                    ("try {\n}\ncatch"      . "try {\n} catch")
+                   ;; list-close-comma 相当: `,' は `}' へ直付けする（空白を挟まない）
+                   ("int a[] = {\n    {1}\n}\n," . "int a[] = {\n    {1}\n},")
                    ;; empty-defun-braces 相当: `{' 直後の空行の `}' を 1 行へ戻す
                    ("int f() {\n    }"     . "int f() {}")
                    ;; 直前が `}' でなければ触らない
-                   ("int a;\n;"            . "int a;\n;")))
+                   ("int a;\n;"            . "int a;\n;")
+                   ("int a[] = {1\n,"      . "int a[] = {1\n,")))
     (with-temp-buffer
       (c++-mode)
       (insert input)
@@ -507,6 +510,10 @@ helper の直接呼び出しでは electric-layout / electric-indent との連�
                     . "try {\n    a;\n} catch (...) {\n    b;\n}\n")
                    ("do {a;} while (b);"    . "do {\n    a;\n} while (b);\n")
                    ("int f(int a, int b);"  . "int f(int a, int b);\n")
+                   ;; list-close-comma 相当: 閉じ波括弧の後ろのカンマを直付けする。
+                   ;; ブレース初期化の `{' は cc-mode と違い次行へ送らない（意図的差分）
+                   ("int a[][2] = {{1,2},{3,4}};"
+                    . "int a[][2] = {\n    {\n        1,2\n    },{\n        3,4\n    }\n};\n")
                    ;; 入力途中で木が ERROR へ落ちる 2 段以上のネスト。
                    ;; 括弧の深さから桁を算出する経路が効いていないと崩れる
                    ("int f() {int x = 1;if (x) {x++;} else {x--;}return x;}"

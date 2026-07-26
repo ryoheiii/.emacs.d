@@ -29,11 +29,19 @@
     `}` の次行が `;` / `else` / `while` / `catch` のとき、および `{}` が空のときは
     1 行へ戻す（`c-cleanup-list` の `defun-close-semi` / `brace-else-brace` /
     `brace-elseif-brace` / `brace-catch-brace` / `empty-defun-braces` 相当）。
+    `}` の次行が `,` のときも直付けする（`list-close-comma` 相当）。
   - hungry delete: DEL を `backward-delete-char-untabify`（`'all`）へ差し替える。
     コメント・文字列の中と前置引数付きでは cc-mode と同じ通常削除に戻る
     （`kill-ring` は使わない）。リージョン選択中は選択範囲を削除する。
-  - 未再現: `c-cleanup-list` の `list-close-comma` / `scope-operator`、
-    ブレース初期化リストの `{` 前改行。
+  - `scope-operator` は再現しない。`:` の自動改行をアクセス指定子に限っているため、
+    `::` が改行で割れること自体が起きない（cc-mode はこの cleanup で割れた `::` を
+    繋ぎ直す）。
+  - **意図的な差分**: ブレース初期化リストの `{` を次行へ送らない。
+    cc-mode は `int a[] = \n{\n    1, 2\n};` にするが、これは google-c-style が
+    `c-hanging-braces-alist` に `brace-list-open` を持たず cc-mode の既定
+    （前後に改行）へ落ちた結果で、Google C++ スタイルガイド自身は
+    `int a[] = {1, 2};` と書く。ts 側は後者に揃える。
+    このため入れ子の初期化は `},{` と続く（cc-mode は `},` で改行する）。
 - 波括弧が 2 段以上開いている入力途中は tree-sitter が木全体を `ERROR` に落とし、
   既定の規則が桁 0 へ倒す。この間の桁は括弧の深さから算出して補う
   （`namespace` の波括弧は `(innamespace . 0)` に合わせて段数へ数えない）。
