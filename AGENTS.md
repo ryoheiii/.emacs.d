@@ -121,6 +121,9 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 具体的な `use-package` 規約、命名、セクションヘッダ、不変条件は
 `.claude/rules/elisp-conventions.md` を参照する。
 
+シェルスクリプトのエラー処理、記法、shellcheck の採用方針は
+`.claude/rules/shell-conventions.md` を参照する。
+
 ## 検証
 
 - 変更の種類に応じた最小十分な検証を実行する。
