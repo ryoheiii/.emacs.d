@@ -34,9 +34,13 @@
     （`kill-ring` は使わない）。リージョン選択中は選択範囲を削除する。
   - 未再現: `c-cleanup-list` の `list-close-comma` / `scope-operator`、
     ブレース初期化リストの `{` 前改行。
-- **既知の使用感差分**: 波括弧が 2 段以上開いている入力途中は tree-sitter が木全体を
-  `ERROR` に落とすため、インデントが概算になる（直前の行を基準にした近似で、
-  既定の桁 0 よりは近い）。構文が揃えば cc-mode + google-c-style と完全に一致する。
+- 波括弧が 2 段以上開いている入力途中は tree-sitter が木全体を `ERROR` に落とし、
+  既定の規則が桁 0 へ倒す。この間の桁は括弧の深さから算出して補う
+  （`namespace` の波括弧は `(innamespace . 0)` に合わせて段数へ数えない）。
+- **既知の使用感差分**: 上記 `ERROR` 状態の間だけ、波括弧に現れない段が 1 段
+  浅くなる。該当するのは `case` ラベル配下の文（cc-mode は `case` から 1 段
+  下げる）と、波括弧を省いた本体が解析できないとき（`for` で確認）である。
+  構文が揃えば cc-mode + google-c-style と完全に一致する。
 
 文法の導入は `M-x my/treesit-install-c-grammars`（`git` と C コンパイラが必要）。
 導入先は `var/package/tree-sitter/` で、`~/.emacs.d/tree-sitter/` は使わない。

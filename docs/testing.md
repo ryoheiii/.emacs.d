@@ -59,6 +59,8 @@ tree-sitter 文法は通常「未導入」になる（システムの共有ラ�
 文法の可用性で排他になっており、未導入なら cc-mode 側
 （`my-test-cpp-config-google-style`）、導入済みなら ts 側
 （`my-test-cpp-config-c-ts-indent-google-equivalent`）が走る。
+入力途中（`ERROR` 状態）の桁を固定する `my-test-cpp-config-c-ts-error-indent`
+などの ts 専用検査も文法が要るため、未導入環境では skip される。
 ts 側を明示的に走らせる場合は、文法を置いたディレクトリを
 `treesit-extra-load-path` へ加えた状態で ERT を実行する。
 
