@@ -879,6 +879,44 @@ echo "=== --clean 動作 ==="
 assert_exit "clean succeeds"     0  --clean
 assert_exit "clean-all succeeds" 0  --clean-all
 
+# early-init.el を読まない emacs --batch が作る迷子の eln-cache を回収すること。
+# 本設定での正規の保存先は var/package/eln-cache/ で、直下のものは重複でしかない。
+assert_clean_removes_stray_eln() {
+    local stray="$HOME/.emacs.d/eln-cache"
+    rm -rf "$stray"
+    if ! mkdir -p "$stray/30.2-stub" || ! : > "$stray/30.2-stub/dummy.eln"; then
+        record_fail "clean removes stray eln-cache — スタブを作れなかった"
+        return
+    fi
+    if "$SCRIPT" --clean >/dev/null 2>&1 && [ ! -e "$stray" ]; then
+        record_pass "clean removes stray eln-cache"
+    else
+        record_fail "clean removes stray eln-cache — $stray が残ったか --clean が失敗した"
+    fi
+}
+assert_clean_removes_stray_eln
+
+# symlink は利用者が意図して張ったものとみなし、リンクも参照先も残すこと。
+# rm -rf は参照先を辿らずリンク自体を消すため、黙って消すと復旧できない。
+assert_clean_keeps_stray_eln_symlink() {
+    local stray="$HOME/.emacs.d/eln-cache"
+    local target="$HOME/eln-target"
+    rm -rf "$stray" "$target"
+    if ! mkdir -p "$target" || ! : > "$target/dummy.eln" \
+        || ! mkdir -p "$(dirname "$stray")" || ! ln -s "$target" "$stray"; then
+        record_fail "clean keeps stray eln-cache symlink — スタブを作れなかった"
+        return
+    fi
+    if "$SCRIPT" --clean >/dev/null 2>&1 \
+        && [ -L "$stray" ] && [ -f "$target/dummy.eln" ]; then
+        record_pass "clean keeps stray eln-cache symlink"
+    else
+        record_fail "clean keeps stray eln-cache symlink — リンクか参照先が失われた"
+    fi
+    rm -rf "$stray" "$target"
+}
+assert_clean_keeps_stray_eln_symlink
+
 echo ""
 echo "=== 出力先の分離 ==="
 

@@ -71,7 +71,8 @@ tty での動作を第一級として扱い、退行（デグレ）を絶対に�
 # ローカルへインストールした Emacs をアンインストール
 ./emacs-setup.sh --uninstall
 
-# var/ 配下の生成物とユーザー操作履歴を削除 ※パッケージは保持
+# var/ 配下の生成物とユーザー操作履歴、および直下へ迷い込んだ eln-cache/ を削除
+# ※パッケージは保持。直下の eln-cache/ が symlink の場合は残す
 # ミニバッファ履歴・カーソル位置・undo 履歴など復元不能なデータを含む
 ./emacs-setup.sh --clean
 
@@ -163,6 +164,17 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 - 指示のないファイルを変更しない。
 - `var/`、`loads/straight/`、`eln-cache`、`package.tar.gz` などの自動生成物を手で編集しない。
 - 自動生成物の削除が必要な場合は、対応する `emacs-setup.sh` のコマンドを使う。
+- 調査やデバッグで `emacs --batch` を直接実行する場合は、必ず `early-init.el` を
+  読み込む。読み込まないと `startup-redirect-eln-cache` を通らず、native-comp の
+  生成物がリポジトリ直下の `eln-cache/` へ落ちる
+  （本設定での正規の保存先は `var/package/eln-cache/`）。
+  取り残した場合は `./emacs-setup.sh --clean` で回収する。
+
+  ```sh
+  emacs --batch --eval '(setq user-emacs-directory (expand-file-name "~/.emacs.d/"))' \
+    -l early-init.el -l init.el -l <調査用の elisp>
+  ```
+
 - ユーザーの指示なく Git 履歴を書き換えない。
 - `main`／`master` への直コミットと force push を行わない。
 - 検証中に生成された意図しないファイルをコミット対象へ含めない。
