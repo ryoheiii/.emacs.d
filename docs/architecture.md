@@ -45,7 +45,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `01-ui.el` | UI・フォント・フレーム設定 |
 | `02-keybindings.el` | グローバルキーバインド |
 | `10-functions.el` | カスタム関数（ウィンドウ操作、ファイル名コピー） |
-| `18-built-in-package.el` | 組み込みパッケージ設定（eglot、treesit、tab-bar を含む） |
+| `18-built-in-package.el` | 組み込みパッケージ設定（eglot、treesit、tab-bar を含む。tree-sitter 文法の導入経路は `loads/site-elisp/my-treesit.el`） |
 | `19-language-modes.el` | 言語モード設定（cc-mode / c-ts-mode の振り分けを含む） |
 | `21-ime.el` | 日本語入力（tr-ime, mozc） |
 | `22-theme.el` | テーマとモードライン（doom-themes, doom-modeline） |
@@ -70,6 +70,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 |---|---|
 | `my-gtags.el` | タグ検索関数群（eglot/xref 優先、`global` フォールバック） |
 | `my-markdown.el` | Markdown カスタム関数群（pandoc コマンド構築、CSS 設定） |
+| `my-treesit.el` | tree-sitter 文法の取得元・導入先・導入コマンド（`emacs-setup.sh --setup-treesit` からも単体ロードする） |
 
 ## 技術スタック
 

@@ -783,7 +783,10 @@ esac
 APTCACHE
     fi
     chmod +x "$dir/apt-cache"
-    assert_stubs_executable "$dir" sudo apt-get gcc apt-cache
+    # --setup の末尾は tree-sitter 文法の導入を試みる。スタブが無いと実 Emacs が
+    # 起動して実際に文法をビルドしてしまうため、必ずスタブを置く。
+    make_stub_bin "$dir" emacs
+    assert_stubs_executable "$dir" sudo apt-get gcc apt-cache emacs
 }
 
 # libgccjit あり: 正しい cairo パッケージが渡り、誤記のものは渡らない
@@ -798,6 +801,19 @@ if [ -z "$setup_problems" ]; then
     record_pass "setup installs the correct cairo and libgccjit packages"
 else
     record_fail "setup installs the correct cairo and libgccjit packages —$setup_problems"
+fi
+
+# この設定が前提としている外部コマンドが --setup で入る (issue #11)。
+# clangd は clang とは別パッケージ、mozc-server は straight が入れる mozc.el の
+# helper、ripgrep は consult と xref の検索経路であり、いずれも欠けると縮退する。
+setup_problems=""
+for pkg in clangd mozc-server emacs-mozc-bin ripgrep; do
+    grep -q "$pkg" "$SETUP_OK_STUB/calls.log" 2>/dev/null || setup_problems="$setup_problems $pkg未指定"
+done
+if [ -z "$setup_problems" ]; then
+    record_pass "setup installs the external tools this config depends on"
+else
+    record_fail "setup installs the external tools this config depends on —$setup_problems"
 fi
 
 # libgccjit なし: apt-get install へ進まずに停止する
@@ -845,7 +861,9 @@ gui_problems=""
 echo "$SETUP_DEFAULT_LOG" | grep -q 'xorg-dev' || gui_problems="$gui_problems 既定でGUI未導入"
 echo "$SETUP_NOGUI_LOG" | grep -q 'xorg-dev' && gui_problems="$gui_problems gui=noでGUI導入"
 echo "$SETUP_NOGUI_LOG" | grep -q 'libncurses-dev' || gui_problems="$gui_problems gui=noでTUI未導入"
-echo "$SETUP_NOGUI_LOG" | grep -q 'pandoc' || gui_problems="$gui_problems gui=noでツール未導入"
+for pkg in pandoc clangd mozc-server emacs-mozc-bin ripgrep; do
+    echo "$SETUP_NOGUI_LOG" | grep -q "$pkg" || gui_problems="$gui_problems gui=noで${pkg}未導入"
+done
 if [ -z "$gui_problems" ]; then
     record_pass "setup --gui no excludes only GUI packages"
 else
@@ -886,6 +904,92 @@ else
     record_fail "invalid install gui value is rejected before any side effect —$gui_early_problems"
 fi
 rm -rf "$HOME/.local"
+
+echo ""
+echo "=== --setup-treesit ==="
+
+# 文法のレシピと導入先は Elisp 側 (loads/site-elisp/my-treesit.el) が正本である。
+# シェル側の契約は「そのライブラリを early-init.el 付きでロードし、
+# my/treesit-install-c-grammars を呼ぶ」ことだけなので、そこだけを固定する。
+make_treesit_home() {
+    local home="$1" with_lib="$2"
+    make_fake_home "$home"
+    : > "$home/.emacs.d/early-init.el" || harness_fatal "early-init.el を作成できません。"
+    if [ "$with_lib" = yes ]; then
+        mkdir -p "$home/.emacs.d/loads/site-elisp" || harness_fatal "site-elisp を作成できません。"
+        : > "$home/.emacs.d/loads/site-elisp/my-treesit.el" \
+            || harness_fatal "my-treesit.el を作成できません。"
+    fi
+}
+
+TS_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+TS_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+make_treesit_home "$TS_HOME" yes
+make_stub_bin "$TS_STUB" emacs
+ts_problems=""
+HOME="$TS_HOME" PATH="$TS_STUB:$PATH" "$SCRIPT" --setup-treesit >/dev/null 2>&1 \
+    || ts_problems="$ts_problems 非ゼロ終了"
+grep -q 'early-init.el' "$TS_STUB/calls.log" 2>/dev/null \
+    || ts_problems="$ts_problems early-init未ロード"
+grep -q 'site-elisp/my-treesit.el' "$TS_STUB/calls.log" 2>/dev/null \
+    || ts_problems="$ts_problems ライブラリ未ロード"
+grep -q 'my/treesit-install-c-grammars' "$TS_STUB/calls.log" 2>/dev/null \
+    || ts_problems="$ts_problems 導入コマンド未実行"
+if [ -z "$ts_problems" ]; then
+    record_pass "setup-treesit installs grammars through the shared elisp library"
+else
+    record_fail "setup-treesit installs grammars through the shared elisp library —$ts_problems"
+fi
+
+# ライブラリが無い場合、明示指定の --setup-treesit は fail-closed で止まる。
+TS_NOLIB_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+TS_NOLIB_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+make_treesit_home "$TS_NOLIB_HOME" no
+make_stub_bin "$TS_NOLIB_STUB" emacs
+ts_problems=""
+HOME="$TS_NOLIB_HOME" PATH="$TS_NOLIB_STUB:$PATH" "$SCRIPT" --setup-treesit >/dev/null 2>&1 \
+    && ts_problems="$ts_problems 成功扱い"
+[ -s "$TS_NOLIB_STUB/calls.log" ] && ts_problems="$ts_problems emacs起動"
+if [ -z "$ts_problems" ]; then
+    record_pass "setup-treesit fails when the elisp library is missing"
+else
+    record_fail "setup-treesit fails when the elisp library is missing —$ts_problems"
+fi
+
+# --setup の末尾でも文法を導入する（前提が揃っている場合）。
+TS_SETUP_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+TS_SETUP_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+make_treesit_home "$TS_SETUP_HOME" yes
+make_setup_stubs "$TS_SETUP_STUB" yes
+ts_problems=""
+HOME="$TS_SETUP_HOME" PATH="$TS_SETUP_STUB:$PATH" "$SCRIPT" --setup >/dev/null 2>&1 \
+    || ts_problems="$ts_problems 非ゼロ終了"
+grep -q 'my/treesit-install-c-grammars' "$TS_SETUP_STUB/calls.log" 2>/dev/null \
+    || ts_problems="$ts_problems 文法未導入"
+if [ -z "$ts_problems" ]; then
+    record_pass "setup installs grammars when the prerequisites are met"
+else
+    record_fail "setup installs grammars when the prerequisites are met —$ts_problems"
+fi
+
+# tree-sitter 無効な Emacs では、--setup は文法を諦めて案内を出し、成功で終わる。
+# 新規マシンでは --setup の時点で Emacs 自体が未ビルドなのが普通のため。
+TS_SKIP_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+TS_SKIP_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+make_treesit_home "$TS_SKIP_HOME" yes
+make_setup_stubs "$TS_SKIP_STUB" yes
+ts_problems=""
+TS_SKIP_OUT="$(HOME="$TS_SKIP_HOME" PATH="$TS_SKIP_STUB:$PATH" STUB_EXIT_EMACS=1 \
+    "$SCRIPT" --setup 2>&1)" || ts_problems="$ts_problems 非ゼロ終了"
+echo "$TS_SKIP_OUT" | grep -q -- '--setup-treesit' || ts_problems="$ts_problems 案内なし"
+echo "$TS_SKIP_OUT" | grep -q 'setup-env complete' || ts_problems="$ts_problems 後続処理が止まった"
+grep -q 'my/treesit-install-c-grammars' "$TS_SKIP_STUB/calls.log" 2>/dev/null \
+    && ts_problems="$ts_problems 導入を試みた"
+if [ -z "$ts_problems" ]; then
+    record_pass "setup skips grammars and keeps going when tree-sitter is unavailable"
+else
+    record_fail "setup skips grammars and keeps going when tree-sitter is unavailable —$ts_problems"
+fi
 
 echo ""
 echo "=== 基本オプション ==="

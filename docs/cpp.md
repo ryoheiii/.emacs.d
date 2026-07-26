@@ -55,7 +55,12 @@
   構文が揃えば、上記のブレース初期化の `{` 配置を除いて cc-mode + google-c-style
   と一致する。
 
-文法の導入は `M-x my/treesit-install-c-grammars`（`git` と C コンパイラが必要）。
+文法の導入は `./emacs-setup.sh --setup-treesit`（`git` と C コンパイラが必要）。
+`--setup` も、tree-sitter 有効ビルドの Emacs がすでにある環境では併せて導入する。
+Emacs からは `M-x my/treesit-install-c-grammars`（C/C++ をまとめて導入）か、
+標準の `M-x treesit-install-language-grammar` を使う。どちらも同じ固定タグと
+同じ導入先を使う（レシピは `loads/site-elisp/my-treesit.el` が正本）。
+
 導入先は `var/package/tree-sitter/` で、`~/.emacs.d/tree-sitter/` は使わない。
 自動ではインストールしないため、実行しない限り cc-mode のまま動く。
 
@@ -122,8 +127,8 @@ GTAGS が無い状態では何も作られない（`global` が終了コード 3
 
 | 段 | 必要なもの | 導入方法 |
 |---|---|---|
-| tree-sitter モード | `git`、C コンパイラ | `M-x my/treesit-install-c-grammars` |
-| eglot | `clangd`、CDB か `.clangd` | **`clangd` は `--setup` に含まれない**（入るのは `clang` と `llvm`）。`sudo apt install clangd`。CDB はビルド系で生成する |
+| tree-sitter モード | `git`、C コンパイラ | `./emacs-setup.sh --setup-treesit`（`M-x my/treesit-install-c-grammars` でも可） |
+| eglot | `clangd`、CDB か `.clangd` | `./emacs-setup.sh --setup`（`clangd` パッケージ。`clang` とは別パッケージ）。CDB はビルド系で生成する |
 | irony | `cmake`、libclang | `./emacs-setup.sh --setup` の後、`M-x irony-install-server` |
 | ggtags | GNU Global | `./emacs-setup.sh --setup`（`global` パッケージ） |
 

@@ -5,6 +5,7 @@
 *.elc
 elpa/
 eln-cache/
+/tree-sitter/
 var/*
 loads/elisp/*
 loads/site-elisp/*

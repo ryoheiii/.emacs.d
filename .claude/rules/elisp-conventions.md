@@ -10,6 +10,13 @@ globs: ["**/*.el"]
 - 外部パッケージは `use-package` で宣言する。`straight-use-package-by-default t` により `:straight t` は暗黙に適用される。
 - 組み込みパッケージには必ず `:straight nil` を指定する。
 - 設定値は `:custom`、フックは `:hook`、キーバインドは `:bind` にグループ化する。
+- **`:hook` / `:bind` から参照する自前の関数は `:init` ではなく `:preface` で定義する。**
+  これらの節の関数は `:commands` 経由で autoload 対象になり、バイトコンパイル時に
+  `declare-function` が名前を先に登録する。`:init`（処理順 100）はその後に来るため
+  「`defined multiple times`」警告になる。`:preface`（処理順 79）は `:commands`（98）より
+  前に処理されるので警告が出ない。副作用を伴う式は `:preface`（`eval-and-compile`）へ
+  置かず `:init` に残す。同じ節の他の定義を参照する場合はブロックごと移す
+  （残すと「free variable」警告へ入れ替わる）。
 - 外部パッケージ宣言は `loads/inits/` の 20〜35 番台へ機能別に配置する。
 - `package.el` をパッケージ管理へ使用しない。
 

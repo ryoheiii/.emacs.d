@@ -106,7 +106,8 @@
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
   :straight nil
-  :init
+  ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
+  :preface
   (defun my/flyspell-prog-setup ()
     "Emacs Lisp を除くプログラムモードで flyspell-prog-mode を有効化する。"
     (unless (derived-mode-p 'emacs-lisp-mode)
