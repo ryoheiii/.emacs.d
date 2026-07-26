@@ -14,7 +14,9 @@ make test
 | ターゲット | 検証内容 |
 |---|---|
 | `make test` | 下記すべてを fail-fast で一括実行 |
-| `make lint` | Git 追跡中のシェルスクリプトを shellcheck、設定ファイルを一時ディレクトリへ byte compile（byte compile の警告は表示、エラーは失敗） |
+| `make lint` | `lint-sh` と `lint-el` をまとめて実行 |
+| `make lint-sh` | Git 追跡中のシェルスクリプトを shellcheck |
+| `make lint-el` | 設定ファイルを一時ディレクトリへ byte compile（警告は表示、エラーは失敗） |
 | `make test-unit` | `early-init.el` のパスヘルパー |
 | `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
 | `make test-keybinding` | `C-t` タグナビゲーションの固定キーバインド |
@@ -24,6 +26,7 @@ make test
 | `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |
 | `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・`C-t` 表） |
 | `make test-setup` | 隔離した HOME で `test-emacs-setup.sh` を実行（引数パース、`--list` の抽出、ダウンロードの原子性、パッケージ復元のトランザクション、サンドボックスガード） |
+| `make test-guards` | テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査（`test-emacs-setup.sh` のガード、`lint-sh` の環境分離、`run_trial` の失敗検査） |
 | `make clean-test` | `tests/` 配下の byte compile 生成物を削除 |
 | `make straight-thaw` | CI 専用。lockfile のリビジョンを適用して `straight-check-all` まで実行する（`CI=true` 以外では実行できない） |
 
@@ -34,9 +37,15 @@ CI は runner 同梱版を使わず、`.github/workflows/test.yml` で **0.11.0 
 `SHELLCHECK_VERSION` と `SHELLCHECK_SHA256` を両方更新し、ローカルの shellcheck も
 同じ版へ揃えてから `make lint` が通ることを確認する。
 
-`make lint` は `--norc` と `env -u SHELLCHECK_OPTS` を付けて実行する。
-`.shellcheckrc` と `SHELLCHECK_OPTS` はどちらも検査内容を書き換えるため、
-個人環境によって結果が変わらないようにしている。
+`make lint-sh` は `--norc` と `env -u SHELLCHECK_OPTS` を付けて実行する。
+`.shellcheckrc`（祖先探索ではドット無しの `shellcheckrc` も読まれる）と `SHELLCHECK_OPTS` は
+どちらも検査内容を書き換えるため、個人環境によって結果が変わらないようにしている。
+
+この 2 つはどちらが外れても通常の実行では気づけないため、`make test-guards` が
+`SHELLCHECK_OPTS=--enable=all` と `$HOME/.shellcheckrc` を注入して `make lint-sh` が
+影響を受けないことを検査する。注入が実際にレバーとして効くこと（optional チェックが
+本当に増えること）も正の対照で確かめる。リポジトリ外の祖先に `.shellcheckrc` がある
+環境では `$HOME` フォールバックが使われないため、該当の 2 件は `SKIP:` になる。
 
 ## 変更範囲ごとの最小検証
 
@@ -53,6 +62,7 @@ CI は runner 同梱版を使わず、`.github/workflows/test.yml` で **0.11.0 
 | グローバルモードのフック登録、feature のロード状態、ts モードのフック parity | `make test-invariants` |
 | 表示・モードライン・キーバインド・補完・クリップボード・端末初期化・GUI 分岐 | `make test-tty` と `make test-tty-live` |
 | `emacs-setup.sh` | `make test-setup` |
+| テスト基盤・lint 基盤（`test-emacs-setup.sh`、`tests/my-bench-run.sh`、`Makefile` の `lint*` / `test-*`） | `make test-guards` |
 
 ## テストの実行環境
 
