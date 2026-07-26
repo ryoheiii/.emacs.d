@@ -53,6 +53,10 @@
 (use-package irony
   :straight t
   :defer t
+  ;; irony-install-server には autoload cookie が無く、irony 本体をロードするまで
+  ;; M-x から見えない。かつ未導入環境では my/irony-maybe-enable がロードを止めるため、
+  ;; サーバー導入前は到達できなくなる。autoload を張って M-x 単独で呼べるようにする。
+  :commands (irony-install-server)
   :preface
   ;; :custom より前に評価される節。導入先を 1 箇所で決めて可用性判定と共有する
   (defconst my/irony-server-prefix (my-set-history "irony")
