@@ -8,6 +8,8 @@ set -Eeuo pipefail
 readonly EMACS_DIR="$HOME/.emacs.d"
 readonly LOADS_DIR="$EMACS_DIR/loads"
 readonly PACKAGE_DIR="straight"
+# setup-treesit（文法の取得元・固定タグ・導入先は、このファイルが正本）
+readonly TREESIT_LIB="$LOADS_DIR/site-elisp/my-treesit.el"
 # install-emacs
 readonly DL_DIR="$HOME/.local/downloads"
 readonly EMACS_SRC_DIR="$DL_DIR/emacs"
@@ -63,6 +65,10 @@ Options:
                             the default (install everything).
   -n, --setup-node          Install Node.js (offline tarball or fnm fallback).
                             Required only for GitHub Copilot.
+  -t, --setup-treesit       Build the C/C++ tree-sitter grammars into
+                            var/package/tree-sitter/. Included in --setup when a
+                            tree-sitter enabled Emacs is already available; run
+                            it after --install otherwise.
   --uninstall-node          Uninstall Node.js (offline install and/or fnm).
   -l, --list                List available Emacs versions for installation.
   -i <ver>, --install <ver> [-g|--gui <gtk3|lucid|pgtk|no>]
@@ -89,6 +95,7 @@ Examples:
   $0 --setup
   $0 --setup --gui no            # Skip GUI dependencies (terminal only).
   $0 --setup-node                # Install Node.js for GitHub Copilot.
+  $0 --setup-treesit             # Install the C/C++ tree-sitter grammars.
   $0 --uninstall-node
   $0 --list
   $0 --install 30.1              # Install Emacs version 30.1.
@@ -460,7 +467,54 @@ setup_env() {
     sudo apt-get install -y "${TUI_PACKAGES[@]}"
     sudo apt-get install -y "${EMACS_TOOL_PACKAGES[@]}"
 
+    # C/C++ の tree-sitter 文法もここで導入する。ただし新規マシンでは --setup の
+    # 時点で Emacs が未ビルドなのが普通なので、前提が揃うときだけ実行し、
+    # 揃わなければ次の手順を案内して続行する（--setup 自体は失敗させない）。
+    if treesit_prereqs_ready_p; then
+        setup_treesit
+    else
+        echo "tree-sitter 文法の導入をスキップします (tree-sitter 有効な emacs と git が必要です)。"
+        echo "       Emacs の導入後に ./emacs-setup.sh --setup-treesit を実行してください。"
+    fi
+
     echo "Emacs setup-env complete."
+}
+
+##### tree-sitter 文法の導入 #####
+# 文法の取得元・固定タグ・導入先は $TREESIT_LIB が正本であり、ここへ複製しない。
+# use-package と straight に依存しないライブラリなので、パッケージを 1 つも
+# 導入していない環境でも単体ロードできる。
+# early-init.el を読むのはパスヘルパーと eln-cache のリダイレクトを通すためである
+# （読まないと native-comp の生成物がリポジトリ直下の eln-cache/ へ落ちる）。
+setup_treesit() {
+    require_commands emacs git
+    if [ ! -f "$TREESIT_LIB" ]; then
+        echo "Error: $TREESIT_LIB が見つかりません。" >&2
+        exit 1
+    fi
+
+    echo "Installing tree-sitter grammars (C/C++) ..."
+    if ! emacs --batch \
+        --eval "(setq user-emacs-directory \"$EMACS_DIR/\")" \
+        -l "$EMACS_DIR/early-init.el" \
+        -l "$TREESIT_LIB" \
+        -f my/treesit-install-c-grammars; then
+        echo "Error: tree-sitter 文法の導入に失敗しました。" >&2
+        exit 1
+    fi
+}
+
+# --setup から呼ぶ前提チェック。文法のビルドには git と C コンパイラが要り、
+# 導入結果の検査には tree-sitter 有効ビルドの Emacs が要る。
+# -Q は Lisp を一切読まないため eln-cache は生成されない。
+treesit_prereqs_ready_p() {
+    [ -f "$TREESIT_LIB" ] || return 1
+    command -v emacs >/dev/null 2>&1 || return 1
+    command -v git >/dev/null 2>&1 || return 1
+    emacs --batch -Q --eval \
+        '(kill-emacs (if (and (fboundp (quote treesit-available-p)) (treesit-available-p)) 0 1))' \
+        >/dev/null 2>&1 || return 1
+    return 0
 }
 
 ##### インストール可能な Emacs バージョンを取得 #####
@@ -926,6 +980,7 @@ case "$ACTION" in
         setup_env "$SETUP_GUI"
         ;;
     -n|--setup-node)      setup_node ;;
+    -t|--setup-treesit)   setup_treesit ;;
     --uninstall-node)     uninstall_node ;;
     -l|--list)            list_emacs_versions ;;
     -i|--install)
