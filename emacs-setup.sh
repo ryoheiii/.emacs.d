@@ -438,10 +438,13 @@ setup_env() {
     ##### Emacs 利用時に必要なパッケージのインストール
     local EMACS_TOOL_PACKAGES=(
         clang libclang-dev              # Clang 用
+        clangd                          # C/C++ の LSP (eglot の第 1 段。clang とは別パッケージ)
         elpa-color-theme-modern         # カラーテーマ用
         fonts-ricty-diminished          # フォント用
         global                          # GTAGS (ソースコード検索ツール)
         cmigemo                         # Migemo (ローマ字で日本語検索)
+        mozc-server emacs-mozc-bin      # Mozc (日本語入力。straight が入れるのは mozc.el だけ)
+        ripgrep                         # ripgrep (consult-ripgrep と xref の検索経路)
         hunspell hunspell-en-us         # Hunspell (スペルチェック)
         aspell aspell-en                # Aspell (スペルチェック)
         cmake llvm                      # CMake and LLVM (irony-install-server 用)

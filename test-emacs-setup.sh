@@ -780,6 +780,19 @@ else
     record_fail "setup installs the correct cairo and libgccjit packages —$setup_problems"
 fi
 
+# この設定が前提としている外部コマンドが --setup で入る (issue #11)。
+# clangd は clang とは別パッケージ、mozc-server は straight が入れる mozc.el の
+# helper、ripgrep は consult と xref の検索経路であり、いずれも欠けると縮退する。
+setup_problems=""
+for pkg in clangd mozc-server emacs-mozc-bin ripgrep; do
+    grep -q "$pkg" "$SETUP_OK_STUB/calls.log" 2>/dev/null || setup_problems="$setup_problems $pkg未指定"
+done
+if [ -z "$setup_problems" ]; then
+    record_pass "setup installs the external tools this config depends on"
+else
+    record_fail "setup installs the external tools this config depends on —$setup_problems"
+fi
+
 # libgccjit なし: apt-get install へ進まずに停止する
 SETUP_NG_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_setup_stubs "$SETUP_NG_STUB" no
@@ -811,7 +824,9 @@ gui_problems=""
 echo "$SETUP_DEFAULT_LOG" | grep -q 'xorg-dev' || gui_problems="$gui_problems 既定でGUI未導入"
 echo "$SETUP_NOGUI_LOG" | grep -q 'xorg-dev' && gui_problems="$gui_problems gui=noでGUI導入"
 echo "$SETUP_NOGUI_LOG" | grep -q 'libncurses-dev' || gui_problems="$gui_problems gui=noでTUI未導入"
-echo "$SETUP_NOGUI_LOG" | grep -q 'pandoc' || gui_problems="$gui_problems gui=noでツール未導入"
+for pkg in pandoc clangd mozc-server emacs-mozc-bin ripgrep; do
+    echo "$SETUP_NOGUI_LOG" | grep -q "$pkg" || gui_problems="$gui_problems gui=noで${pkg}未導入"
+done
 if [ -z "$gui_problems" ]; then
     record_pass "setup --gui no excludes only GUI packages"
 else
