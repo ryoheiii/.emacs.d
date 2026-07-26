@@ -549,8 +549,13 @@ setup_pkg_stub
 
 # 1. 正常系: 内容が入れ替わり、ユーザーデータは保護され、eln-cache は消える
 prepare_archive_and_old_tree
-HIST_SUM="$(md5sum < "$PKG_VAR/hist/savehist")"
-BK_SUM="$(md5sum < "$PKG_VAR/backup/bk")"
+# 取得に失敗して空のまま進むと、下の再計算も空になり "" = "" が成立して
+# 「ユーザーデータ保護」の検査が空虚に PASS する。fixture の前提条件として
+# ここで止める。
+HIST_SUM="$(md5sum < "$PKG_VAR/hist/savehist")" \
+    || harness_fatal "fixture の savehist を読めません。"
+BK_SUM="$(md5sum < "$PKG_VAR/backup/bk")" \
+    || harness_fatal "fixture の backup/bk を読めません。"
 run_extract >/dev/null 2>&1
 EXTRACT_RC=$?
 pkg_problems=""
@@ -705,11 +710,26 @@ build_pkg_tree new
 rm -f "$PKG_ARCHIVE"
 PKG_TAR_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_stub_bin "$PKG_TAR_STUB" tar
+# find を wc -l へ直接繋ぐと、find が失敗しても wc が 0 を出すため
+# 前後の件数がともに 0 になり、残骸があっても一致して PASS してしまう。
+# 取得と計数を分け、find の失敗はここで止める。
+count_files_under() {
+    local dir="$1" listing
+    listing="$(find "$dir" -type f)" || return 1
+    if [ -z "$listing" ]; then
+        printf '0\n'
+    else
+        printf '%s\n' "$listing" | wc -l
+    fi
+}
+
 PKG_TMPDIR="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
-TMP_BEFORE="$(find "$PKG_TMPDIR" -type f | wc -l)"
+TMP_BEFORE="$(count_files_under "$PKG_TMPDIR")" \
+    || harness_fatal "一時ディレクトリ $PKG_TMPDIR を走査できません。"
 PATH="$PKG_TAR_STUB:$PATH" TMPDIR="$PKG_TMPDIR" STUB_EXIT_TAR=1 \
     "$SCRIPT" --packing-package >/dev/null 2>&1
-TMP_AFTER="$(find "$PKG_TMPDIR" -type f | wc -l)"
+TMP_AFTER="$(count_files_under "$PKG_TMPDIR")" \
+    || harness_fatal "一時ディレクトリ $PKG_TMPDIR を走査できません。"
 if [ "$TMP_BEFORE" -eq "$TMP_AFTER" ]; then
     record_pass "packing leaves no temp file when tar fails"
 else
