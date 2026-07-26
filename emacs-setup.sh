@@ -21,7 +21,7 @@ readonly FNM_OWNED_MARKER=".installed-by-emacs-setup"
 # clean
 readonly VAR_DIR="$EMACS_DIR/var"
 # early-init.el を読まない emacs --batch が作る迷子の eln-cache。
-# 実体は var/package/eln-cache/ 側にあり、こちらは読み込み経路からも外れている。
+# 本設定での正規の保存先は var/package/eln-cache/ で、こちらは読み込み経路からも外れている。
 readonly STRAY_ELN_DIR="$EMACS_DIR/eln-cache"
 # packing/extract_package
 readonly PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"

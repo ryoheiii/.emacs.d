@@ -166,7 +166,8 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 - 自動生成物の削除が必要な場合は、対応する `emacs-setup.sh` のコマンドを使う。
 - 調査やデバッグで `emacs --batch` を直接実行する場合は、必ず `early-init.el` を
   読み込む。読み込まないと `startup-redirect-eln-cache` を通らず、native-comp の
-  生成物がリポジトリ直下の `eln-cache/` へ落ちる（実体は `var/package/eln-cache/`）。
+  生成物がリポジトリ直下の `eln-cache/` へ落ちる
+  （本設定での正規の保存先は `var/package/eln-cache/`）。
   取り残した場合は `./emacs-setup.sh --clean` で回収する。
 
   ```sh

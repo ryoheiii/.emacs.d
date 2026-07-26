@@ -880,7 +880,7 @@ assert_exit "clean succeeds"     0  --clean
 assert_exit "clean-all succeeds" 0  --clean-all
 
 # early-init.el を読まない emacs --batch が作る迷子の eln-cache を回収すること。
-# 実体は var/package/eln-cache/ 側にあり、直下のものは重複でしかない。
+# 本設定での正規の保存先は var/package/eln-cache/ で、直下のものは重複でしかない。
 assert_clean_removes_stray_eln() {
     local stray="$HOME/.emacs.d/eln-cache"
     rm -rf "$stray"
