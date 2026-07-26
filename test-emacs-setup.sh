@@ -768,7 +768,15 @@ GCCSTUB
 #!/bin/bash
 printf 'apt-cache %s\n' "$*" >> "$(dirname "$0")/calls.log"
 case "$1" in
-    policy) printf 'libgccjit-13-dev:\n  候補: 13.3.0\n' ;;
+    policy)
+        printf 'libgccjit-13-dev:\n  候補: 13.3.0\n'
+        # 回帰検出用の埋め草。判定側が grep -q などへパイプすると、読み手が
+        # 先に終了してここが SIGPIPE で落ち、pipefail 経由で「見つかりません」へ
+        # 倒れる。1 行だけのスタブでは実 apt-cache と違って再現しないため、
+        # パイプバッファ (既定 64KiB) を確実に超える量を吐いて確定的に暴く。
+        printf -v pad '%*s' 1024 ''
+        for _ in {1..256}; do printf '%s\n' "$pad"; done
+        ;;
     search) printf 'libgccjit-13-dev - GCC just-in-time compilation\n' ;;
 esac
 APTCACHE
@@ -792,8 +800,11 @@ APTCACHE
 # libgccjit あり: 正しい cairo パッケージが渡り、誤記のものは渡らない
 SETUP_OK_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 make_setup_stubs "$SETUP_OK_STUB" yes
-PATH="$SETUP_OK_STUB:$PATH" "$SCRIPT" --setup >/dev/null 2>&1
+SETUP_OK_ERR="$(PATH="$SETUP_OK_STUB:$PATH" "$SCRIPT" --setup 2>&1 >/dev/null)"
 setup_problems=""
+# 実在する libgccjit を誤って「見つかりません」と判定していない。スタブ側の埋め草が
+# あるため、判定がパイプ形式へ戻るとここが確定的に落ちる。
+echo "$SETUP_OK_ERR" | grep -q 'libgccjit-13-dev が見つかりません' && setup_problems="$setup_problems libgccjit誤判定"
 grep -q 'libcairo2-dev' "$SETUP_OK_STUB/calls.log" 2>/dev/null || setup_problems="$setup_problems libcairo2-dev未指定"
 grep -q 'libcairo-5c-dev' "$SETUP_OK_STUB/calls.log" 2>/dev/null && setup_problems="$setup_problems libcairo-5c-dev混入"
 grep -q 'libgccjit-13-dev' "$SETUP_OK_STUB/calls.log" 2>/dev/null || setup_problems="$setup_problems libgccjit未指定"

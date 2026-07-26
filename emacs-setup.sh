@@ -372,7 +372,14 @@ setup_env() {
     # libgccjit は gcc とバージョンを揃える必要がある。
     # 欠落したまま続行すると install_emacs の --with-native-compilation が
     # 無条件のため、setup の成功が後のビルド失敗に化ける。ここで止める。
-    if ! apt-cache policy "libgccjit-${GCC_VERSION}-dev" 2>/dev/null | grep -q '^libgccjit-'; then
+    # apt-cache policy は知らないパッケージには何も出さずに 0 で終わるため、
+    # 出力の有無が判定になる。ここを grep -q へパイプしてはならない。読み手が
+    # 先に終了して apt-cache が SIGPIPE で 141 になり、pipefail が拾って
+    # 実在するのに「見つかりません」へ倒れる。取得と判定を分ける。
+    local GCCJIT_POLICY
+    GCCJIT_POLICY=$(apt-cache policy "libgccjit-${GCC_VERSION}-dev" 2>/dev/null) \
+        || GCCJIT_POLICY=""   # 取得失敗は空扱いにして下の判定を失敗側へ倒す
+    if [[ "$GCCJIT_POLICY" != libgccjit-* ]]; then
         echo "Error: libgccjit-${GCC_VERSION}-dev が見つかりません。" >&2
         echo "       --with-native-compilation には gcc と同じバージョンの libgccjit が必要です。" >&2
         echo "       利用可能な候補:" >&2
