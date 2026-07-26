@@ -33,6 +33,7 @@ make test-startup
 | C/C++ 設定（スタイル、eglot 起動条件、検索経路、tree-sitter 切替、irony ゲート） | `make test-cpp-config` |
 | `:defer` 付きパッケージ宣言 | `make test-deferred` |
 | グローバルモードのフック登録、feature のロード状態、ts モードのフック parity | `make test-invariants` |
+| テスト基盤・lint 基盤（`test-emacs-setup.sh`、`tests/my-bench-run.sh`、`Makefile` の `lint*` / `test-*`） | `make test-guards` |
 
 `make clean-test` は `tests/` 配下の byte compile 生成物を削除する補助ターゲットである。
 `make straight-thaw` は CI 専用で、`CI=true` 以外の環境では実行できない。

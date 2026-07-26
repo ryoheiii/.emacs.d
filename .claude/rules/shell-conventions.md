@@ -33,7 +33,8 @@ globs: ["**/*.sh", "Makefile"]
 
 ## shellcheck
 
-`make lint` は `env -u SHELLCHECK_OPTS shellcheck --norc -x` を実行する。
+`make lint` は `lint-sh`（shellcheck）と `lint-el`（byte compile）の集約である。
+`lint-sh` は `env -u SHELLCHECK_OPTS shellcheck --norc -x` を実行する。
 既定チェックのみを採用し、optional チェック（`-o all` / `--enable=all`）は常用しない。
 `-S`（`--severity`）は報告する最低 severity の指定であって optional の有効化ではない。
 既定が最低の `style` なので、既定チェックはすべて報告される。
@@ -43,10 +44,14 @@ globs: ["**/*.sh", "Makefile"]
 - lint の結果は環境から切り離す。入力経路は 2 つあり、両方を塞ぐ必要がある。
   - `.shellcheckrc`: 検査対象のディレクトリから上へ探し、無ければ `$HOME` のものを使う。
     見つけた 1 つだけを採用しマージしない。→ `--norc`
+    **祖先ディレクトリの探索はドット無しの `shellcheckrc` も読む**（`$HOME` フォールバックは
+    `.shellcheckrc` のみ）。
   - `SHELLCHECK_OPTS`: 中身がコマンドラインの前へ置かれる。`--norc` では防げず、
     `--enable=all` で optional が復活し、`--exclude=` で既定チェックを黙らせられる。
     → `env -u SHELLCHECK_OPTS`
-- 上記の方針上、リポジトリへ `.shellcheckrc` は置かない。
+- 上記の方針上、リポジトリへ `.shellcheckrc` も `shellcheckrc` も置かない。
+- この 2 つが外れていないことは `make test-guards` が故障注入で検査する
+  （`tests/my-test-guards.sh`）。注入が実際にレバーとして効くことも正の対照で確かめる。
 - CI は runner 同梱版ではなく、`.github/workflows/test.yml` で版と配布物の SHA-256 を
   固定して導入し、解決先の絶対パスと版を検査する。
 
@@ -91,8 +96,28 @@ CI の shellcheck だけは `SHELLCHECK_SHA256` で内容を固定している�
 |---|---|---|
 | `test-emacs-setup.sh` の `LIST_GHOSTS=` | `grep -c` が 0 件マッチで終了 1 を返しつつ `0` を出力するため、`--list` の破損が隠れて成功側へ倒れる | 直前の `assert_list_output` が版一覧を実値で検査する二重防御がある |
 | `test-emacs-setup.sh` の `tar -tzf … \| grep -q` | 部分出力後に `tar` が失敗しても `grep` が一致すれば成功する | 検査の主張は「該当パスが一覧に現れること」であり、一致した時点で成立している |
-| `tests/my-bench-run.sh` の `run_trial` | 条件文脈で呼ばれるが、内部の `awk` / `date` / ログ書き込みが未ガード | 計測ハーネスであり失敗は試行の破棄に留まる。回帰テストではなく `make test` からも呼ばれない |
-| `test-emacs-setup.sh` のガード群 | 偽 PASS を塞ぐガードそのものを検査する恒久テストが無い。ガードを外しても通常の実行は全件 PASS のまま通る | 導入時は故障注入で「外すと偽 PASS に戻る」ことを確認した。恒久テスト化には失敗を注入できる仕組みが要る |
-| `make lint` の環境分離 | `--norc` と `env -u SHELLCHECK_OPTS` が外されても、通常の実行では気づけない | 同上。Makefile の該当行にコメントで理由を残している |
+| `tests/my-bench-run.sh` の最終出力の rc 検査 | ガードを外しても観測が変わらないため mutation で検出できない | 最終コマンドの終了ステータスが関数の戻り値になるため現状は暗黙に伝播する。`printf` の後ろへ行が足された瞬間に失われるので、契約テスト（`make test-guards` の "run_trial rejects a closed stdout"）として固定してある |
 
 この一覧は「確認した範囲」の記録である。ここに無い箇所が規約を満たす保証にはならない。
+
+## ガードの恒久テスト
+
+fail-closed のガードは、外しても通常の実行が全件 PASS のまま通る。退行を検出できるよう、
+`make test-guards`（`tests/my-test-guards.sh`）が故障を注入して次を固定する。
+
+| 対象 | 検査 |
+|---|---|
+| `test-emacs-setup.sh` のガード | `md5sum` / `find` / `cat` / `mktemp` の故障と `--setup` の失敗を注入し、偽 PASS へ戻らないことを確認する。注入で到達できない呼び出し側のガードは、`harness_mktemp` と `setup_calls_for_gui` の全呼び出しが `harness_fatal` で受けられていることをソース走査で検査する |
+| `make lint-sh` の環境分離 | `SHELLCHECK_OPTS` と `$HOME/.shellcheckrc` を注入し、結果が変わらないことを確認する |
+| `tests/my-bench-run.sh` の `run_trial` | library モード（`MY_BENCH_LIB_ONLY=1`）で source し、`awk` / `date` / `grep` の故障を注入する |
+
+設計上の要点は 2 つある。
+
+- 注入はすべて外部から行い、検査対象へフックを埋め込まない。ガードを検査するために、
+  そのガードのあるファイルへ制御を変える分岐を足すのは本末転倒である。
+- 各注入は**対象ガードを外したときにだけ偽の成功へ戻る**ものにする。単に「非ゼロになる」
+  だけの注入は別のガードが受けても通るため判別力がない。同種のガードが直列に並ぶ箇所で
+  「常時失敗」させると最初のガードに遮蔽されるので、呼び出し回数で挙動を変える。
+
+検査対象は `MY_GUARD_HARNESS` / `MY_GUARD_BENCH` で差し替えられる。ガードを 1 つ外した
+コピーを指して `make test-guards` を回せば、対応する検査が FAIL することを確認できる。
