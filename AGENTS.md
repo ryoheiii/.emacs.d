@@ -163,6 +163,16 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
 - 指示のないファイルを変更しない。
 - `var/`、`loads/straight/`、`eln-cache`、`package.tar.gz` などの自動生成物を手で編集しない。
 - 自動生成物の削除が必要な場合は、対応する `emacs-setup.sh` のコマンドを使う。
+- 調査やデバッグで `emacs --batch` を直接実行する場合は、必ず `early-init.el` を
+  読み込む。読み込まないと `startup-redirect-eln-cache` を通らず、native-comp の
+  生成物がリポジトリ直下の `eln-cache/` へ落ちる（実体は `var/package/eln-cache/`）。
+  取り残した場合は `./emacs-setup.sh --clean` で回収する。
+
+  ```sh
+  emacs --batch --eval '(setq user-emacs-directory (expand-file-name "~/.emacs.d/"))' \
+    -l early-init.el -l init.el -l <調査用の elisp>
+  ```
+
 - ユーザーの指示なく Git 履歴を書き換えない。
 - `main`／`master` への直コミットと force push を行わない。
 - 検証中に生成された意図しないファイルをコミット対象へ含めない。

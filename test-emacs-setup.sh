@@ -879,6 +879,24 @@ echo "=== --clean 動作 ==="
 assert_exit "clean succeeds"     0  --clean
 assert_exit "clean-all succeeds" 0  --clean-all
 
+# early-init.el を読まない emacs --batch が作る迷子の eln-cache を回収すること。
+# 実体は var/package/eln-cache/ 側にあり、直下のものは重複でしかない。
+assert_clean_removes_stray_eln() {
+    local stray="$HOME/.emacs.d/eln-cache"
+    if ! mkdir -p "$stray/30.2-stub"; then
+        record_fail "clean removes stray eln-cache — スタブを作れなかった"
+        return
+    fi
+    : > "$stray/30.2-stub/dummy.eln"
+    "$SCRIPT" --clean >/dev/null 2>&1
+    if [ -e "$stray" ]; then
+        record_fail "clean removes stray eln-cache — $stray が残った"
+    else
+        record_pass "clean removes stray eln-cache"
+    fi
+}
+assert_clean_removes_stray_eln
+
 echo ""
 echo "=== 出力先の分離 ==="
 

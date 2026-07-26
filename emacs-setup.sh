@@ -20,6 +20,9 @@ readonly NODE_ACTIVE_LINK="$HOME/.local/node"
 readonly FNM_OWNED_MARKER=".installed-by-emacs-setup"
 # clean
 readonly VAR_DIR="$EMACS_DIR/var"
+# early-init.el を読まない emacs --batch が作る迷子の eln-cache。
+# 実体は var/package/eln-cache/ 側にあり、こちらは読み込み経路からも外れている。
+readonly STRAY_ELN_DIR="$EMACS_DIR/eln-cache"
 # packing/extract_package
 readonly PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"
 readonly PACKAGE_TARGET=("repos" "versions/default.el")
@@ -69,6 +72,8 @@ Options:
                             This includes unrecoverable user data such as
                             minibuffer history, cursor positions and undo
                             history — not just caches.
+                            Also removes a stray .emacs.d/eln-cache/ left by an
+                            emacs --batch run that skipped early-init.el.
   -C, --clean-all           Same as --clean, and also removes the packages.
   -p, --packing-package     Archive the package directory ($PACKAGE_DIR).
   -x, --extract-package     Extract the package archive to .emacs.d/loads/$PACKAGE_DIR.
@@ -680,6 +685,13 @@ clean() {
     if [ -d "$VAR_DIR" ]; then
         echo "Removing $VAR_DIR ..."
         rm -rf "$VAR_DIR"
+    fi
+    # early-init.el を読まない emacs --batch は startup-redirect-eln-cache を
+    # 通らないため、既定の $EMACS_DIR/eln-cache/ へ書く。実体は var/package/ 側で
+    # あり重複するだけなので、置き場所の誤りとしてここで回収する。
+    if [ -d "$STRAY_ELN_DIR" ]; then
+        echo "Removing $STRAY_ELN_DIR ..."
+        rm -rf "${STRAY_ELN_DIR:?}"
     fi
     echo "Emacs clean complete."
 }
