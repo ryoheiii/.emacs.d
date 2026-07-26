@@ -71,13 +71,14 @@
   導入手順（`cmake` と libclang が必要）:
 
   ```text
-  M-x load-library RET irony RET   ; irony 本体をロードする
   M-x irony-install-server
   ```
 
-  `irony-install-server` には autoload cookie が無く、irony 本体がロードされるまで
-  `M-x` から見えない。かつ irony は「サーバー導入済みの環境でだけロードする」ゲートを
-  通るため、未導入の環境では自動ではロードされない。そのため 1 行目が必要になる。
+  `irony-install-server` は irony 本体に autoload cookie が無く、かつ irony は
+  「サーバー導入済みの環境でだけロードする」ゲートを通るため、そのままでは未導入の
+  環境から呼べない。`use-package irony` の `:commands` で autoload を張って
+  `M-x` から直接到達できるようにしている。
+  導入後は C/C++ バッファを開き直すと `irony-mode` が有効になる。
 
 ## タグナビゲーション
 
@@ -110,7 +111,7 @@ GTAGS が無い状態では何も作られない（`global` が終了コード 3
 |---|---|---|
 | tree-sitter モード | `git`、C コンパイラ | `M-x my/treesit-install-c-grammars` |
 | eglot | `clangd`、CDB か `.clangd` | **`clangd` は `--setup` に含まれない**（入るのは `clang` と `llvm`）。`sudo apt install clangd`。CDB はビルド系で生成する |
-| irony | `cmake`、libclang | `./emacs-setup.sh --setup` の後、上記の手順で `M-x irony-install-server` |
+| irony | `cmake`、libclang | `./emacs-setup.sh --setup` の後、`M-x irony-install-server` |
 | ggtags | GNU Global | `./emacs-setup.sh --setup`（`global` パッケージ） |
 
 ## テスト
