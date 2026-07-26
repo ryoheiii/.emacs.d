@@ -342,7 +342,9 @@ M-x straight-pull-all         ; 全パッケージを更新
 ### クリーンアップ
 
 ```sh
-./emacs-setup.sh --clean       # var/ 配下の生成物とユーザー操作履歴を削除
+./emacs-setup.sh --clean       # var/ 配下の生成物とユーザー操作履歴、および
+                               # 直下へ迷い込んだ eln-cache/ を削除
+                               # （symlink の場合は残す）
 ./emacs-setup.sh --clean-all   # 上記に加えてパッケージも削除
 ```
 

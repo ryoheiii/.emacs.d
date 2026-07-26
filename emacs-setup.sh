@@ -74,6 +74,7 @@ Options:
                             history — not just caches.
                             Also removes a stray .emacs.d/eln-cache/ left by an
                             emacs --batch run that skipped early-init.el.
+                            A symlink at that path is kept, not removed.
   -C, --clean-all           Same as --clean, and also removes the packages.
   -p, --packing-package     Archive the package directory ($PACKAGE_DIR).
   -x, --extract-package     Extract the package archive to .emacs.d/loads/$PACKAGE_DIR.
@@ -687,9 +688,13 @@ clean() {
         rm -rf "$VAR_DIR"
     fi
     # early-init.el を読まない emacs --batch は startup-redirect-eln-cache を
-    # 通らないため、既定の $EMACS_DIR/eln-cache/ へ書く。実体は var/package/ 側で
-    # あり重複するだけなので、置き場所の誤りとしてここで回収する。
-    if [ -d "$STRAY_ELN_DIR" ]; then
+    # 通らないため、既定の $EMACS_DIR/eln-cache/ へ書く。本設定の正規の保存先は
+    # var/package/eln-cache/ なので、置き場所の誤りとしてここで回収する。
+    # symlink は利用者が意図して張ったものとみなし、削除せず残す
+    # （rm -rf は参照先を辿らずリンク自体を消すため、黙って消すと復旧できない）。
+    if [ -L "$STRAY_ELN_DIR" ]; then
+        echo "Skipping $STRAY_ELN_DIR (symlink)." >&2
+    elif [ -d "$STRAY_ELN_DIR" ]; then
         echo "Removing $STRAY_ELN_DIR ..."
         rm -rf "${STRAY_ELN_DIR:?}"
     fi
