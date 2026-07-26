@@ -34,6 +34,26 @@ jobs:
         with:
           version: ${{ matrix.emacs-version }}
 
+      # runner 同梱の shellcheck はバージョンが固定されない。ubuntu-latest の
+      # 実体が上がるとチェック集合が変わり、無関係な変更が make lint で落ちる。
+      # ローカルと同じ版を明示導入して結果を揃える。
+      - name: shellcheck をバージョン固定で導入
+        env:
+          SHELLCHECK_VERSION: "0.11.0"
+        run: |
+          set -Eeuo pipefail
+          url="https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          curl -fsSL --retry 3 "$url" -o "$tmp/shellcheck.tar.xz"
+          tar -xJf "$tmp/shellcheck.tar.xz" -C "$tmp"
+          sudo install -m 0755 \
+            "$tmp/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          # 同梱版へ黙って落ちないよう、解決先と版の両方を検査する
+          command -v shellcheck
+          installed="$(shellcheck --version | awk '/^version:/ {print $2}')"
+          test "$installed" = "$SHELLCHECK_VERSION"
+
       - name: straight.el キャッシュを復元
         id: straight-cache
         uses: actions/cache@v6.1.0
