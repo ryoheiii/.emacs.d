@@ -57,19 +57,12 @@
   ;; M-x から見えない。かつ未導入環境では my/irony-maybe-enable がロードを止めるため、
   ;; サーバー導入前は到達できなくなる。autoload を張って M-x 単独で呼べるようにする。
   :commands (irony-install-server)
+  ;; :custom より前に評価される節。導入先を 1 箇所で決めて可用性判定と共有する。
+  ;; :hook から参照する関数もここで定義する (:init だと多重定義警告が出る)
   :preface
-  ;; :custom より前に評価される節。導入先を 1 箇所で決めて可用性判定と共有する
   (defconst my/irony-server-prefix (my-set-history "irony")
     "irony-server の導入先。`irony-server-install-prefix' と一致させる。")
-  :hook ((c-mode      . my/irony-maybe-enable)
-         (c++-mode    . my/irony-maybe-enable)
-         (c-ts-mode   . my/irony-maybe-enable)
-         (c++-ts-mode . my/irony-maybe-enable)
-         (irony-mode  . irony-cdb-autosetup-compile-options))
-  :custom
-  ;; irony-server の導入先 (実体は <prefix>/bin/irony-server)
-  (irony-server-install-prefix my/irony-server-prefix)
-  :init
+
   (defun my/irony-server-available-p ()
     "irony-server の実体が見つかるなら non-nil.
 irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
@@ -82,6 +75,14 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
 未導入の環境では irony をロードせず、cape + ggtags のフォールバックに任せる。"
     (when (my/irony-server-available-p)
       (irony-mode 1)))
+  :hook ((c-mode      . my/irony-maybe-enable)
+         (c++-mode    . my/irony-maybe-enable)
+         (c-ts-mode   . my/irony-maybe-enable)
+         (c++-ts-mode . my/irony-maybe-enable)
+         (irony-mode  . irony-cdb-autosetup-compile-options))
+  :custom
+  ;; irony-server の導入先 (実体は <prefix>/bin/irony-server)
+  (irony-server-install-prefix my/irony-server-prefix)
   :config
   ;; ts モードでも irony を使えるようにする（既定は cc-mode 系のみ）。
   ;; irony--lang-compile-option は major-mode を assq で引くため、言語対応も

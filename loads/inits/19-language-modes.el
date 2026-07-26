@@ -138,7 +138,8 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
   :custom
   (c-ts-mode-indent-offset 4)
   (c-ts-mode-indent-style #'my/c-ts-mode-indent-style)
-  :init
+  ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
+  :preface
   ;; --- c-toggle-auto-hungry-state 相当 ---------------------------------
   ;; ts モードには cc-mode の auto-newline / hungry delete が無い。
   ;; cc-mode + google-c-style の実挙動に合わせて組み込み機能で再現する

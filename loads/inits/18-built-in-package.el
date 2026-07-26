@@ -124,7 +124,8 @@ FORCE (C-u) を付けると導入済みでも再ビルドする。git と C コ�
          (c++-mode    . my/eglot-cc-maybe-ensure)
          (c-ts-mode   . my/eglot-cc-maybe-ensure)
          (c++-ts-mode . my/eglot-cc-maybe-ensure))
-  :init
+  ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
+  :preface
   (defconst my/eglot-cc-file-regexp "\\.\\(c\\|cc\\|C\\|cpp\\|cxx\\|h\\|hh\\|hpp\\|hxx\\)\\'"
     "eglot を自動起動してよい C/C++ 実ソースの拡張子。.log/.cfg (c-mode 割当) を除外する.")
   (defun my/eglot-cc-project-p ()
