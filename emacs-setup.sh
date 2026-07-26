@@ -12,6 +12,12 @@ readonly PACKAGE_DIR="straight"
 readonly DL_DIR="$HOME/.local/downloads"
 readonly EMACS_SRC_DIR="$DL_DIR/emacs"
 readonly EMACS_INSTALL_PREFIX="$HOME/.local"
+# setup-node (offline)
+readonly NODE_DL_DIR="$DL_DIR/node"
+readonly NODE_INSTALL_BASE="$HOME/.local/share/nodejs"
+readonly NODE_ACTIVE_LINK="$HOME/.local/node"
+# fnm をこのスクリプトが導入したことを示す印。--uninstall-node の削除判定に使う。
+readonly FNM_OWNED_MARKER=".installed-by-emacs-setup"
 # clean
 readonly VAR_DIR="$EMACS_DIR/var"
 # packing/extract_package
@@ -52,6 +58,9 @@ Options:
                             Only "no" changes the result: it skips the GUI
                             packages. gtk3 / lucid / pgtk are equivalent to
                             the default (install everything).
+  -n, --setup-node          Install Node.js (offline tarball or fnm fallback).
+                            Required only for GitHub Copilot.
+  --uninstall-node          Uninstall Node.js (offline install and/or fnm).
   -l, --list                List available Emacs versions for installation.
   -i <ver>, --install <ver> [-g|--gui <gtk3|lucid|pgtk|no>]
                             Install Emacs <ver> with optional GUI backend.
@@ -73,6 +82,8 @@ Environment:
 Examples:
   $0 --setup
   $0 --setup --gui no            # Skip GUI dependencies (terminal only).
+  $0 --setup-node                # Install Node.js for GitHub Copilot.
+  $0 --uninstall-node
   $0 --list
   $0 --install 30.1              # Install Emacs version 30.1.
   $0 --uninstall
@@ -119,6 +130,200 @@ validate_gui_toolkit() {
             exit 1
             ;;
     esac
+}
+
+##### Node.js アーキテクチャ検出 #####
+# 成功時はアーキテクチャ名を stdout に出力し 0 を返す。
+# 非対応アーキテクチャの場合は stderr にメッセージを出し 1 を返す。
+detect_node_arch() {
+    local machine
+    machine="$(uname -m)"
+    case "$machine" in
+        x86_64)  echo "x64" ;;
+        aarch64) echo "arm64" ;;
+        armv7l)  echo "armv7l" ;;
+        *)
+            echo "Warning: Unsupported architecture for offline install: $machine" >&2
+            return 1
+            ;;
+    esac
+}
+
+##### Node.js オフラインインストールが可能か判定 #####
+# tarball が存在すれば 0 を返し、パスを stdout に出力する。
+# 存在しなければ 1 を返す。
+find_node_tarball() {
+    local arch tarball
+    arch="$(detect_node_arch)" || return 1
+
+    tarball="$(find "$NODE_DL_DIR" -maxdepth 1 -name "node-v*-linux-${arch}.tar.xz" 2>/dev/null \
+        | sort -V | tail -n 1)"
+
+    if [ -z "$tarball" ]; then
+        return 1
+    fi
+    echo "$tarball"
+}
+
+##### Node.js オフラインインストール #####
+setup_node_offline() {
+    local tarball="$1"
+
+    echo "Installing Node.js from offline tarball: $(basename "$tarball") ..."
+
+    mkdir -p "$NODE_INSTALL_BASE"
+
+    # tarball 内のトップレベルディレクトリ名を取得・検証
+    # awk は入力を最後まで読む。head や sed q のような早期終了を使うと、
+    # tar が SIGPIPE で落ちて pipefail により exit 141 になる（実測）。
+    local topdir
+    topdir="$(tar -tf "$tarball" | awk -F/ 'NR==1 {print $1}')"
+    if [ -z "$topdir" ]; then
+        echo "Error: Failed to read tarball contents: $tarball" >&2
+        exit 1
+    fi
+
+    # 既存の同バージョンディレクトリがあれば削除して再インストール
+    # ${var:?} で空展開による広範囲削除を防ぐ（topdir は tar の中身由来のため必須）
+    [ -d "$NODE_INSTALL_BASE/$topdir" ] && rm -rf "${NODE_INSTALL_BASE:?}/${topdir:?}"
+
+    # 展開
+    tar -xJf "$tarball" -C "$NODE_INSTALL_BASE"
+
+    # アクティブシンボリックリンクの作成
+    ln -sfn "$NODE_INSTALL_BASE/$topdir" "$NODE_ACTIVE_LINK"
+
+    # インストール検証（絶対パスで実行し、システムの node を誤検出しない）
+    local node_bin="$NODE_ACTIVE_LINK/bin/node"
+    local npm_bin="$NODE_ACTIVE_LINK/bin/npm"
+    if [ ! -x "$node_bin" ]; then
+        echo "Error: node binary not found at $node_bin" >&2
+        exit 1
+    fi
+    echo ""
+    echo "node: $("$node_bin" -v)"
+    echo "npm:  $("$npm_bin" -v)"
+    echo "path: $node_bin"
+    echo ""
+    echo "Node.js installation complete."
+    echo ""
+    echo "=== シェル設定 ==="
+    echo "以下を ~/.bashrc や ~/.zshrc に追加してください:"
+    echo "  export PATH=\"\$HOME/.local/node/bin:\$PATH\""
+}
+
+##### Node.js インストール（fnm 経由） #####
+setup_node_fnm() {
+    echo "Setting up Node.js via fnm..."
+
+    local FNM_DIR="$HOME/.local/share/fnm"
+
+    # fnm インストール
+    if ! command -v fnm &>/dev/null && [ ! -x "$FNM_DIR/fnm" ]; then
+        echo "Installing fnm to $FNM_DIR ..."
+        curl -fsSL https://fnm.vercel.app/install | bash -s -- \
+            --install-dir "$FNM_DIR" --skip-shell
+        # インストール成功を検証（実行可能かチェック）
+        if [ ! -x "$FNM_DIR/fnm" ]; then
+            echo "Error: fnm installation failed." >&2
+            exit 1
+        fi
+        # このスクリプトが導入したことを記録する。
+        # --uninstall-node は、この印がある場合だけ fnm ディレクトリごと削除する
+        # （既存 fnm を流用したときに、利用者の全 Node バージョンを消さないため）。
+        : > "$FNM_DIR/$FNM_OWNED_MARKER"
+    fi
+
+    export PATH="$FNM_DIR:$PATH"
+
+    # fnm が実行可能か最終検証
+    if ! command -v fnm &>/dev/null; then
+        echo "Error: fnm is not executable after installation." >&2
+        exit 1
+    fi
+
+    eval "$(fnm env --shell bash)"
+
+    # Node.js 22 LTS をインストール・デフォルト化
+    fnm install 22
+    fnm default 22
+
+    echo ""
+    echo "Node.js $(node --version) installed via fnm."
+    echo ""
+    echo "=== シェル設定 ==="
+    echo "以下を ~/.bashrc や ~/.zshrc に追加してください:"
+    # 実際の fnm バイナリのディレクトリを案内（既存 fnm 流用時のパスずれを防止）
+    local fnm_bin_dir
+    fnm_bin_dir="$(dirname "$(command -v fnm)")"
+    echo "  export PATH=\"${fnm_bin_dir/#"$HOME"/\$HOME}:\$PATH\""
+    # シェル設定へ貼り付ける文字列そのものを出すため、ここは展開させない
+    # shellcheck disable=SC2016
+    echo '  eval "$(fnm env)"'
+}
+
+##### Node.js セットアップ（オフライン優先、fnm フォールバック） #####
+setup_node() {
+    local tarball
+    # tarball 検索のみ if で判定（set -e が無効になっても安全）
+    if tarball="$(find_node_tarball)"; then
+        # 本体は直接呼び出し（set -e が有効な文脈で実行）
+        setup_node_offline "$tarball"
+        return
+    fi
+    echo "No offline tarball found in $NODE_DL_DIR. Falling back to fnm..."
+    setup_node_fnm
+}
+
+##### Node.js アンインストール #####
+uninstall_node() {
+    echo "Uninstalling Node.js..."
+    local found=false
+
+    # オフラインインストールの削除
+    if [ -L "$NODE_ACTIVE_LINK" ]; then
+        local target
+        target="$(readlink -f "$NODE_ACTIVE_LINK")"
+        rm -f "$NODE_ACTIVE_LINK"
+        echo "Removed symlink: $NODE_ACTIVE_LINK"
+
+        # リンク先が NODE_INSTALL_BASE 配下の場合のみ削除（任意ディレクトリ削除を防止）
+        local real_install_base
+        real_install_base="$(readlink -f "$NODE_INSTALL_BASE" 2>/dev/null || echo "$NODE_INSTALL_BASE")"
+        if [ -d "$target" ] && [[ "$target" == "$real_install_base"/* ]]; then
+            rm -rf "$target"
+            echo "Removed directory: $target"
+        elif [ -d "$target" ]; then
+            echo "Warning: Skipped deletion of $target (outside $NODE_INSTALL_BASE)" >&2
+        fi
+
+        # インストールベースディレクトリが空なら削除
+        if [ -d "$NODE_INSTALL_BASE" ] && [ -z "$(ls -A "$NODE_INSTALL_BASE")" ]; then
+            rmdir "$NODE_INSTALL_BASE"
+        fi
+        found=true
+    fi
+
+    # fnm インストールの削除
+    # 既存 fnm を流用した場合は利用者の資産（全 Node バージョンと設定）であるため
+    # 削除しない。このスクリプトが導入した印がある場合だけディレクトリごと消す。
+    local FNM_DIR="$HOME/.local/share/fnm"
+    if [ -d "$FNM_DIR" ]; then
+        if [ -e "$FNM_DIR/$FNM_OWNED_MARKER" ]; then
+            rm -rf "${FNM_DIR:?}"
+            echo "Removed fnm directory: $FNM_DIR"
+            found=true
+        else
+            echo "Skipped $FNM_DIR (not installed by this script)."
+            echo "  このスクリプト導入分の Node だけ消すには: fnm uninstall 22"
+        fi
+    fi
+
+    if [ "$found" = false ]; then
+        echo "No Node.js installation found."
+    else
+        echo "Node.js uninstallation complete."
+    fi
 }
 
 ##### 関連パッケージインストール #####
@@ -700,6 +905,8 @@ case "$ACTION" in
         done
         setup_env "$SETUP_GUI"
         ;;
+    -n|--setup-node)      setup_node ;;
+    --uninstall-node)     uninstall_node ;;
     -l|--list)            list_emacs_versions ;;
     -i|--install)
         EMACS_VERSION=""
