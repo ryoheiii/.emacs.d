@@ -72,5 +72,25 @@
   (dolist (key '("n" "p" "a" "d" "u" "s" "i" "l" "o"))
     (should (commandp (lookup-key my/mc-repeat-map (kbd key))))))
 
+;;;;; [Group] Keybinding - 検索 ;;;;;
+;; Emacs では C-S は C-s と同一のキーイベントであるため、両方を :bind へ並べると
+;; 後勝ちで一方が到達不能になる。バッファ内検索と横断検索が別々のキーから
+;; 呼べる状態を固定する（横断検索は端末が送出できる M-s l へ置く）。
+(defconst my-test-keybindings--search-bindings
+  '(("C-s"   . consult-line)
+    ("M-s l" . my/consult-line-multi))
+  "固定する consult 検索系のグローバルキーバインド。")
+
+(ert-deftest my-test-keybindings-consult-search-bindings ()
+  :tags '(:keybinding)
+  ;; 退行の原因になった Emacs の仕様。C-S は独立したキーとして使えない
+  (should (equal (kbd "C-s") (kbd "C-S")))
+  (dolist (binding my-test-keybindings--search-bindings)
+    (should (eq (lookup-key global-map (kbd (car binding)))
+                (cdr binding))))
+  ;; 2 つの検索が同じコマンドへ潰れていないこと
+  (should-not (eq (lookup-key global-map (kbd "C-s"))
+                  (lookup-key global-map (kbd "M-s l")))))
+
 (provide 'my-test-keybindings)
 ;;; my-test-keybindings.el ends here
