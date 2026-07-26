@@ -16,7 +16,10 @@
    ("C-x b"   . consult-buffer)
    ("C-x i"   . consult-imenu)
    ("C-s"     . consult-line)
-   ("C-S"     . my/consult-line-multi)
+   ;; 横断検索は C-S へ置けない。Emacs では C-S は C-s と同一のキーイベントであり
+   ;; ((equal (kbd "C-s") (kbd "C-S")) は t)、:bind の後勝ちで C-s を奪ってしまう。
+   ;; 端末が送出できる M-s l へ逃がして両方を到達可能にする。
+   ("M-s l"   . my/consult-line-multi)
    ("C-."     . consult-goto-line)
    ("C-x g"   . my/consult-ripgrep-or-grep)
    )

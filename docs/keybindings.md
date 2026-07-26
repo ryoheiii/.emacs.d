@@ -55,7 +55,8 @@
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-s` | `my/consult-line-multi` | 全バッファ横断検索（1 文字から開始）。下記の注意を参照 |
+| `C-s` | `consult-line` | 現在のバッファ内を検索 |
+| `M-s l` | `my/consult-line-multi` | 全バッファ横断検索（1 文字から開始） |
 | `C-.` | `consult-goto-line` | 指定行へ移動 |
 | `C-x g` | `my/consult-ripgrep-or-grep` | プロジェクト検索（`rg` があれば ripgrep。`.gitignore` を尊重） |
 | `C-c g` | `grep` | 生の `grep -nr`（ignore されたファイルも検索する） |
@@ -71,13 +72,13 @@
 
 補完候補が出ている間（corfu）は `TAB` で確定、`C-n` / `C-p` で候補移動、`C-s` でスクロール。
 
-> **`C-s` / `C-S` の衝突**: `loads/inits/27-consult.el` は `C-s` に `consult-line`、
-> `C-S` に `my/consult-line-multi` を割り当てているが、Emacs では `C-S` は `C-s` と
-> 同一のキーイベントである（`(equal (kbd "C-s") (kbd "C-S"))` は `t`）。
-> `:bind` は後勝ちのため、**実際に `C-s` で起動するのは `my/consult-line-multi`**
-> であり、`consult-line` を呼ぶキーは存在しない。
-> バッファ内に絞った検索が必要なときは `M-x consult-line` を使う。
-> （[issue #10](https://github.com/ryoheiii/.emacs.d/issues/10)）
+> **`C-S` を使わない理由**: Emacs では `C-S` は `C-s` と同一のキーイベントであり
+> （`(equal (kbd "C-s") (kbd "C-S"))` は `t`）、両方を `:bind` へ並べると後勝ちで
+> 一方が到達不能になる。以前は `C-S` に割り当てた `my/consult-line-multi` が
+> `C-s` を奪い、`consult-line` を呼ぶキーが存在しなかった（issue #10）。
+> 横断検索は端末が送出できる `M-s l` へ置いている。
+> この退行は `tests/my-test-keybindings.el` の
+> `my-test-keybindings-consult-search-bindings` が固定する。
 
 Migemo はミニバッファ補完の絞り込み（Orderless の matching style）で有効になる。
 `C-x g` / `C-c g` は外部プロセスへ正規表現を渡すため Migemo は効かない。
