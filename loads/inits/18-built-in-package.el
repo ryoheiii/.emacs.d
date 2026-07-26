@@ -69,47 +69,21 @@
 
 ;;;;;; [Group] Tree-sitter - 構文解析基盤 ;;;;;;
 ;;; Treesit - 文法ライブラリの配置先と導入経路
-;; 文法は var/package/tree-sitter/ へ隔離する (既定の ~/.emacs.d/tree-sitter/ は使わない)。
-;; 導入は M-x my/treesit-install-c-grammars だけで行い、自動ではインストールしない。
-;; 文法が無い環境では 19-language-modes.el の remap が成立せず cc-mode のまま動作する。
+;; 配置先・取得元・導入コマンドは loads/site-elisp/my-treesit.el が持つ。
+;; use-package と straight に依存しないライブラリにしてあり、emacs-setup.sh の
+;; --setup-treesit が同じファイルを単体ロードして文法をビルドする。
 ;;
 ;; 注意: c-ts-mode.el は末尾で treesit-ready-p を呼ぶため、文法不在の環境で require すると
 ;; display-warning が発火して make test-startup が失敗する。起動経路で c-ts-mode を
 ;; require してはならない。可用性判定には警告を出さない treesit-language-available-p を使う。
 (use-package treesit
   :straight nil
-  ;; treesit.el のロードは grammar 導入時だけで足りる (起動経路では読まない)
+  ;; treesit.el のロードは grammar 導入時だけで足りる (起動経路では読まない)。
+  ;; 宣言自体は残す — use-package のバイトコンパイル時の先読みが無くなると、
+  ;; 19-language-modes.el の treesit-* 参照が未定義警告になる。
   :defer t
   :init
-  (defvar my/treesit-grammar-dir (my-set-package "tree-sitter/")
-    "tree-sitter 文法ライブラリの配置先。")
-
-  (defconst my/treesit-c-language-sources
-    '((c   . ("https://github.com/tree-sitter/tree-sitter-c"   "v0.23.6" "src"))
-      (cpp . ("https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.4" "src")))
-    "C/C++ 文法の取得元。Emacs 30 が読める ABI へ収まるタグへ固定する。")
-
-  (defun my/treesit-install-c-grammars (&optional force)
-    "C/C++ の tree-sitter 文法を `my/treesit-grammar-dir' へ導入する.
-FORCE (C-u) を付けると導入済みでも再ビルドする。git と C コンパイラが必要。
-導入後の切り替えは Emacs の再起動で反映される。"
-    (interactive "P")
-    (unless (and (fboundp 'treesit-available-p) (treesit-available-p))
-      (user-error "この Emacs は tree-sitter 無効ビルドです"))
-    (require 'treesit)
-    (make-directory my/treesit-grammar-dir t)
-    ;; グローバルな treesit-language-source-alist を汚さずレシピを渡す
-    (let ((treesit-language-source-alist my/treesit-c-language-sources))
-      (dolist (entry my/treesit-c-language-sources)
-        (let ((lang (car entry)))
-          (if (and (not force) (treesit-language-available-p lang))
-              (message "treesit: %s は導入済み" lang)
-            (treesit-install-language-grammar lang my/treesit-grammar-dir)))))
-    (message "treesit: 完了。Emacs を再起動すると ts モードへ切り替わります"))
-
-  ;; treesit-extra-load-path は treesit.c 側の変数で、treesit.el をロードせずに設定できる
-  (when (and (fboundp 'treesit-available-p) (treesit-available-p))
-    (add-to-list 'treesit-extra-load-path my/treesit-grammar-dir))
+  (require 'my-treesit)
   )
 
 ;;;;;; [Group] LSP - Language Server ;;;;;;

@@ -197,6 +197,19 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
                            my/treesit-grammar-dir))
   (should (member my/treesit-grammar-dir treesit-extra-load-path)))
 
+(ert-deftest my-test-cpp-config-treesit-standard-install-path ()
+  "標準の `treesit-install-language-grammar' が同じレシピと導入先を使う."
+  :tags '(:cpp-config)
+  ;; レシピはグローバルへ載せる（自作コマンドを知らなくても標準コマンドで入る）
+  (dolist (lang '(c cpp))
+    (let ((recipe (alist-get lang treesit-language-source-alist)))
+      (should recipe)
+      ;; ABI 互換のためタグを固定する（追随は手動）
+      (should (string-match-p "\\`v[0-9]" (nth 1 recipe)))))
+  ;; 標準コマンドの既定 OUT-DIR。空だとリポジトリ直下へ書き出してしまう。
+  (should (equal (car treesit--install-language-grammar-out-dir-history)
+                 my/treesit-grammar-dir)))
+
 (ert-deftest my-test-cpp-config-c-ts-indent-google-equivalent ()
   "ts モードのインデントが google-c-style 相当（offset 4）になること."
   :tags '(:cpp-config)
