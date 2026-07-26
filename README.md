@@ -29,6 +29,8 @@ cd ~/.emacs.d
 
 # ~/.local/bin は PATH へ追加されない。シェル設定へ追記するか、フルパスで起動する
 export PATH="$HOME/.local/bin:$PATH"
+
+./emacs-setup.sh --setup-treesit  # C/C++ の tree-sitter 文法を導入
 emacs -nw                         # 初回起動（straight が全パッケージを取得する）
 ```
 
@@ -53,8 +55,13 @@ emacs -nw                         # 初回起動（straight が全パッケー�
 ```
 
 Emacs のビルドに必要なライブラリに加えて、この設定が使う外部コマンド
-（`clang` / `global` / `cmigemo` / `hunspell` / `aspell` / `cmake` / `pandoc` /
-Ricty Diminished フォント）をまとめて導入する。
+（`clang` / `clangd` / `global` / `cmigemo` / `mozc-server` / `ripgrep` /
+`hunspell` / `aspell` / `cmake` / `pandoc` / Ricty Diminished フォント）を
+まとめて導入する。
+
+tree-sitter 有効ビルドの Emacs がすでにある環境では、C/C++ の tree-sitter 文法も
+併せて導入する。無ければスキップして案内を出すので、`--install` の後に
+`./emacs-setup.sh --setup-treesit` を実行する。
 
 `--gui` は `no` を指定したときだけ GUI パッケージ（X11 群、画像ライブラリなど）を
 除外する。`gtk3` / `lucid` / `pgtk` を指定しても既定（すべて導入）と同じ結果になる。
@@ -95,19 +102,16 @@ TLS など GUI に依存しない依存は `--gui no` でも導入される。
 
 | 項目 | 手順 | 入れない場合 |
 |---|---|---|
-| tree-sitter 文法（C/C++） | `M-x my/treesit-install-c-grammars`（`git` と C コンパイラが必要）。再起動で ts モードへ切り替わる | cc-mode で動作する |
+| tree-sitter 文法（C/C++） | `./emacs-setup.sh --setup-treesit`（`git` と C コンパイラが必要）。Emacs からは `M-x my/treesit-install-c-grammars` または `M-x treesit-install-language-grammar`。再起動で ts モードへ切り替わる | cc-mode で動作する |
 | Node.js（Copilot 用） | `./emacs-setup.sh --setup-node` | Copilot 関連を一切読み込まない |
 | Copilot language server | `M-x copilot-install-server` → `M-x copilot-login` | `copilot-mode` を有効化しない |
 | irony サーバー（非 LSP 環境の補完） | `M-x irony-install-server`（`cmake` と libclang が必要） | cape + ggtags へフォールバックする |
 | Nerd Font | `M-x nerd-icons-install-fonts` | GUI のアイコン表示のみ影響。tty では既定で無効 |
 | Migemo 辞書 | `--setup` の `cmigemo` に同梱。パスは `/usr/share/cmigemo/utf-8/migemo-dict` | ローマ字での日本語検索が無効になる |
-| clangd（C/C++ の LSP） | `sudo apt install clangd` | irony、無ければ cape + ggtags へフォールバックする |
-| ripgrep（`C-x g`） | `sudo apt install ripgrep` | `consult-grep` へフォールバックする |
-| Mozc（日本語入力） | `sudo apt install mozc-server emacs-mozc-bin` | 日本語入力が使えない |
 
-`--setup` は Emacs のビルド依存と、`clang` / `global` / `cmigemo` / `hunspell` /
-`aspell` / `cmake` / `pandoc` / Ricty Diminished フォントを導入する。
-上表の下 3 つ（`clangd` / `ripgrep` / Mozc）は**含まれない**ため、必要なら個別に入れる。
+`clangd`（C/C++ の LSP）、`ripgrep`（`C-x g`）、Mozc（日本語入力）は
+`--setup` に含まれる。個別に入れる場合は
+`sudo apt install clangd ripgrep mozc-server emacs-mozc-bin` を実行する。
 
 #### GitHub Copilot を使う場合
 
@@ -164,8 +168,7 @@ which-key が候補を出す。
 > 横断検索は `M-s l` へ置いている。詳細は
 > [docs/keybindings.md](docs/keybindings.md) を参照。
 
-`rg` は `--setup` では導入されない。ripgrep を使いたい場合は
-`sudo apt install ripgrep` を別途実行する。
+`rg` は `--setup` で導入される。個別に入れる場合は `sudo apt install ripgrep`。
 
 ### 3.2 補完
 
@@ -232,8 +235,8 @@ undo 履歴は Emacs を終了しても保持される（undo-fu-session）。
 Linux では Mozc、Windows では TR-IME を使う。
 `変換` キーで ON、`無変換` キーで OFF、`半角/全角` でトグルする。
 
-**Mozc は `--setup` に含まれない。** straight が導入するのは `mozc.el`（Emacs 側）だけで、
-変換エンジンと helper は別途必要になる。
+straight が導入するのは `mozc.el`（Emacs 側）だけで、変換エンジンと helper は
+別に要る。`--setup` で導入されるが、個別に入れる場合は次を実行する。
 
 ```sh
 sudo apt install mozc-server emacs-mozc-bin
@@ -303,6 +306,7 @@ M-x customize-variable RET my/copilot-enabled   ; auto / t / nil から選ぶ
 ### tree-sitter（C/C++）
 
 文法を導入すると次回起動から `c-ts-mode` / `c++-ts-mode` に切り替わる。
+導入は `./emacs-setup.sh --setup-treesit`（`--setup` でも前提が揃っていれば入る）。
 一時的に従来の cc-mode へ戻すには `my/use-treesit-for-cc` を `nil` にする（要再起動）。
 詳細は [docs/cpp.md](docs/cpp.md)。
 
@@ -373,7 +377,7 @@ make test-startup  # 起動だけを素早く確認
 | パッケージが壊れた | `M-x straight-rebuild-all`。直らなければ `./emacs-setup.sh --clean-all` で再構築する |
 | Emacs 外でパッケージを書き換えた後、古いビルドのままになる | `M-x straight-check-all`（[docs/packages.md](docs/packages.md) の変更検出の方式を参照） |
 | Copilot がつながらない | `M-x copilot-diagnose`。`node` が PATH にあるか、`M-x copilot-login` 済みかを確認する |
-| C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd` の導入を確認する（`clangd` は `--setup` に含まれない。`sudo apt install clangd`） |
+| C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd` の導入を確認する（`clangd` は `--setup` で入る。個別なら `sudo apt install clangd`） |
 | 定義ジャンプが見つからない | GTAGS が未作成なら C/C++ バッファで `M-x ggtags-create-tags`。作成済みなら `M-x update-gtags` で更新する |
 | `make lint` が失敗する | shellcheck を導入する（`sudo apt install shellcheck`） |
 

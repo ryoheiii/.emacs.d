@@ -62,6 +62,10 @@ tty での動作を第一級として扱い、退行（デグレ）を絶対に�
 # --gui no のときだけ GUI パッケージを除外する（gtk3/lucid/pgtk は既定と同じ）
 ./emacs-setup.sh --setup [--gui <gtk3|lucid|pgtk|no>]
 
+# C/C++ の tree-sitter 文法を var/package/tree-sitter/ へ導入
+# （--setup も、tree-sitter 有効な Emacs がある環境では併せて導入する）
+./emacs-setup.sh --setup-treesit
+
 # インストール可能な Emacs バージョンを一覧表示
 ./emacs-setup.sh --list
 
