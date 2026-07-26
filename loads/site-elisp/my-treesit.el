@@ -73,15 +73,17 @@
 `display-warning' で報告して正常終了するため、戻り値では成否が分からない。
 さらに再ビルド時は古い文法が残っているため `treesit-language-available-p' も
 真のままになる。今回の実行で警告が出たかどうかを併せて見る。"
-  (require 'cl-lib)
-  (let ((warned nil))
-    (cl-letf* ((orig (symbol-function 'display-warning))
-               ((symbol-function 'display-warning)
-                (lambda (type message &rest args)
+  (let* ((warned nil)
+         ;; symbol-function を差し替える方式は使えない。warnings.el 未ロードの
+         ;; 環境では display-warning が autoload オブジェクトのままで、
+         ;; それを apply できずに落ちる（CI の素の Emacs で再現）。
+         (watch (lambda (type &rest _)
                   (when (eq (if (consp type) (car type) type) 'treesit)
-                    (setq warned t))
-                  (apply orig type message args))))
-      (treesit-install-language-grammar lang my/treesit-grammar-dir))
+                    (setq warned t)))))
+    (advice-add 'display-warning :before watch)
+    (unwind-protect
+        (treesit-install-language-grammar lang my/treesit-grammar-dir)
+      (advice-remove 'display-warning watch))
     (and (not warned) (treesit-language-available-p lang))))
 
 (defun my/treesit-install-c-grammars (&optional force)
