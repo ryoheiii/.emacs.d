@@ -150,7 +150,8 @@ which-key が候補を出す。
 
 | キー | 動作 |
 |---|---|
-| `C-s` | 全バッファ横断検索（Migemo があればローマ字で日本語も引ける） |
+| `C-s` | 現在のバッファ内を検索（Migemo があればローマ字で日本語も引ける） |
+| `M-s l` | 全バッファ横断検索（1 文字から開始） |
 | `C-x g` | プロジェクト検索（`rg` があれば ripgrep で `.gitignore` を尊重、無ければ `grep`） |
 | `C-c g` | 生の `grep -nr`（ignore されたファイルも対象） |
 | `C-x b` / `C-x C-r` | バッファ切り替え / 最近使ったファイル |
@@ -159,12 +160,9 @@ which-key が候補を出す。
 
 `C-h` は BackSpace に割り当てているので、ヘルプは `M-?` を使う。
 
-> **注意**: 設定は `C-s` を `consult-line`（バッファ内検索）、`C-S` を
-> `my/consult-line-multi`（横断検索）へ割り当てているが、Emacs では
-> `C-S` は `C-s` と同一のキーイベントである。後から評価される `C-S` の
-> 束縛が勝つため、**実際には `C-s` で横断検索が動き、バッファ内検索だけを
-> 呼ぶキーは無い**。バッファ内に絞りたい場合は `M-x consult-line`。
-> （[issue #10](https://github.com/ryoheiii/.emacs.d/issues/10)）
+> **`C-S` は使えない**: Emacs では `C-S` は `C-s` と同一のキーイベントであるため、
+> 横断検索は `M-s l` へ置いている。詳細は
+> [docs/keybindings.md](docs/keybindings.md) を参照。
 
 `rg` は `--setup` では導入されない。ripgrep を使いたい場合は
 `sudo apt install ripgrep` を別途実行する。
