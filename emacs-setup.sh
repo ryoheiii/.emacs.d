@@ -473,7 +473,7 @@ setup_env() {
     if treesit_prereqs_ready_p; then
         setup_treesit
     else
-        echo "tree-sitter 文法の導入をスキップします (tree-sitter 有効な emacs と git が必要です)。"
+        echo "tree-sitter 文法の導入をスキップします (tree-sitter 有効な Emacs 30 以降と git が必要です)。"
         echo "       Emacs の導入後に ./emacs-setup.sh --setup-treesit を実行してください。"
     fi
 
@@ -505,14 +505,21 @@ setup_treesit() {
 }
 
 # --setup から呼ぶ前提チェック。文法のビルドには git と C コンパイラが要り、
-# 導入結果の検査には tree-sitter 有効ビルドの Emacs が要る。
-# -Q は Lisp を一切読まないため eln-cache は生成されない。
+# 導入には tree-sitter 有効ビルドかつ Emacs 30 以降が要る。
+# treesit-install-language-grammar が導入先 (OUT-DIR) を受け取るのは 30 以降で、
+# 29 以前で呼ぶと引数エラーになる（Ubuntu 24.04 の既定は 29 系）。
+# 判定は func-arity で行う。autoload のまま解決できるため treesit.el をロードせず、
+# -Q と併せて Lisp を一切読まないので eln-cache も生成されない。
 treesit_prereqs_ready_p() {
     [ -f "$TREESIT_LIB" ] || return 1
     command -v emacs >/dev/null 2>&1 || return 1
     command -v git >/dev/null 2>&1 || return 1
     emacs --batch -Q --eval \
-        '(kill-emacs (if (and (fboundp (quote treesit-available-p)) (treesit-available-p)) 0 1))' \
+        '(kill-emacs (if (and (fboundp (quote treesit-available-p))
+                              (treesit-available-p)
+                              (fboundp (quote treesit-install-language-grammar))
+                              (>= (cdr (func-arity (quote treesit-install-language-grammar))) 2))
+                         0 1))' \
         >/dev/null 2>&1 || return 1
     return 0
 }

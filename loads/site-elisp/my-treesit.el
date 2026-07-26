@@ -32,8 +32,16 @@
     (cpp . ("https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.4" "src")))
   "C/C++ 文法の取得元。Emacs 30 が読める ABI へ収まるタグへ固定する。")
 
-;; 標準の M-x treesit-install-language-grammar からも同じ固定タグで導入できるようにする
-(setq treesit-language-source-alist my/treesit-c-language-sources)
+(defun my/treesit-register-c-sources ()
+  "C/C++ のレシピを `treesit-language-source-alist' へ登録する.
+標準の \\[treesit-install-language-grammar] からも同じ固定タグで導入できるようにする。
+既存の登録は残す（丸ごと `setq' すると custom.el などが登録した他言語が消える）。"
+  (unless (boundp 'treesit-language-source-alist)
+    (setq treesit-language-source-alist nil))
+  (dolist (entry my/treesit-c-language-sources)
+    (setf (alist-get (car entry) treesit-language-source-alist) (cdr entry))))
+
+(my/treesit-register-c-sources)
 
 ;; 標準コマンドの導入先の既定値。`treesit-install-language-grammar' は OUT-DIR の
 ;; 既定をこの履歴の先頭から取るため、入れておかないと既定がリポジトリ直下になる。
@@ -46,6 +54,36 @@
 (when (and (fboundp 'treesit-available-p) (treesit-available-p))
   (add-to-list 'treesit-extra-load-path my/treesit-grammar-dir))
 
+(defun my/treesit-grammars-installable-p ()
+  "この Emacs で文法をビルド・導入できるなら non-nil.
+`treesit-install-language-grammar' が OUT-DIR を受け取るのは Emacs 30 以降で、
+29 以前は導入先を指定できない（既定のリポジトリ直下へ書き出してしまう）。
+可用性は `func-arity' で見る。autoload のままでも解決できるため treesit.el を
+ロードせずに判定できる。"
+  (and (fboundp 'treesit-available-p)
+       (treesit-available-p)
+       (fboundp 'treesit-install-language-grammar)
+       (>= (cdr (func-arity 'treesit-install-language-grammar)) 2)))
+
+(defun my/treesit-install-one-grammar (lang)
+  "LANG の文法をビルドして `my/treesit-grammar-dir' へ導入する.
+成功したら non-nil を返す。
+
+`treesit-install-language-grammar' は clone・ビルド・検査のいずれの失敗も
+`display-warning' で報告して正常終了するため、戻り値では成否が分からない。
+さらに再ビルド時は古い文法が残っているため `treesit-language-available-p' も
+真のままになる。今回の実行で警告が出たかどうかを併せて見る。"
+  (require 'cl-lib)
+  (let ((warned nil))
+    (cl-letf* ((orig (symbol-function 'display-warning))
+               ((symbol-function 'display-warning)
+                (lambda (type message &rest args)
+                  (when (eq (if (consp type) (car type) type) 'treesit)
+                    (setq warned t))
+                  (apply orig type message args))))
+      (treesit-install-language-grammar lang my/treesit-grammar-dir))
+    (and (not warned) (treesit-language-available-p lang))))
+
 (defun my/treesit-install-c-grammars (&optional force)
   "C/C++ の tree-sitter 文法を `my/treesit-grammar-dir' へ導入する.
 FORCE (C-u) を付けると導入済みでも再ビルドする。git と C コンパイラが必要。
@@ -53,6 +91,8 @@ FORCE (C-u) を付けると導入済みでも再ビルドする。git と C コ�
   (interactive "P")
   (unless (and (fboundp 'treesit-available-p) (treesit-available-p))
     (user-error "この Emacs は tree-sitter 無効ビルドです"))
+  (unless (my/treesit-grammars-installable-p)
+    (user-error "導入先を指定できる Emacs 30 以降が必要です (現在 %s)" emacs-version))
   (require 'treesit)
   (make-directory my/treesit-grammar-dir t)
   (let ((failed nil))
@@ -60,10 +100,7 @@ FORCE (C-u) を付けると導入済みでも再ビルドする。git と C コ�
       (let ((lang (car entry)))
         (if (and (not force) (treesit-language-available-p lang))
             (message "treesit: %s は導入済み" lang)
-          (treesit-install-language-grammar lang my/treesit-grammar-dir)
-          ;; treesit-install-language-grammar は失敗を display-warning で握り潰して
-          ;; 正常終了する。batch 実行を fail-closed にするため自前で結果を検査する。
-          (unless (treesit-language-available-p lang)
+          (unless (my/treesit-install-one-grammar lang)
             (push lang failed)))))
     (when failed
       (error "treesit: 文法の導入に失敗しました (%s)"

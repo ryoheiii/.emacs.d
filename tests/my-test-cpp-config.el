@@ -210,6 +210,49 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
   (should (equal (car treesit--install-language-grammar-out-dir-history)
                  my/treesit-grammar-dir)))
 
+(ert-deftest my-test-cpp-config-treesit-sources-merge ()
+  "レシピの登録は追記であり、他言語の登録を消さない."
+  :tags '(:cpp-config)
+  ;; treesit.el 未ロードの環境では defcustom が無く let が静的束縛になるため dlet を使う
+  (dlet ((treesit-language-source-alist
+          '((sentinel . ("https://example.invalid/sentinel" "v0.0.1" "src")))))
+    (my/treesit-register-c-sources)
+    (should (alist-get 'sentinel treesit-language-source-alist))
+    (should (alist-get 'c treesit-language-source-alist))
+    (should (alist-get 'cpp treesit-language-source-alist))))
+
+(ert-deftest my-test-cpp-config-treesit-requires-outdir-support ()
+  "導入先を指定できない Emacs 29 以前では文法導入を実行しない.
+`treesit-install-language-grammar' の OUT-DIR 引数は Emacs 30 以降にしか無く、
+29 で呼ぶと引数エラーになるうえ、通ってもリポジトリ直下へ書き出してしまう。"
+  :tags '(:cpp-config)
+  (cl-letf (((symbol-function 'treesit-available-p) (lambda () t)))
+    ;; Emacs 29 相当 (lang のみ)
+    (cl-letf (((symbol-function 'treesit-install-language-grammar) (lambda (_lang) nil)))
+      (should-not (my/treesit-grammars-installable-p))
+      (should-error (my/treesit-install-c-grammars) :type 'user-error))
+    ;; Emacs 30 相当 (lang + out-dir)
+    (cl-letf (((symbol-function 'treesit-install-language-grammar)
+               (lambda (_lang &optional _out-dir) nil)))
+      (should (my/treesit-grammars-installable-p)))))
+
+(ert-deftest my-test-cpp-config-treesit-install-detects-failure ()
+  "導入の失敗を握り潰さない.
+`treesit-install-language-grammar' は失敗しても display-warning を出すだけで
+正常終了する。再ビルド時は古い文法が残るため可用性判定も真のままになる。"
+  :tags '(:cpp-config)
+  (let ((warning-minimum-level :emergency))
+    (cl-letf (((symbol-function 'treesit-language-available-p) (lambda (_lang &optional _d) t)))
+      ;; 警告が出た実行は失敗として扱う
+      (cl-letf (((symbol-function 'treesit-install-language-grammar)
+                 (lambda (_lang &optional _out-dir)
+                   (display-warning 'treesit "test failure"))))
+        (should-not (my/treesit-install-one-grammar 'c)))
+      ;; 警告が出なければ成功
+      (cl-letf (((symbol-function 'treesit-install-language-grammar)
+                 (lambda (_lang &optional _out-dir) nil)))
+        (should (my/treesit-install-one-grammar 'c))))))
+
 (ert-deftest my-test-cpp-config-c-ts-indent-google-equivalent ()
   "ts モードのインデントが google-c-style 相当（offset 4）になること."
   :tags '(:cpp-config)
