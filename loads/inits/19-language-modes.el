@@ -62,8 +62,9 @@
 ;; ts モードには c-toggle-auto-hungry-state が無いため、自動改行と連続スペース
 ;; 一括削除は組み込み機能で再現する（my/c-ts-mode-setup を参照）。
 ;; 波括弧が閉じていない入力途中は構文木が ERROR になるため、桁は括弧の深さから
-;; 算出する（my/c-ts-error-context-p を参照）。構文が揃えば cc-mode +
-;; google-c-style と完全に一致する。
+;; 算出する（my/c-ts-error-context-p を参照）。構文が揃えば、ブレース初期化の
+;; `{' 配置（意図的な差分。docs/cpp.md を参照）を除いて cc-mode + google-c-style
+;; と一致する。
 (defvar my/use-treesit-for-cc t
   "Non-nil なら文法が揃っている C/C++ で ts モードを使う。
 nil にすると文法があっても cc-mode を使い続ける。")
@@ -210,24 +211,45 @@ case ラベル・三項演算子・スコープ解決演算子では改行しな
     "`}' の直後の改行を取り消す語。
 google-c-style の (defun-close-semi list-close-comma brace-else-brace
 brace-elseif-brace brace-catch-brace) に対応する。
-`;' と `,' は `}' へ直付けし、語の場合は空白 1 個を挟む。")
+`;' と `,' は `}' へ直付けし、語の場合は空白 1 個を挟む。
+`scope-operator' は `my/c-ts-pre-layout-fixups' の別枝で扱う。")
+
+  (defun my/c-ts--previous-code-char-p (char)
+    "行頭のトークンの直前（空白と改行を飛ばす）が CHAR なら non-nil."
+    (save-excursion
+      (back-to-indentation)
+      (skip-chars-backward " \t\n")
+      (eq (char-before) char)))
+
+  (defun my/c-ts--join-to-previous (sep)
+    "行頭のトークンを直前の非空白文字へ SEP で繋ぐ（間の空白と改行を畳む）."
+    (let ((token (save-excursion (back-to-indentation) (point))))
+      (save-excursion
+        (goto-char token)
+        (skip-chars-backward " \t\n")
+        (delete-region (point) token)
+        (insert sep))))
 
   (defun my/c-ts-pre-layout-fixups ()
     "自動改行の直前に走らせる整形（cc-mode の `c-cleanup-list' 相当）.
-`electric-layout'（深さ 40）と `electric-indent'（深さ 60）より先に走る必要がある。"
-    (unless (or current-prefix-arg (my/c-ts-in-literal-p))
+`electric-layout'（深さ 40）と `electric-indent'（深さ 60）より先に走る必要がある。
+point の後ろに空白以外が残る行では何もしない。cc-mode の cleanup も行末でだけ
+働くため、既存行の途中や行頭へ挿入したときに前の行を巻き込まない。"
+    (unless (or current-prefix-arg
+                (my/c-ts-in-literal-p)
+                (my/c-ts-before-nonblank-p))
       (let ((line (buffer-substring-no-properties (line-beginning-position) (point))))
         (cond
-         ;; `}' の後ろへ入れた改行を、次行が `;' / else / while / catch なら取り消す
-         ((string-match my/c-ts-close-brace-followers-regexp line)
-          (let ((sep (if (member (match-string 1 line) '(";" ",")) "" " "))
-                (token (save-excursion (back-to-indentation) (point))))
-            (save-excursion
-              (goto-char token)
-              (skip-chars-backward " \t\n")
-              (when (eq (char-before) ?\})
-                (delete-region (point) token)
-                (insert sep)))))
+         ;; `}' の後ろへ入れた改行を、次行が `;' / `,' / else / while / catch なら取り消す
+         ((and (string-match my/c-ts-close-brace-followers-regexp line)
+               (my/c-ts--previous-code-char-p ?\}))
+          (my/c-ts--join-to-previous
+           (if (member (match-string 1 line) '(";" ",")) "" " ")))
+         ;; scope-operator 相当: アクセス指定子の改行で割れた `::' を繋ぎ直す
+         ;; （`public::X' のように `public' がマクロや名前空間の場合に起きる）
+         ((and (string-match-p "\\`[ \t]*:\\'" line)
+               (my/c-ts--previous-code-char-p ?:))
+          (my/c-ts--join-to-previous ""))
          ;; empty-defun-braces 相当: `{' の直後の空行へ `}' を置いたら 1 行へ戻す
          ((string-match-p "\\`[ \t]*}\\'" line)
           (let ((brace (1- (point))))

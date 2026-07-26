@@ -479,14 +479,31 @@ ERROR そのものの場合に限る。関数本体の中だけが壊れてい�
                    ("int a[] = {\n    {1}\n}\n," . "int a[] = {\n    {1}\n},")
                    ;; empty-defun-braces 相当: `{' 直後の空行の `}' を 1 行へ戻す
                    ("int f() {\n    }"     . "int f() {}")
+                   ;; scope-operator 相当: 割れた `::' を繋ぎ直す
+                   ("class A {\n  public:\n    :"  . "class A {\n  public::")
                    ;; 直前が `}' でなければ触らない
                    ("int a;\n;"            . "int a;\n;")
-                   ("int a[] = {1\n,"      . "int a[] = {1\n,")))
+                   ("int a[] = {1\n,"      . "int a[] = {1\n,")
+                   ;; 直前が `:' でなければ `:' も触らない
+                   ("int a;\n:"            . "int a;\n:")))
     (with-temp-buffer
       (c++-mode)
       (insert input)
       (my/c-ts-pre-layout-fixups)
-      (should (equal (buffer-string) expected)))))
+      (should (equal (buffer-string) expected))))
+  ;; point の後ろに空白以外が残る行では何もしない（cc-mode の cleanup と同じ）。
+  ;; 既存行の途中や行頭へ挿入したときに、前の行を巻き込ませないため。
+  (pcase-dolist (`(,before ,after)
+                 '(("int f() {\n}\n;" "x")
+                   ("if (a) {\n}\nelse" "x")
+                   ("int a[] = {\n    {1}\n}\n," "x")
+                   ("class A {\n  public:\n    :" "X;")))
+    (with-temp-buffer
+      (c++-mode)
+      (insert before)
+      (save-excursion (insert after))   ; point の後ろへ残す
+      (my/c-ts-pre-layout-fixups)
+      (should (equal (buffer-string) (concat before after))))))
 
 (defun my-test-cpp-config--type (string)
   "STRING を 1 文字ずつ実際のキー割当経由で入力する.
@@ -514,6 +531,10 @@ helper の直接呼び出しでは electric-layout / electric-indent との連�
                    ;; ブレース初期化の `{' は cc-mode と違い次行へ送らない（意図的差分）
                    ("int a[][2] = {{1,2},{3,4}};"
                     . "int a[][2] = {\n    {\n        1,2\n    },{\n        3,4\n    }\n};\n")
+                   ;; scope-operator 相当: public がマクロ・名前空間名のとき
+                   ;; `public::X' が書ける。アクセス指定子の改行で割らない
+                   ("class A {public::X;};"
+                    . "class A {\n  public::X;\n};\n")
                    ;; 入力途中で木が ERROR へ落ちる 2 段以上のネスト。
                    ;; 括弧の深さから桁を算出する経路が効いていないと崩れる
                    ("int f() {int x = 1;if (x) {x++;} else {x--;}return x;}"
