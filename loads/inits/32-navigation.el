@@ -53,7 +53,7 @@
   (defun my/neotree-project-toggle ()
     "Toggle NeoTree, opening at the project root or current file."
     (interactive)
-    (let ((project-dir (when-let ((proj (project-current)))
+    (let ((project-dir (when-let* ((proj (project-current)))
                          (project-root proj)))
           (file-name (buffer-file-name)))
       (if (neo-global--window-exists-p)

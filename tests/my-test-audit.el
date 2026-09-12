@@ -212,5 +212,21 @@
               (should (eq result (cdr entry))))))
       (delete-directory root t))))
 
+(ert-deftest my-test-audit-ui-compiles-without-gui-api ()
+  :tags '(:audit)
+  ;; GUI 対応 Emacs 上でも、tty 専用ビルドの未定義 API を再現する。
+  (require 'bytecomp)
+  (let* ((root (make-temp-file "my-test-ui-compile-" t))
+         (byte-compile-error-on-warn t)
+         (byte-compile-dest-file-function
+          (lambda (_) (expand-file-name "01-ui.elc" root))))
+    (unwind-protect
+        (cl-letf (((symbol-function 'set-fontset-font) nil)
+                  ((symbol-function 'display-graphic-p) (lambda (&rest _) nil)))
+          (my/setup-fonts)
+          (should (byte-compile-file
+                   (expand-file-name "loads/inits/01-ui.el" user-emacs-directory))))
+      (delete-directory root t))))
+
 (provide 'my-test-audit)
 ;;; my-test-audit.el ends here
