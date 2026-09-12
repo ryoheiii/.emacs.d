@@ -4,6 +4,11 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function mu-magit-kill-buffers "33-vcs")
+(declare-function magit-restore-window-configuration "magit-mode")
+(declare-function magit-mode-get-buffers "magit-mode")
+
 ;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
 ;;; Magit
 (use-package magit

@@ -4,6 +4,9 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function c-toggle-auto-hungry-state "cc-cmds")
+
 ;;;;;; [Group] Code Folding - コード折りたたみ ;;;;;;
 (use-package hideshow
   :straight nil

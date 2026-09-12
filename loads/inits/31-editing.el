@@ -5,6 +5,12 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function python-nav-end-of-defun "python")
+(declare-function python-nav-beginning-of-defun "python")
+(declare-function symbol-overlay-get-symbol "symbol-overlay")
+(declare-function my/safe-irony-completion-at-point "31-editing")
+
 ;;;;; [Group] Code-editing - コード編集関連 ;;;;;
 ;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style

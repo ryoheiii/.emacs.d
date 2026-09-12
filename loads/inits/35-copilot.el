@@ -13,6 +13,9 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function my/copilot--extend-jsonrpc-timeout "35-copilot")
+
 ;;;;; [Group] Copilot Config - 設定グループとトグル ;;;;;
 (defgroup my/copilot nil
   "GitHub Copilot の設定."

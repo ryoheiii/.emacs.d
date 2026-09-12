@@ -4,6 +4,12 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(defvar w32-get-true-file-attributes)
+(defvar w32-pipe-read-delay)
+(defvar w32-pipe-buffer-size)
+(defvar w32-use-native-image-API)
+
 ;;;;;; [Group] Coding System - 文字コード設定 ;;;;;;
 (set-language-environment "Japanese")
 (prefer-coding-system 'utf-8)

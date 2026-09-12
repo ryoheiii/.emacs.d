@@ -4,6 +4,10 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function color-saturate-name "color")
+(declare-function perfect-margin-mode "perfect-margin")
+
 ;;;;; [Group] Visual - 視覚効果関連 ;;;;;
 ;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
 (use-package pulsar

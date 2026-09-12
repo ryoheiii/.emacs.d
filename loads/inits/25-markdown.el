@@ -5,6 +5,10 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function my-markdown-load-css "my-markdown")
+(declare-function my-markdown-pandoc-command "my-markdown")
+
 ;;;;; [Group] Markdown - Markdown 関連 ;;;;;
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode

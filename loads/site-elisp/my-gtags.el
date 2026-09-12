@@ -40,7 +40,7 @@
         (forward-line 1)))
     (nreverse xrefs)))
 
-(defun my/gtags--show (xrefs input)
+(defun my/gtags--show (xrefs _input)
   "XREFS を表示: 単一結果は直接ジャンプ、複数結果は consult-xref で表示.
 呼び出し元で xref-push-marker-stack を実行済みであること。"
   (cond

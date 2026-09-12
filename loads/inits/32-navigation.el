@@ -4,6 +4,10 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function neo-global--window-exists-p "neotree")
+(declare-function migemo-init "migemo")
+
 ;; project-root は autoload されないため、コンパイラ警告のみ declare で抑える
 ;; (実行時は project-current の autoload が project.el をロードする)
 (declare-function project-root "project" (project &optional maybe-prompt))

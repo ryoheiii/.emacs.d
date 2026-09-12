@@ -4,6 +4,9 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function recentf-save-list "recentf")
+
 ;;;;; [Group] Buffer-and-File-management - バッファとファイル管理関連 ;;;;;
 ;;; xclip - クリップボードとの共有
 (use-package xclip
@@ -46,7 +49,7 @@
   :config
   ;; メッセージを抑制するマクロ
   (defmacro with-suppressed-message (&rest body)
-    "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
+    "BODY の評価中はエコー領域とメッセージバッファへの出力を抑制する。"
     (declare (indent 0))
     `(let ((message-log-max nil))
        (with-temp-message (or (current-message) "") ,@body)))

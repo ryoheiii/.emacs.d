@@ -4,6 +4,9 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function package-built-in-p "package")
+
 ;;;;;; [Group] Package Management - `straight.el` 判定 ;;;;;;
 ;;; 指定した PACKAGE が `straight.el` で管理すべきかを判定する関数
 (defun my/should-use-straight (package)
