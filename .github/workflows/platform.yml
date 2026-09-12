@@ -53,3 +53,9 @@ jobs:
             missing=(--allow-missing w32-ime.el --allow-missing tr-emacs-ime-module --allow-missing xclip)
           fi
           python3 tests/my-check-lockfile.py loads/straight/versions/default.el loads/straight/repos "${missing[@]}"
+      - name: macOS の実 mv でパッケージアーカイブを置換・復元
+        if: runner.os == 'macOS'
+        run: |
+          python3 tests/my-test-audit-shell.py \
+            AuditShellTests.test_package_archive_replacement_with_native_mv \
+            AuditShellTests.test_extract_preserves_grammars_and_server

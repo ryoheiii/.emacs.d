@@ -29,6 +29,8 @@ make test
 | `make test-guards` | テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査（`test-emacs-setup.sh` のガード、`lint-sh` の環境分離、`run_trial` の失敗検査） |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |
 | `make test-audit-shell` | セットアップ・レビュー・ベンチ・lock照合の故障注入 |
+| `make test-platform` | 実 OS の入力メソッド分岐・生成物パス・PATH 区切り文字 |
+| `make test-gui` | Linux の実 GUI 起動・モードライン・Corfu 子フレームと確定・clipboard（通常の `make test` とは別） |
 | `make check-lockfile` | 導入済み repo の HEAD・変更・過不足と lockfile を照合 |
 | `make install-test-grammars` | `TEST_TREESIT_DIR` に固定タグの C/C++ 文法を導入 |
 | `make clean-test` | `tests/` 配下の byte compile 生成物を削除 |
@@ -102,6 +104,31 @@ pty 上で再現して検証する。
   起動したままの実行は避ける
 - コールドキャッシュ時は先に `make test-startup` 等の batch 系ターゲットで
   ビルドを温めてから実行する（timeout 180 秒のため）
+
+## GUI・他 OS・非native ビルド
+
+`make test-gui` は GUI 対応 Emacs、X11 の `DISPLAY`、`timeout` が必要。
+クリップボードへ固定文字列を書き込むため、日常のディスプレイと分離した Xvfb で実行する。
+パッケージは事前に専用の `STRAIGHT_DIR` へ準備する。
+
+```sh
+make test-startup STRAIGHT_DIR=/専用/straight
+xvfb-run -a make test-gui STRAIGHT_DIR=/専用/straight
+make test-tty test-tty-live STRAIGHT_DIR=/専用/straight
+```
+
+非native ビルドは、Emacs を `--without-native-compilation` でビルドした実行ファイルを
+`EMACS=/専用/emacs/bin/emacs` で各ターゲットへ渡す。`make test-platform` の環境行が
+`native-comp=nil` であることも確認する（JIT の停止だけでは代替しない）。
+
+macOS / Windows のバッチ起動は `.github/workflows/platform.yml` で Emacs 30.2 と
+lockfile の組合せを検証する。手動実行、または設定変更の PR で起動する。
+macOS では実 BSD `mv` によるパッケージアーカイブの置換・復元も検査する。
+Linux 固有のビルド・apt 導入は macOS / Windows の対象外。
+Windows の検査はバッチ起動と IME の GUI ガード・パスに限定し、GUI の日本語入力は含まない。
+
+Emacs 30 の tty 補完は `corfu-terminal`、標準の `tty-child-frames` がある Emacs 31 は
+Corfu 本体を使う。snapshot の文法あり C/C++ 互換性は #19 で別途検証する。
 
 ## 起動コストの計測
 
