@@ -52,12 +52,13 @@
   (add-hook 'java-mode-hook #'my/corfu-remap-tab-command)
   )
 
-;;; Corfu-terminal - 端末 (`-nw`) で `corfu` を有効化(非 GUI 表示時のみ介入するため無条件で有効化)
+;;; Corfu-terminal - 標準の tty 子フレームがない Emacs で端末補完を有効化
 (use-package corfu-terminal
   :straight (:type git :repo "https://codeberg.org/akib/emacs-corfu-terminal.git")
-  :after corfu
-  :config
-  (corfu-terminal-mode +1)
+  :commands corfu-terminal-mode
+  :init
+  (unless (featurep 'tty-child-frames)
+    (corfu-terminal-mode +1))
   )
 
 ;;; corfu-popupinfo - 補完候補の横に説明用のポップアップを表示

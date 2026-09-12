@@ -1,0 +1,55 @@
+name: 他OSの起動検証
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/platform.yml'
+      - 'early-init.el'
+      - 'init.el'
+      - 'loads/**'
+      - 'tests/my-test-platform.el'
+
+permissions:
+  contents: read
+
+jobs:
+  startup:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      # ホストごとのネイティブなパスを Elisp に渡す。runner は使い捨て。
+      MY_TEST_ROOT: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: purcell/setup-emacs@v8.0
+        if: runner.os == 'macOS'
+        with:
+          version: '30.2'
+      - uses: jcs090218/setup-emacs-windows@754079f286ddffd48dbdf261192e8e1568ff4e21 # v5
+        if: runner.os == 'Windows'
+        with:
+          version: '30.2'
+      - name: 固定した依存で起動・OS分岐・パスを検証
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--batch
+            --eval '(setq user-emacs-directory (file-name-as-directory (getenv "MY_TEST_ROOT")) native-comp-jit-compilation nil)'
+            --eval '(defvar my-test--recorded-warnings nil)'
+            --eval '(defun my-test--record-warning (type message &optional level &rest _) (push (list type message level) my-test--recorded-warnings))'
+            --eval '(advice-add (quote display-warning) :before (quote my-test--record-warning))'
+            -l early-init.el -l init.el)
+          emacs "${args[@]}" -f straight-thaw-versions -f straight-check-all
+          emacs "${args[@]}" -l tests/my-test-startup.el -l tests/my-test-platform.el \
+            --eval '(ert-run-tests-batch-and-exit (quote (tag :platform)))'
+          if [ "$RUNNER_OS" = Windows ]; then
+            missing=(--allow-missing mozc --allow-missing xclip --allow-missing w32-ime.el --allow-missing tr-emacs-ime-module)
+          else
+            missing=(--allow-missing w32-ime.el --allow-missing tr-emacs-ime-module --allow-missing xclip)
+          fi
+          python3 tests/my-check-lockfile.py loads/straight/versions/default.el loads/straight/repos "${missing[@]}"
