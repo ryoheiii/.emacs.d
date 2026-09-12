@@ -159,17 +159,24 @@
 (ert-deftest my-test-audit-markdown-spell-policy ()
   :tags '(:audit)
   (require 'markdown-mode)
-  (with-temp-buffer
-    (markdown-mode)
-    (should (bound-and-true-p flyspell-mode))
-    (my/flyspell-disable)
-    (should (bound-and-true-p flyspell-mode))
-    (insert (make-string 3001 ?a))
-    (my/flyspell-disable-in-large-buffer)
-    (should-not flyspell-mode))
-  (with-temp-buffer
-    (text-mode)
-    (should-not (bound-and-true-p flyspell-mode))))
+  (require 'flyspell)
+  ;; 設定フックによる有効・無効の方針を検査し、外部辞書の有無に依存させない。
+  (let ((ispell-program-name "my-test-missing-ispell"))
+    (cl-letf (((symbol-function 'flyspell-mode)
+               (lambda (arg) (setq-local flyspell-mode (> arg 0)))))
+      (with-temp-buffer
+        (markdown-mode)
+        (should (bound-and-true-p flyspell-mode))
+        (my/flyspell-disable)
+        (should (bound-and-true-p flyspell-mode))
+        (insert (make-string 3001 ?a))
+        (my/flyspell-disable-in-large-buffer)
+        (should-not flyspell-mode))
+      (with-temp-buffer
+        (text-mode)
+        (flyspell-mode 1)
+        (my/flyspell-disable)
+        (should-not flyspell-mode)))))
 
 (ert-deftest my-test-audit-markdown-export-command ()
   :tags '(:audit)
@@ -210,6 +217,22 @@
               (cl-letf (((symbol-function 'kill-emacs) (lambda (status &rest _) (setq result status))))
                 (my-lint-el-run))
               (should (eq result (cdr entry))))))
+      (delete-directory root t))))
+
+(ert-deftest my-test-audit-ui-compiles-without-gui-api ()
+  :tags '(:audit)
+  ;; GUI 対応 Emacs 上でも、tty 専用ビルドの未定義 API を再現する。
+  (require 'bytecomp)
+  (let* ((root (make-temp-file "my-test-ui-compile-" t))
+         (byte-compile-error-on-warn t)
+         (byte-compile-dest-file-function
+          (lambda (_) (expand-file-name "01-ui.elc" root))))
+    (unwind-protect
+        (cl-letf (((symbol-function 'set-fontset-font) nil)
+                  ((symbol-function 'display-graphic-p) (lambda (&rest _) nil)))
+          (my/setup-fonts)
+          (should (byte-compile-file
+                   (expand-file-name "loads/inits/01-ui.el" user-emacs-directory))))
       (delete-directory root t))))
 
 (provide 'my-test-audit)

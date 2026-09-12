@@ -4,6 +4,9 @@
 
 ;;; Code:
 
+;; tty 専用ビルドには存在しない GUI 用 API をコンパイラへ伝える。
+(declare-function set-fontset-font "fontset.c")
+
 ;;;;;; [Group] UI Settings - インターフェース ;;;;;;
 (column-number-mode t)                  ; カーソル位置の列番号表示
 (line-number-mode t)                    ; カーソル位置の行番号表示
