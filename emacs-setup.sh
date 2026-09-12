@@ -179,51 +179,132 @@ find_node_tarball() {
 }
 
 ##### Node.js オフラインインストール #####
-setup_node_offline() {
-    local tarball="$1"
-
-    echo "Installing Node.js from offline tarball: $(basename "$tarball") ..."
-
+# 展開・実行検証が完了するまで既存の版とリンクには触れない。
+setup_node_offline() (
+    require_commands python3 tar mktemp
+    local tarball="$1" topdir members member staging live backup link_stage
+    local had_live=no installed=no committed=no
+    local node_version npm_version
     mkdir -p "$NODE_INSTALL_BASE"
-
-    # tarball 内のトップレベルディレクトリ名を取得・検証
-    # awk は入力を最後まで読む。head や sed q のような早期終了を使うと、
-    # tar が SIGPIPE で落ちて pipefail により exit 141 になる（実測）。
-    local topdir
-    topdir="$(tar -tf "$tarball" | awk -F/ 'NR==1 {print $1}')"
-    if [ -z "$topdir" ]; then
-        echo "Error: Failed to read tarball contents: $tarball" >&2
+    members="$(tar -tf "$tarball")"
+    topdir="${members%%/*}"
+    if [[ ! "$topdir" =~ ^node-v[0-9]+\.[0-9]+\.[0-9]+-linux-(x64|arm64|armv7l)$ ]]; then
+        echo "Error: Node.js アーカイブの最上位ディレクトリが不正です。" >&2
         exit 1
     fi
-
-    # 既存の同バージョンディレクトリがあれば削除して再インストール
-    # ${var:?} で空展開による広範囲削除を防ぐ（topdir は tar の中身由来のため必須）
-    [ -d "$NODE_INSTALL_BASE/$topdir" ] && rm -rf "${NODE_INSTALL_BASE:?}/${topdir:?}"
-
-    # 展開
-    tar -xJf "$tarball" -C "$NODE_INSTALL_BASE"
-
-    # アクティブシンボリックリンクの作成
-    ln -sfn "$NODE_INSTALL_BASE/$topdir" "$NODE_ACTIVE_LINK"
-
-    # インストール検証（絶対パスで実行し、システムの node を誤検出しない）
-    local node_bin="$NODE_ACTIVE_LINK/bin/node"
-    local npm_bin="$NODE_ACTIVE_LINK/bin/npm"
-    if [ ! -x "$node_bin" ]; then
-        echo "Error: node binary not found at $node_bin" >&2
+    while IFS= read -r member; do
+        case "/$member/" in
+            *'/../'*|*'/./'*) echo "Error: アーカイブに不正な相対パスがあります。" >&2; exit 1 ;;
+        esac
+        case "$member" in
+            "$topdir"|"$topdir/"*) ;;
+            *) echo "Error: アーカイブに別の最上位パスがあります。" >&2; exit 1 ;;
+        esac
+    done <<< "$members"
+    if [ "$(basename "$tarball")" != "$topdir.tar.xz" ]; then
+        echo "Error: tarball 名と内容の版が一致しません。" >&2
         exit 1
     fi
-    echo ""
-    echo "node: $("$node_bin" -v)"
-    echo "npm:  $("$npm_bin" -v)"
-    echo "path: $node_bin"
-    echo ""
+    # 通常ファイル・ディレクトリ・内部リンクだけを許可する。
+    python3 - "$tarball" "$topdir" <<'NODE_VALIDATE'
+import posixpath
+import sys
+import tarfile
+from pathlib import PurePosixPath
+archive, root = sys.argv[1:]
+with tarfile.open(archive) as source:
+    members = source.getmembers()
+    paths = [PurePosixPath(member.name) for member in members]
+    if len(set(paths)) != len(paths):
+        sys.exit('Error: duplicate archive member')
+    symlinks = {path for member, path in zip(members, paths) if member.issym()}
+    for member, path in zip(members, paths):
+        # symlink の親を通る展開は、字面の相対パスと実際の宛先が一致しない。
+        if any(parent in symlinks for parent in path.parents):
+            sys.exit('Error: archive member traverses a symbolic link')
+        if path.is_absolute() or '..' in path.parts or path.parts[0] != root:
+            sys.exit('Error: archive path is outside the expected directory')
+        if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
+            sys.exit('Error: unsupported archive member type')
+        if member.issym() or member.islnk():
+            base = str(path.parent) if member.issym() else ''
+            target = PurePosixPath(posixpath.normpath(posixpath.join(base, member.linkname)))
+            if target.is_absolute() or not target.parts or target.parts[0] != root:
+                sys.exit('Error: archive link leaves the expected directory')
+            if member.islnk() and any(parent in symlinks for parent in target.parents):
+                sys.exit('Error: hard link traverses a symbolic link')
+NODE_VALIDATE
+    live="$NODE_INSTALL_BASE/$topdir"
+    backup="$live.bak"
+    if [ -e "$backup" ] || [ -L "$backup" ]; then
+        echo "Error: 前回の退避先 $backup を確認してください。" >&2
+        exit 1
+    fi
+    if [ -e "$NODE_ACTIVE_LINK" ] && [ ! -L "$NODE_ACTIVE_LINK" ]; then
+        echo "Error: $NODE_ACTIVE_LINK が symlink ではありません。" >&2
+        exit 1
+    fi
+    staging="$(mktemp -d "$NODE_INSTALL_BASE/.install-XXXXXX")"
+    link_stage=""
+    # commit 前の失敗・シグナルでは旧版へ戻す。復元失敗時の .bak は保持する。
+    trap '
+        rc=$?
+        if [ "$committed" = no ]; then
+            if [ "$installed" = yes ]; then rm -rf "$live"; fi
+            if [ "$had_live" = yes ] && ! mv_replace "$backup" "$live"; then
+                echo "Error: 復元に失敗しました。$backup を保持しています。" >&2
+                rc=1
+            fi
+        fi
+        rm -rf "$staging"
+        if [ -n "$link_stage" ]; then rm -rf "$link_stage"; fi
+        exit "$rc"
+    ' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    tar -xJf "$tarball" -C "$staging"
+    python3 - "$staging/$topdir" <<'NODE_LINKS'
+import sys
+from pathlib import Path
+root = Path(sys.argv[1]).resolve()
+for path in root.rglob('*'):
+    if path.is_symlink() and not path.resolve().is_relative_to(root):
+        sys.exit('Error: extracted link leaves staging')
+NODE_LINKS
+    local node_bin="$staging/$topdir/bin/node" npm_bin="$staging/$topdir/bin/npm"
+    if [ ! -x "$node_bin" ] || [ ! -x "$npm_bin" ]; then
+        echo "Error: node または npm が実行できません。" >&2
+        exit 1
+    fi
+    node_version="$("$node_bin" --version)"
+    npm_version="$(PATH="$staging/$topdir/bin:$PATH" "$npm_bin" --version)"
+    if [[ ! "$node_version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+       [[ ! "$npm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Error: node または npm のバージョン出力が不正です。" >&2
+        exit 1
+    fi
+    if [[ "$topdir" != "node-$node_version-linux-"* ]]; then
+        echo "Error: node の版と tarball 名が一致しません。" >&2
+        exit 1
+    fi
+    link_stage="$(mktemp -d "$HOME/.local/.node-link-XXXXXX")"
+    ln -s "$live" "$link_stage/node"
+    if [ -e "$live" ] || [ -L "$live" ]; then
+        mv_replace "$live" "$backup"
+        had_live=yes
+    fi
+    mv_replace "$staging/$topdir" "$live"
+    installed=yes
+    mv_replace_file "$link_stage/node" "$NODE_ACTIVE_LINK"
+    committed=yes
+    if [ "$had_live" = yes ]; then rm -rf "$backup"; fi
+    printf 'node: %s\nnpm: %s\npath: %s/bin/node\n' "$node_version" "$npm_version" "$NODE_ACTIVE_LINK"
     echo "Node.js installation complete."
-    echo ""
-    echo "=== シェル設定 ==="
     echo "以下を ~/.bashrc や ~/.zshrc に追加してください:"
-    echo "  export PATH=\"\$HOME/.local/node/bin:\$PATH\""
-}
+    # シェル設定へ貼り付ける文字列をそのまま表示する。
+    # shellcheck disable=SC2016
+    echo '  export PATH="$HOME/.local/node/bin:$PATH"'
+)
 
 ##### Node.js インストール（fnm 経由） #####
 setup_node_fnm() {
@@ -255,14 +336,25 @@ setup_node_fnm() {
         exit 1
     fi
 
-    eval "$(fnm env --shell bash)"
+    local fnm_env node_version npm_version
+    fnm_env="$(fnm env --shell bash)"
+    [ -n "$fnm_env" ] || { echo "Error: fnm env が空です。" >&2; exit 1; }
+    eval "$fnm_env"
 
     # Node.js 22 LTS をインストール・デフォルト化
     fnm install 22
     fnm default 22
+    fnm use 22
 
     echo ""
-    echo "Node.js $(node --version) installed via fnm."
+    node_version="$(node --version)"
+    npm_version="$(npm --version)"
+    if [[ ! "$node_version" =~ ^v22\.[0-9]+\.[0-9]+$ ]] ||
+       [[ ! "$npm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Error: fnm の Node.js 22 / npm を検証できません。" >&2
+        exit 1
+    fi
+    echo "Node.js $node_version (npm $npm_version) installed via fnm."
     echo ""
     echo "=== シェル設定 ==="
     echo "以下を ~/.bashrc や ~/.zshrc に追加してください:"
@@ -816,7 +908,8 @@ packing_package() {
         echo "Archiving package directory..."
 
         tmp_list=$(mktemp)
-        trap 'rm -f "$tmp_list"' EXIT
+        tmp_archive=""
+        trap 'rm -f "$tmp_list"; if [ -n "$tmp_archive" ]; then rm -f "$tmp_archive"; fi' EXIT
 
         # `PACKAGE_TARGET` はすべて揃っていることを要求する。
         # 一部だけのアーカイブを許すと、展開側が完全性を要求するため
@@ -829,10 +922,12 @@ packing_package() {
             echo "$PACKAGE_DIR/$target" >> "$tmp_list"
         done
 
-        if ! tar -czf "$PACKAGE_ARCHIVE" -C "$LOADS_DIR" -T "$tmp_list"; then
+        tmp_archive="$(mktemp "$EMACS_DIR/.package-XXXXXX.tar.gz")"
+        if ! tar -czf "$tmp_archive" -C "$LOADS_DIR" -T "$tmp_list"; then
             echo "Error: Archive creation failed." >&2
             exit 1
         fi
+        mv_replace_file "$tmp_archive" "$PACKAGE_ARCHIVE"
         echo "Package directory archived as $PACKAGE_ARCHIVE"
     )
 }
@@ -848,6 +943,21 @@ mv_replace() {
             return 1
         fi
         mv "$1" "$2"
+    fi
+}
+
+# 通常ファイル・symlink の原子的な更新。ディレクトリ移動とは契約を分ける。
+mv_replace_file() {
+    if [ -d "$2" ] && [ ! -L "$2" ]; then
+        return 1
+    fi
+    if mv --version >/dev/null 2>&1; then
+        mv -Tf "$1" "$2"
+    elif [ -L "$2" ]; then
+        # BSD mv の -h はディレクトリを指す symlink を辿らず置換する。
+        mv -fh "$1" "$2"
+    else
+        mv -f "$1" "$2"
     fi
 }
 
@@ -953,9 +1063,9 @@ extract_package() {
 
     # eln-cache は展開したパッケージと対応しないため破棄する。
     # var/hist と var/backup はユーザーデータなので残す。
-    if [ -d "$VAR_DIR/package" ]; then
-        echo "Removing $VAR_DIR/package ..."
-        rm -rf "${VAR_DIR:?}/package"
+    if [ -d "$VAR_DIR/package/eln-cache" ] && [ ! -L "$VAR_DIR/package/eln-cache" ]; then
+        echo "Removing $VAR_DIR/package/eln-cache ..."
+        rm -rf "${VAR_DIR:?}/package/eln-cache"
     fi
 
     ##### フェーズ C: ビルド #####
@@ -980,6 +1090,16 @@ extract_package() {
 ##### メイン処理 #####
 [ $# -eq 0 ] && { echo "Error: No action specified." >&2; usage; }
 ACTION="$1"; shift
+# 引数の誤りは削除・通信などの副作用を始める前に拒否する。
+case "$ACTION" in
+    -s|--setup|-i|--install) ;;
+    *)
+        if [ "$#" -ne 0 ]; then
+            echo "Error: $ACTION は追加引数を受け付けません。" >&2
+            exit 1
+        fi
+        ;;
+esac
 case "$ACTION" in
     -s|--setup)
         SETUP_GUI="gtk3"  # 既定は現状どおり GUI パッケージも入れる
