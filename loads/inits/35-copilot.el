@@ -13,6 +13,9 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function my/copilot--extend-jsonrpc-timeout "35-copilot")
+
 ;;;;; [Group] Copilot Config - 設定グループとトグル ;;;;;
 (defgroup my/copilot nil
   "GitHub Copilot の設定."
@@ -94,9 +97,16 @@ NVM-DIR は nvm のルート。DEPTH はループ防止用（最大 10）.
                               resolved
                             (concat "v" resolved)))
                  ;; 部分バージョン（"v22"）→ ディレクトリ glob で最新を取得
-                 (node-dirs (file-expand-wildcards
-                             (expand-file-name
-                              (concat "versions/node/" version "*/bin") nvm-dir)))
+                 (node-dirs
+                  (seq-filter
+                   (lambda (dir)
+                     (let ((candidate (file-name-nondirectory
+                                       (directory-file-name (file-name-directory dir)))))
+                       (and (string-match-p "\\`v[0-9]+\\.[0-9]+\\.[0-9]+\\'" candidate)
+                            (or (equal candidate version)
+                                (string-prefix-p (concat version ".") candidate)))))
+                   (file-expand-wildcards
+                    (expand-file-name (concat "versions/node/" version "*/bin") nvm-dir))))
                  ;; セマンティックバージョン比較（string< だと v22.9 > v22.14 になる）
                  ;; version< は "v" 付きだと Invalid version syntax になるため除去
                  (node-bin (car (last (sort node-dirs

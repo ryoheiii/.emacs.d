@@ -4,6 +4,10 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function color-saturate-name "color")
+(declare-function perfect-margin-mode "perfect-margin")
+
 ;;;;; [Group] Visual - 視覚効果関連 ;;;;;
 ;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
 (use-package pulsar
@@ -37,9 +41,9 @@
            :right-divider-width 30
            :scroll-bar-width 8))
 
-  ;; Read the doc string of `spacious-padding-subtle-mode-line' as it
+  ;; Read the doc string of `spacious-padding-subtle-frame-lines' as it
   ;; is very flexible and provides several examples.
-  (setq spacious-padding-subtle-mode-line
+  (setq spacious-padding-subtle-frame-lines
         `( :mode-line-active 'default
            :mode-line-inactive vertical-border))
   (spacious-padding-mode 1)

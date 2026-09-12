@@ -5,6 +5,10 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function my-markdown-load-css "my-markdown")
+(declare-function my-markdown-pandoc-command "my-markdown")
+
 ;;;;; [Group] Markdown - Markdown 関連 ;;;;;
 ;;; markdown-mode - markdown mode の設定
 (use-package markdown-mode
@@ -33,7 +37,6 @@
   (require 'my-markdown)
   ;; Pandoc コマンドと CSS を遅延設定（markdown-mode ロード時に初めて構築）
   (setq markdown-command (my-markdown-pandoc-command))
-  (setq markdown-export-command (my-markdown-pandoc-command))
   (setq markdown-xhtml-header-content
         (format "<meta charset='utf-8'>\n
                 <meta name='viewport' content='width=device-width, initial-scale=1'>\n

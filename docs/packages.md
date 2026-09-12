@@ -45,6 +45,9 @@ CI の `make straight-thaw` は、この理由からターゲット内で `strai
 4. `loads/straight/versions/default.el` を設定変更と同じコミットへ含める。
 
 lockfile は CI の `make straight-thaw` がリビジョンを固定するために使う。
+thaw 後は `make check-lockfile` で各 repo の HEAD・未コミット変更・過不足を検査する。
+未導入を許す条件付きパッケージは CI の `LOCK_ALLOW_MISSING` に名前を列挙し、件数も出力する。
+ローカルの現状確認と lockfile の再現確認は分け、日常利用中の共有キャッシュを thaw しない。
 新しいパッケージを追加したら必ず凍結する。
 
 ## アーカイブと復元
@@ -59,9 +62,17 @@ lockfile は CI の `make straight-thaw` がリビジョンを固定するため
 ./emacs-setup.sh --extract-package
 ```
 
-`--extract-package` は既存の `loads/straight/` を削除してから展開し、
-`var/package/`（ネイティブコンパイルキャッシュ等）を消してリビルドする。
-`--clean` とは異なり、**`var/hist/` と `var/backup/` のユーザーデータは残す**。
+アーカイブ作成は一時ファイルへ完了してから `package.tar.gz` を置換する。
+作成に失敗した場合、以前のアーカイブを保持する。
+
+`--extract-package` は一時ディレクトリへ展開・検証してから既存の
+`loads/straight/` を `.bak` へ退避し、新しいツリーを配置する。配置失敗時は
+旧ツリーを戻し、リビルド失敗時は `.bak` を残して復旧方法を表示する。
+リビルド成功後にだけ `.bak` を削除する。残っている `.bak` を上書きしない。
+
+削除するのは通常ディレクトリの `var/package/eln-cache/` だけで、同名の symlink は保持する。
+**文法・Copilot サーバーを含む兄弟データ、`var/hist/`、`var/backup/` は保持する**。
+`--clean` はバックアップ世代や自動保存も削除するため、復旧作業前には実行しない。
 
 ## 手動リビルド
 

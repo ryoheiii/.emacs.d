@@ -13,10 +13,10 @@ make test
 
 | ターゲット | 検証内容 |
 |---|---|
-| `make test` | 下記すべてを fail-fast で一括実行 |
+| `make test` | lint と test-* を fail-fast で一括実行（文法ありレーンは別途） |
 | `make lint` | `lint-sh` と `lint-el` をまとめて実行 |
 | `make lint-sh` | Git 追跡中のシェルスクリプトを shellcheck |
-| `make lint-el` | 設定ファイルを一時ディレクトリへ byte compile（警告は表示、エラーは失敗） |
+| `make lint-el` | 全管理対象 Elisp の構文と設定の byte compile（警告・エラーは失敗） |
 | `make test-unit` | `early-init.el` のパスヘルパー |
 | `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
 | `make test-keybinding` | `C-t` タグナビゲーションの固定キーバインド |
@@ -27,8 +27,12 @@ make test
 | `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・`C-t` 表） |
 | `make test-setup` | 隔離した HOME で `test-emacs-setup.sh` を実行（引数パース、`--list` の抽出、ダウンロードの原子性、パッケージ復元のトランザクション、サンドボックスガード） |
 | `make test-guards` | テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査（`test-emacs-setup.sh` のガード、`lint-sh` の環境分離、`run_trial` の失敗検査） |
+| `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |
+| `make test-audit-shell` | セットアップ・レビュー・ベンチ・lock照合の故障注入 |
+| `make check-lockfile` | 導入済み repo の HEAD・変更・過不足と lockfile を照合 |
+| `make install-test-grammars` | `TEST_TREESIT_DIR` に固定タグの C/C++ 文法を導入 |
 | `make clean-test` | `tests/` 配下の byte compile 生成物を削除 |
-| `make straight-thaw` | CI 専用。lockfile のリビジョンを適用して `straight-check-all` まで実行する（`CI=true` 以外では実行できない） |
+| `make straight-thaw` | CI 専用。lockfile のリビジョンを適用して `straight-check-all` と lockfile 照合まで実行する（`CI=true` 以外では実行できない） |
 
 `make lint` は [shellcheck](https://www.shellcheck.net/) を必要とする。
 CI は runner 同梱版を使わず、`.github/workflows/test.yml` で **0.11.0 を明示導入**する。
@@ -79,8 +83,9 @@ tree-sitter 文法は通常「未導入」になる（システムの共有ラ�
 （`my-test-cpp-config-c-ts-indent-google-equivalent`）が走る。
 入力途中（`ERROR` 状態）の桁を固定する `my-test-cpp-config-c-ts-error-indent`
 などの ts 専用検査も文法が要るため、未導入環境では skip される。
-ts 側を明示的に走らせる場合は、文法を置いたディレクトリを
-`treesit-extra-load-path` へ加えた状態で ERT を実行する。
+ts 側を明示的に走らせる場合は `TEST_TREESIT_EXPECT=with` と
+`TEST_TREESIT_DIR=/文法のディレクトリ` を指定する。文法は一時ルートへ複製され、
+必須のテストが実行されない場合は失敗する。
 
 worktree で検証する場合は、パッケージ実体を共有するため
 `make test STRAIGHT_DIR=$HOME/.emacs.d/loads/straight` のように指定する。
@@ -120,10 +125,15 @@ tests/my-bench-summarize.sh .bench/out
 
 注意点:
 
-- **worktree で計測しない。** パッケージキャッシュを実体からコピーすると実環境と
-  異なる結果が出ることがある（`eval/7-elpaca-ceiling/CORRECTION.md`）
-- 修正前後を比較する場合は `git checkout <rev> -- <file>` で作業ツリーを一時的に戻し、
-  同一ハーネス・同一キャッシュで測る（ハーネスは作業ツリーの差分を取り込む）
+- 専用 worktree で計測する。`STRAIGHT_DIR` は両側で同一の依存状態を持つ実体を指定する。
+  日常利用の cache への書込みを避ける場合は、独立した複製を1回作成して比較の両側へ使う。
+  build 内の絶対 symlink が複製元を向いていないことも確認する。
+- 修正済みの同一ハーネスから `BENCH_REPO_ROOT=/比較対象のcheckout` で対象を選び、
+  修正前後とも15有効試行を測る。main の作業ファイルを checkout で戻さない。
+  過去の計測訂正（`eval/7-elpaca-ceiling/CORRECTION.md`）を踏まえ、
+  異なる cache・ハーネス・環境の結果を同条件の比較として扱わない。
+- raw ログは実行ごとのディレクトリへ保存し、完走時だけ manifest を公開する。
+  集計は manifest に記録された有効試行だけを使う。manifest のない旧計測は再計測する。
 - `emacs-init-time` は `after-init-hook` の直前で止まるため、この設定の主要コストを
   計測窓の外へ出す。判断には使わない
 - 出力先の `.bench/` は gitignored
@@ -136,3 +146,29 @@ snapshot のカナリアレーンを実行する。snapshot の失敗は non-blo
 実測時間（2026-07 時点）: キャッシュミス時（全パッケージ clone）は
 安定レーンで約 4 分 30 秒、キャッシュヒット時は約 1 分 20 秒。
 Copilot 関連パッケージの追加により、キャッシュミス時はこれより伸びる。
+
+## 監査で追加した検証
+
+- `make test-audit`: シンボル置換の範囲・undo・失敗時保全、Global解析、補完、版選択、ユーティリティ、Markdown。
+- `make test-audit-shell`: 一時 HOME とスタブで archive/Node/レビュー公開の失敗、ベンチ有効試行、lock照合を検証する。Python 3 が必要。
+- `make lint-el`: 全管理対象 Elisp の構文を検査し、early-init/init/inits/site-elisp を一時出力先へコンパイルする。警告は未許可として失敗する。
+- `make check-lockfile STRAIGHT_DIR=/隔離した/straight`: lockfile の再現性を変更なしで検査する。HEAD差分と未コミット変更、ロック外repo、未許可の欠落を拒否する。
+
+文法の両レーンは次で再現できる。文法ありでは実編集5件、文法なしでは cc-mode の2件が必須となる。
+
+```sh
+make test-cpp-config TEST_TREESIT_EXPECT=without
+mkdir -p /tmp/emacs-test-grammars
+make install-test-grammars TEST_TREESIT_DIR=/tmp/emacs-test-grammars
+make test-cpp-config TEST_TREESIT_EXPECT=with TEST_TREESIT_DIR=/tmp/emacs-test-grammars
+```
+
+`test-tty-live` は同じ隔離 HOME を使う2プロセスで実行し、圧縮ファイルの起動引数、
+固定 CAPF 候補の表示・確定、保存後の undo 再読込、固定入力メソッドの状態遷移を確認する。
+undo 検証だけは fixture 自体が `/tmp` 内にあるため、一時ファイルの除外を局所的に無効化する。
+
+実機での日本語入力は `M-x toggle-input-method`（再実行で解除）から文章を入力し、
+確定・削除を確認する。`C-\` は本設定の別コマンドに割り当て済みなので IME 切り替えには使わない。
+clipboard の ERT は転送コールバックに渡る文字列を固定fixtureで確認する。
+実 X11 では `DISPLAY` と xclip を用意し、Emacs でコピーした日本語・改行を別アプリへ貼り付け、
+逆方向の貼り付けも確認する。これらの実サービス検証と GUI・macOS・Windows は通常 CI の保証範囲外である。

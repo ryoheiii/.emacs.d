@@ -4,6 +4,10 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function neo-global--window-exists-p "neotree")
+(declare-function migemo-init "migemo")
+
 ;; project-root は autoload されないため、コンパイラ警告のみ declare で抑える
 ;; (実行時は project-current の autoload が project.el をロードする)
 (declare-function project-root "project" (project &optional maybe-prompt))
@@ -114,14 +118,15 @@
       (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ; 日本語無視
       (flyspell-prog-mode)))
   (defun my/flyspell-disable ()
-    "flyspell を無効化する。"
-    (flyspell-mode -1))
+    "Markdown 以外の text 系では flyspell を無効化する。"
+    (unless (derived-mode-p 'markdown-mode)
+      (flyspell-mode -1)))
   (defun my/flyspell-disable-in-large-buffer ()
     "大きなバッファ (3000 文字超) では flyspell を無効化する。"
     (when (> (buffer-size) 3000)
       (flyspell-mode -1)))
   :hook ((prog-mode . my/flyspell-prog-setup)
-         ((text-mode html-mode markdown-mode) . my/flyspell-disable) ; text 系では無効化
+         ((text-mode html-mode) . my/flyspell-disable) ; text 系では無効化
          (find-file . my/flyspell-disable-in-large-buffer))
   :bind (:map flyspell-mode-map
               ("C-," . nil)

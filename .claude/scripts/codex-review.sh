@@ -1,95 +1,118 @@
 #!/usr/bin/env bash
-# Codex CLI を外部レビュアーとして 1 ターン実行する共通ラッパー。
-# x-codex-review-plan / x-codex-review-impl から呼び出す。
-#
-# 使い方:
-#   codex-review.sh PROMPT_FILE REPLY_FILE SESSION_FILE        # 新規レビュー
-#   codex-review.sh PROMPT_FILE REPLY_FILE --resume SESSION_ID # 同一セッションで再レビュー
-#
-# 注意:
-#   - リポジトリルートで実行する（resume は -C を受け付けないため cwd が対象になる）。
-#   - 設定は環境変数で上書きできる。
-#     CODEX_REVIEW_MODEL   (default: gpt-5.6-sol)
-#     CODEX_REVIEW_EFFORT  (default: xhigh)
-#     CODEX_REVIEW_TIMEOUT_SEC (default: 1800)
-#
-# 終了コード:
-#   0   = 成功（reply 非空。新規時は session id も取得済み）
-#   1   = 引数不正または codex exec 失敗
-#   2   = reply が空
-#   3   = session id を抽出できない（新規時のみ）
-#   124 = タイムアウト
-
+# Codex CLI の1回の回答を、新規成果物として検証してから公開する。
+# codex-review.sh PROMPT REPLY {SESSION_FILE | --resume SESSION_ID}
+# CODEX_REVIEW_MODEL / CODEX_REVIEW_EFFORT / CODEX_REVIEW_TIMEOUT_SEC で上書き可能。
+# 終了: 0=成功, 1=引数/CLI/公開失敗, 2=新回答なし, 3=session不正, 124=timeout
 set -u
-
 MODEL="${CODEX_REVIEW_MODEL:-gpt-5.6-sol}"
 EFFORT="${CODEX_REVIEW_EFFORT:-xhigh}"
 TIMEOUT_SEC="${CODEX_REVIEW_TIMEOUT_SEC:-1800}"
-
 PROMPT_FILE="${1:-}"
 REPLY_FILE="${2:-}"
 MODE_ARG="${3:-}"
-
-usage() {
-  echo "Usage: codex-review.sh PROMPT_FILE REPLY_FILE {SESSION_FILE | --resume SESSION_ID}" >&2
-}
-
-if [ -z "$PROMPT_FILE" ] || [ -z "$REPLY_FILE" ] || [ -z "$MODE_ARG" ]; then
-  usage
+if [ -z "$PROMPT_FILE" ] || [ ! -s "$PROMPT_FILE" ] || [ -z "$REPLY_FILE" ] ||
+   { [ "$MODE_ARG" = --resume ] && { [ "$#" -ne 4 ] || [ -z "${4:-}" ]; }; } ||
+   { [ "$MODE_ARG" != --resume ] && { [ "$#" -ne 3 ] || [ -z "$MODE_ARG" ]; }; }; then
+  echo 'Usage: codex-review.sh PROMPT REPLY {SESSION_FILE | --resume SESSION_ID}' >&2
   exit 1
 fi
-if [ ! -s "$PROMPT_FILE" ]; then
-  echo "ERROR: prompt file が空か存在しません: $PROMPT_FILE" >&2
-  exit 1
-fi
-
-LOG_FILE="${REPLY_FILE}.log"
-
-if [ "$MODE_ARG" = "--resume" ]; then
-  SESSION_ID="${4:-}"
-  if [ -z "$SESSION_ID" ]; then
-    usage
-    exit 1
-  fi
-  # resume は -C / -s を受け付けないため、cwd 実行 + config 形式で sandbox を渡す
-  timeout "$TIMEOUT_SEC" codex exec resume "$SESSION_ID" \
-    -m "$MODEL" \
-    -c "model_reasoning_effort=\"$EFFORT\"" \
-    -c 'sandbox_mode="read-only"' \
-    -o "$REPLY_FILE" - < "$PROMPT_FILE" > "$LOG_FILE" 2>&1
-  CODEX_EXIT=$?
+STAGING="$(mktemp -d "${REPLY_FILE}.run.XXXXXX")" || exit 1
+LOG_FILE="$STAGING/log"
+TEMP_REPLY="$STAGING/reply"
+# 失敗時も診断ログは固有の run ディレクトリに残す。
+echo "INFO: log=$LOG_FILE"
+args=(exec)
+if [ "$MODE_ARG" = --resume ]; then
+  args+=(resume "$4" -c 'sandbox_mode="read-only"')
 else
-  SESSION_FILE="$MODE_ARG"
-  timeout "$TIMEOUT_SEC" codex exec \
-    -m "$MODEL" \
-    -c "model_reasoning_effort=\"$EFFORT\"" \
-    -s read-only \
-    -o "$REPLY_FILE" - < "$PROMPT_FILE" > "$LOG_FILE" 2>&1
-  CODEX_EXIT=$?
+  args+=(-s read-only)
 fi
-
-if [ "$CODEX_EXIT" -eq 124 ]; then
-  echo "ERROR: codex exec が ${TIMEOUT_SEC}s 以内に完了しませんでした（ログ: $LOG_FILE）" >&2
-  exit 124
+if timeout "$TIMEOUT_SEC" codex "${args[@]}" -m "$MODEL" \
+   -c "model_reasoning_effort=\"$EFFORT\"" -o "$TEMP_REPLY" - \
+   < "$PROMPT_FILE" > "$LOG_FILE" 2>&1; then
+  CODEX_EXIT=0
+else
+  CODEX_EXIT=$?
 fi
 if [ "$CODEX_EXIT" -ne 0 ]; then
-  echo "ERROR: codex exec が exit $CODEX_EXIT で失敗しました（ログ: $LOG_FILE）" >&2
+  echo "ERROR: codex exec exit=$CODEX_EXIT（ログ: $LOG_FILE）" >&2
+  if [ "$CODEX_EXIT" -eq 124 ]; then exit 124; fi
   exit 1
 fi
-if [ ! -s "$REPLY_FILE" ]; then
-  echo "ERROR: reply が空です（ログ: $LOG_FILE）" >&2
+if [ ! -s "$TEMP_REPLY" ]; then
+  echo "ERROR: 今回の reply が空です（ログ: $LOG_FILE）" >&2
   exit 2
 fi
-
-if [ "$MODE_ARG" != "--resume" ]; then
-  SESSION_ID="$(sed -n 's/^.*session id: *//p' "$LOG_FILE" | head -1 | tr -d '[:space:]')"
-  if [ -z "$SESSION_ID" ]; then
-    echo "ERROR: session id を抽出できませんでした（ログ: $LOG_FILE）" >&2
+sources=("$TEMP_REPLY" "$LOG_FILE")
+targets=("$REPLY_FILE" "$REPLY_FILE.log")
+if [ "$MODE_ARG" != --resume ]; then
+  SESSION_ID="$(awk '/session id: / && !found { sub(/^.*session id: */, ""); gsub(/[[:space:]]/, ""); print; found=1 }' "$LOG_FILE")" || exit 3
+  if [[ ! "$SESSION_ID" =~ ^[[:alnum:]_-]+$ ]]; then
+    echo "ERROR: session id を抽出できません（ログ: $LOG_FILE）" >&2
     exit 3
   fi
-  printf '%s\n' "$SESSION_ID" > "$SESSION_FILE"
-  echo "OK: session=$SESSION_ID"
+  printf '%s\n' "$SESSION_ID" > "$STAGING/session" || exit 3
+  sources+=("$STAGING/session")
+  targets+=("$MODE_ARG")
 fi
-
+# 全公開先を検証し、各親と同じファイルシステム上に新旧の成果物を用意する。
+# session 保存不能のとき reply だけを更新することを防ぐ。
+new_files=() old_files=() existed=() published=0 success=no
+cleanup() {
+  local rc=$? i
+  # 復元中の追加シグナルで、退避済み成果物の回収を中断しない。
+  trap '' INT TERM
+  if [ "$success" = no ]; then
+    for ((i=published-1; i>=0; i--)); do
+      if [ "${existed[i]}" = yes ]; then
+        if ! mv -f -- "${old_files[i]}" "${targets[i]}"; then
+          echo "ERROR: 旧成果物を ${old_files[i]} に保持しています。" >&2
+          old_files[i]=''
+          rc=1
+        fi
+      else
+        rm -f -- "${targets[i]}" || rc=1
+      fi
+    done
+  fi
+  for file in "${new_files[@]}" "${old_files[@]}"; do
+    if [ -n "$file" ]; then rm -f -- "$file"; fi
+  done
+  if [ "$success" = yes ]; then rm -rf -- "$STAGING"; fi
+  exit "$rc"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+for ((i=0; i<${#targets[@]}; i++)); do
+  target="${targets[i]}"
+  if [ -L "$target" ] || { [ -e "$target" ] && [ ! -f "$target" ]; }; then
+    echo "ERROR: 公開先が通常ファイルではありません: $target" >&2
+    exit 1
+  fi
+  for ((j=0; j<i; j++)); do
+    if [ "$target" = "${targets[j]}" ] || [ "$target" -ef "${targets[j]}" ]; then
+      echo "ERROR: 公開先が重複しています。" >&2
+      exit 1
+    fi
+  done
+  new="$(mktemp "${target}.new.XXXXXX")" || exit 1
+  new_files+=("$new")
+  cp -- "${sources[i]}" "$new" || exit 1
+  old_files+=('')
+  existed+=(no)
+  if [ -e "$target" ]; then
+    old="$(mktemp "${target}.old.XXXXXX")" || exit 1
+    old_files[i]="$old"
+    cp -p -- "$target" "$old" || exit 1
+    existed[i]=yes
+  fi
+done
+for ((i=0; i<${#targets[@]}; i++)); do
+  # rename 後に mv が失敗・シグナル終了しても、この公開先を復元する。
+  published=$((published + 1))
+  mv -f -- "${new_files[i]}" "${targets[i]}" || exit 1
+done
+success=yes
+if [ "$MODE_ARG" != --resume ]; then echo "OK: session=$SESSION_ID"; fi
 echo "OK: reply=$REPLY_FILE"
-exit 0

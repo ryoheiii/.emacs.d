@@ -286,8 +286,15 @@ Chat の回答は org 形式・日本語で返る。モデルは `C-c J m` で�
 
 ### GitHub Copilot
 
-Node.js が無い環境、GitHub へ到達できない環境、Copilot の契約が無い環境では、
-**何もしなくてもよい。** 既定の `auto` が Node.js の有無を見て自動で判断する。
+Node.js のオフライン導入（`--setup-node`）は、アーカイブ内のパスとリンクを検査するため Python 3.9 以降を必要とする。
+
+既定の `auto` は Node.js の有無を判定する。Node.js があると初回起動で
+Copilot 関連パッケージを取得するため、GitHub へ到達できない環境や Copilot を
+使わない環境では、**初回起動前に** `custom/custom.el` へ次を記入する。
+
+```elisp
+(setq my/copilot-enabled nil)
+```
 
 | 状態 | 動作 |
 |---|---|
@@ -361,8 +368,8 @@ M-x straight-pull-all         ; 全パッケージを更新
 >
 > | 種別 | 例 |
 > |---|---|
-> | 再生成可能 | ネイティブコンパイルキャッシュ、`var/backup/` |
-> | **復元不可能** | ミニバッファ履歴（savehist）、カーソル位置（places）、最近使ったファイル、undo 履歴（undo-fu-session） |
+> | 再生成可能 | ネイティブコンパイルキャッシュ |
+> | **復元不可能** | `var/backup/` のバックアップ世代と自動保存（未保存内容）、ミニバッファ履歴（savehist）、カーソル位置（places）、最近使ったファイル、undo 履歴（undo-fu-session） |
 
 ### テスト
 

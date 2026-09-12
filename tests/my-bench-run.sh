@@ -16,7 +16,8 @@ MODE="${1:?mode (now|bare) が必要です}"
 TRIALS="${2:?試行数が必要です}"
 OUT_DIR="${3:?出力ディレクトリが必要です}"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="${BENCH_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+PROBE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EMACS="${EMACS:-emacs}"
 STRAIGHT_DIR="${STRAIGHT_DIR:-$REPO_ROOT/loads/straight}"
 BENCH_ROOT="$REPO_ROOT/.bench/$MODE"
@@ -27,6 +28,20 @@ TRIAL_TIMEOUT="${TRIAL_TIMEOUT:-300}"
 LOADAVG_MAX="${LOADAVG_MAX:-4.0}"
 # 無効試行の再試行上限。
 RETRY_MAX="${RETRY_MAX:-8}"
+
+# パスに使う値と試行条件は、mkdir や削除より先に検証する。
+case "$MODE" in now|bare) ;; *) echo "Error: mode は now または bare です。" >&2; exit 1 ;; esac
+if [ "$#" -ne 3 ] || [[ ! "$TRIALS" =~ ^[1-9][0-9]*$ ]] ||
+   [[ ! "$TRIAL_TIMEOUT" =~ ^[1-9][0-9]*$ ]] ||
+   [[ ! "$RETRY_MAX" =~ ^(0|[1-9][0-9]*)$ ]] ||
+   [[ ! "$LOADAVG_MAX" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "Error: ベンチの引数・数値設定が不正です。" >&2
+  exit 1
+fi
+if [ -L "$REPO_ROOT/.bench" ] || [ -L "$BENCH_ROOT" ]; then
+  echo "Error: ベンチ専用ディレクトリの symlink は使用できません。" >&2
+  exit 1
+fi
 
 for cmd in script timeout stty; do
   command -v "$cmd" >/dev/null || { echo "my-bench-run: $cmd が必要です" >&2; exit 1; }
@@ -81,8 +96,8 @@ export MY_BENCH_STRAIGHT_BASE_DIR="$STRAIGHT_DIR/../"
 unset DISPLAY
 exec $EMACS -nw --no-site-file --no-site-lisp \\
   --init-directory="$BENCH_ROOT" \\
-  -L "$REPO_ROOT/tests" \\
-  -l "$REPO_ROOT/tests/my-bench-startup.el"
+  -L "$PROBE_ROOT/tests" \\
+  -l "$PROBE_ROOT/tests/my-bench-startup.el"
 MY_BENCH_RUNNER
   chmod +x "$BENCH_ROOT/run-bench.sh"
 }
@@ -116,7 +131,7 @@ is_decimal() {
 # すべての失敗を明示分岐する。exit は使わない（コマンド置換のサブシェルしか止まらない）。
 run_trial() {
   local idx="$1"
-  local log="$OUT_DIR/raw/${MODE}-${idx}.log"
+  local log="${RUN_RAW_DIR:-$OUT_DIR/raw}/${MODE}-${idx}.log"
   local load start end verdict
 
   # awk の失敗を握り潰すと load が空になり、下の比較が「閾値以下」＝有効試行へ倒れる。
@@ -195,6 +210,10 @@ if [ "${MY_BENCH_LIB_ONLY:-0}" = 1 ]; then
   return 0
 fi
 
+# 完走までは既存 manifest を変更しない。raw は各実行の不変データとして残す。
+RUN_RAW_DIR="$(mktemp -d "$OUT_DIR/raw/$MODE-run-XXXXXX")"
+manifest="$RUN_RAW_DIR/manifest.tsv"
+: > "$manifest"
 setup_bench_root
 [ "$MODE" = bare ] && setup_bare_runner
 
@@ -205,7 +224,7 @@ for i in 1 2 3; do
 done
 
 echo "my-bench-run: $MODE 本計測 ${TRIALS} 試行" >&2
-: > "$OUT_DIR/${MODE}-wall-ms.txt"
+: > "$RUN_RAW_DIR/wall-ms.txt"
 valid=0
 retries=0
 i=0
@@ -213,7 +232,8 @@ while [ "$valid" -lt "$TRIALS" ]; do
   i=$((i + 1))
   if ms="$(run_trial "$i")"; then
     valid=$((valid + 1))
-    echo "$ms" >> "$OUT_DIR/${MODE}-wall-ms.txt"
+    echo "$ms" >> "$RUN_RAW_DIR/wall-ms.txt"
+    printf '%s\t%s\n' "raw/$(basename "$RUN_RAW_DIR")/$MODE-$i.log" "$ms" >> "$manifest"
     printf '  trial %-3s %6s ms (valid %d/%d)\n' "$i" "$ms" "$valid" "$TRIALS" >&2
   else
     retries=$((retries + 1))
@@ -225,4 +245,9 @@ while [ "$valid" -lt "$TRIALS" ]; do
   fi
 done
 
+# manifest が唯一のコミット点。前回の有効試行と wall 値をまとめて切り替える。
+pending_manifest="$(mktemp "$OUT_DIR/.$MODE-manifest.XXXXXX")"
+trap 'rm -f "$pending_manifest"' EXIT
+cp "$manifest" "$pending_manifest"
+mv -f "$pending_manifest" "$OUT_DIR/$MODE-manifest.tsv"
 echo "my-bench-run: $MODE 完了（有効 $valid、無効 $retries）" >&2

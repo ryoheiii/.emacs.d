@@ -61,23 +61,24 @@ globs: ["**/*"]
 マージが完了したら、同じ作業の中で必ず後片付けまで行う。後回しにしない。
 `/x-ship` を使わず手動でマージした場合も同じ手順を適用する。
 
-1. マージ済みローカルブランチを削除する。
+1. タスクのブランチ名・worktree パス・マージ SHA を記録し、worktree から退出して削除する。
+
+   ```sh
+   cd <メインチェックアウト>
+   git worktree remove <worktree パス>
+   git worktree prune
+   ```
+
+2. checkout 先がなくなったマージ済みローカルブランチを削除する。
 
    ```sh
    git branch -d <ブランチ名>
    ```
 
-2. リモートへ push 済みのブランチは、対応するリモートブランチも削除する。
+3. ブランチを push 済みの場合だけ、対応するリモートブランチを削除する。
 
    ```sh
    git push origin --delete <ブランチ名>
-   ```
-
-3. タスク用 worktree を削除する。
-
-   ```sh
-   git worktree remove <worktree パス>
-   git worktree prune
    ```
 
 4. 残骸が無いことを確認する。

@@ -4,6 +4,9 @@
 
 ;;; Code:
 
+(defvar-local my/input-query nil
+  "補完候補のスコアリングに使う入力文字列。")
+
 ;;;;; [Group] Scoring - スコアリング・履歴 ;;;;;
 ;;; Flx - 柔軟なスコアリング
 (use-package flx
@@ -11,7 +14,6 @@
   :after prescient
   :config
   ;; 入力文字を抽出
-  (defvar-local my/input-query nil)
   (defun my/store-input-query (string &rest _args)
     "Store the current completion query in `my/input-query'."
     (setq my/input-query (replace-regexp-in-string " " "" string)))

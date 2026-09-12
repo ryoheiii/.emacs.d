@@ -4,6 +4,9 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function migemo-get-pattern "migemo")
+
 ;;;;; [Group] Consult - 検索・絞り込み ;;;;;
 ;;; Consult - 多機能ミニバッファ補完
 (use-package consult
@@ -68,7 +71,11 @@
 ;;; Embark-consult - `embark` と `consult` の連携
 (use-package embark-consult
   :straight t
-  :hook (embark-collect-mode . consult-preview-at-point-mode)
+  :after (embark consult)
+  :config
+  ;; 新版 consult は自動プレビューを持つ。旧版だけ明示的に有効化する。
+  (unless (get 'consult-preview-at-point-mode 'byte-obsolete-info)
+    (add-hook 'embark-collect-mode-hook 'consult-preview-at-point-mode))
   )
 
 ;;; Orderless - 高度な補完フィルタ

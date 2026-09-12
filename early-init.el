@@ -12,17 +12,19 @@
 (setq gc-cons-threshold most-positive-fixnum)
 
 ;;;;; [Group] Startup - file-name-handler 最適化 ;;;;;
-;; 起動中はファイル名ハンドラを無効化し、起動完了後に復元する
+;; init 読み込み中はハンドラを無効化し、引数のファイルを開く前に復元する
 ;; (バッチ実行では復元フックが発火しないため対話起動に限定する)
+(defvar my/saved-file-name-handler-alist nil)
+(defun my/restore-file-name-handlers ()
+  "init 中に追加されたものも含めてハンドラを一度だけ復元する。"
+  (setq file-name-handler-alist
+        (delete-dups (append file-name-handler-alist
+                             my/saved-file-name-handler-alist)))
+  (remove-hook 'after-init-hook #'my/restore-file-name-handlers))
 (unless noninteractive
-  (defvar my/saved-file-name-handler-alist file-name-handler-alist)
-  (setq file-name-handler-alist nil)
-  (add-hook 'emacs-startup-hook
-            (lambda ()
-              (setq file-name-handler-alist
-                    (delete-dups (append file-name-handler-alist
-                                         my/saved-file-name-handler-alist))))
-            99))
+  (setq my/saved-file-name-handler-alist file-name-handler-alist
+        file-name-handler-alist nil)
+  (add-hook 'after-init-hook #'my/restore-file-name-handlers -90))
 
 ;;;;; [Group] Define - 定数
 ;;; OS判定用定数
@@ -87,7 +89,8 @@
 (setq transient-history-file (my-set-history "transient/history.el"))
 
 ;;; eln-cache の保存先を変更（Emacs 29+ 公式 API）
-(when (fboundp 'startup-redirect-eln-cache)
+(when (and (fboundp 'startup-redirect-eln-cache)
+           (boundp 'native-comp-eln-load-path))
   (startup-redirect-eln-cache (my-set-package "eln-cache/")))
 
 ;;; yasnippet のデフォルト snippets/ ディレクトリ生成を防止

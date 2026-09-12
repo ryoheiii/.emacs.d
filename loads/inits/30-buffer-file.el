@@ -4,6 +4,9 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function recentf-save-list "recentf")
+
 ;;;;; [Group] Buffer-and-File-management - バッファとファイル管理関連 ;;;;;
 ;;; xclip - クリップボードとの共有
 (use-package xclip
@@ -40,13 +43,13 @@
   :custom
   (recentf-max-saved-items 2000)                                 ; 保存するファイルの数
   (recentf-max-menu-items 15)                                    ; メニューに表示するアイテム数
-  (recentf-exclude '("recentf-" user-full-name))                 ; 除外するファイルパターン
+  (recentf-exclude '("recentf-"))                 ; 除外するファイルパターン
   (recentf-auto-cleanup 'never)                                  ; 自動整理の設定
   (recentf-save-file (my-set-history "recentf-" user-full-name)) ; recentf の保存パス
   :config
   ;; メッセージを抑制するマクロ
   (defmacro with-suppressed-message (&rest body)
-    "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
+    "BODY の評価中はエコー領域とメッセージバッファへの出力を抑制する。"
     (declare (indent 0))
     `(let ((message-log-max nil))
        (with-temp-message (or (current-message) "") ,@body)))

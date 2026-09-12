@@ -4,6 +4,11 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function mu-magit-kill-buffers "33-vcs")
+(declare-function magit-restore-window-configuration "magit-mode")
+(declare-function magit-mode-get-buffers "magit-mode")
+
 ;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
 ;;; Magit
 (use-package magit
@@ -24,8 +29,7 @@
 (use-package diff-hl
   :straight t
   :defer 1
-  :hook ((magit-pre-refresh . diff-hl-magit-pre-refresh)
-         (magit-post-refresh . diff-hl-magit-post-refresh)
+  :hook ((magit-post-refresh . diff-hl-magit-post-refresh)
          (dired-mode . diff-hl-dired-mode))
   :config
   (global-diff-hl-mode +1)

@@ -69,12 +69,26 @@ jobs:
             loads/straight/repos
             loads/straight/build
             loads/straight/build-cache.el
-          key: straight-v3-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
+          key: straight-v4-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
           restore-keys: |
-            straight-v3-${{ matrix.emacs-version }}-
+            straight-v4-${{ matrix.emacs-version }}-
+
+      - name: 条件付きパッケージの CI 前提を確認
+        run: |
+          test "$(uname)" = Linux
+          command -v node
+          test -z "${DISPLAY+x}"
 
       - name: lockfile のリビジョンを適用
-        run: make straight-thaw
+        run: make straight-thaw LOCK_ALLOW_MISSING="w32-ime.el tr-emacs-ime-module xclip"
 
       - name: 回帰テストを実行
-        run: make test
+        run: make test TEST_TREESIT_EXPECT=without
+
+      - name: 固定タグの C/C++ 文法を導入
+        run: |
+          mkdir -p "$RUNNER_TEMP/emacs-test-grammars"
+          make install-test-grammars TEST_TREESIT_DIR="$RUNNER_TEMP/emacs-test-grammars"
+
+      - name: 文法ありの C/C++ 実編集を検証
+        run: make test-cpp-config TEST_TREESIT_EXPECT=with TEST_TREESIT_DIR="$RUNNER_TEMP/emacs-test-grammars"

@@ -4,22 +4,22 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function package-built-in-p "package")
+
 ;;;;;; [Group] Package Management - `straight.el` 判定 ;;;;;;
 ;;; 指定した PACKAGE が `straight.el` で管理すべきかを判定する関数
 (defun my/should-use-straight (package)
   "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
 `t` なら `straight t`、`nil` なら `straight nil` を追加すべき。"
   (interactive
-   (list (intern (completing-read "Package name: "
-                                  (mapcar #'symbol-name
-                                          (seq-filter #'symbolp (all-completions "" obarray 'boundp)))))))
-  (let* ((lib (locate-library (symbol-name package)))
-         (is-built-in
-          (or (and (fboundp 'package-built-in-p) (package-built-in-p package)) ;; Emacs 28+ の組み込み判定
-              (and lib
-                   (string-match-p
-                    (regexp-quote (file-truename (concat data-directory "lisp/"))) ;; 環境非依存の built-in パス
-                    (file-truename lib))))))
+   (list (intern (completing-read "Package name: " obarray))))
+  (require 'package)
+  (let* ((library (locate-library (symbol-name package)))
+         ;; data-directory は etc/ を指す。隣接する lisp/ がコアライブラリの配置先。
+         (core-directory (expand-file-name "../lisp/" data-directory))
+         (is-built-in (or (package-built-in-p package)
+                          (and library (file-in-directory-p library core-directory)))))
     (if is-built-in
         (progn
           (message "Package '%s' is built-in. `straight nil` is recommended." package)
@@ -33,7 +33,7 @@
 (defun my/copy-to-clipboard-and-message (text message)
   "Copy TEXT to the kill ring and display MESSAGE in the minibuffer."
   (kill-new text)
-  (message message))
+  (message "%s" message))
 
 (defun my/copy-file-path ()
   "Show the full path file name in the minibuffer and copy to kill ring."
@@ -55,7 +55,10 @@
 ;; 垂直分割
 (defun my/split-window-vertically-n (num_wins)
   "ウィンドウを垂直方向に NUM_WINS 分割。"
-  (interactive "p")
+  (interactive (list (if current-prefix-arg
+                         (prefix-numeric-value current-prefix-arg) 2)))
+  (unless (and (integerp num_wins) (>= num_wins 2))
+    (user-error "分割数は 2 以上の整数を指定してください"))
   (if (= num_wins 2)
       (split-window-vertically)
     (progn
@@ -66,7 +69,10 @@
 ;; 水平分割
 (defun my/split-window-horizontally-n (num_wins)
   "ウィンドウを水平方向に NUM_WINS 分割。"
-  (interactive "p")
+  (interactive (list (if current-prefix-arg
+                         (prefix-numeric-value current-prefix-arg) 2)))
+  (unless (and (integerp num_wins) (>= num_wins 2))
+    (user-error "分割数は 2 以上の整数を指定してください"))
   (if (= num_wins 2)
       (split-window-horizontally)
     (progn
@@ -101,11 +107,11 @@
           (message "Cannot resize: only one window exists.")
           (throw 'end-flag t))
          ;; 横幅変更
-         ((= c ?f) (ignore-errors (enlarge-window-horizontally dx)))
-         ((= c ?b) (ignore-errors (shrink-window-horizontally dx)))
+         ((eq c ?f) (ignore-errors (enlarge-window-horizontally dx)))
+         ((eq c ?b) (ignore-errors (shrink-window-horizontally dx)))
          ;; 高さ変更
-         ((= c ?n) (ignore-errors (shrink-window dy)))
-         ((= c ?p) (ignore-errors (enlarge-window dy)))
+         ((eq c ?n) (ignore-errors (shrink-window dy)))
+         ((eq c ?p) (ignore-errors (enlarge-window dy)))
          ;; それ以外のキーなら終了
          (t
           (message "Quit")

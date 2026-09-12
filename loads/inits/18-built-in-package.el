@@ -4,6 +4,10 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function eglot-managed-p "eglot")
+(declare-function my/eglot-cc-suppress-irony "18-built-in-package")
+
 ;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
 (use-package ediff
   :straight nil

@@ -5,6 +5,12 @@
 
 ;;; Code:
 
+;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
+(declare-function python-nav-end-of-defun "python")
+(declare-function python-nav-beginning-of-defun "python")
+(declare-function symbol-overlay-get-symbol "symbol-overlay")
+(declare-function my/safe-irony-completion-at-point "31-editing")
+
 ;;;;; [Group] Code-editing - コード編集関連 ;;;;;
 ;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style
@@ -315,7 +321,21 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
          ("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
          ("C-x a"   . my-symbol-overlay-rename-in-function) ; 関数・メソッド内の置換
          ("C-x C-g" . symbol-overlay-rename))               ; バッファ全体のシンボルを置換
-  :config
+  :preface
+  (defun my/symbol-overlay-replace-region (symbol new-name start end)
+    "START から END の完全一致 SYMBOL を NEW-NAME へ一括置換する。"
+    (unless (and (stringp symbol) (not (string-empty-p symbol)))
+      (user-error "カーソル位置にシンボルがありません"))
+    (save-excursion
+      (save-restriction
+        (narrow-to-region start end)
+        (goto-char (point-min))
+        (let ((case-fold-search nil)
+              (regexp (concat "\\_<" (regexp-quote symbol) "\\_>")))
+          (atomic-change-group
+            (while (re-search-forward regexp nil t)
+              (replace-match new-name t t)))))))
+
   ;; 現在のウィンドウ内のシンボルをリネーム
   (defun my-symbol-overlay-rename-visible ()
     "現在のウィンドウ内に表示されているシンボルのみをリネームする."
@@ -324,10 +344,7 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
            (new-name (read-string (format "Rename '%s' to: " symbol)))
            (start (window-start))
            (end (window-end)))
-      (save-excursion
-        (goto-char start)
-        (while (re-search-forward (regexp-quote symbol) end t)
-          (replace-match new-name)))))
+      (my/symbol-overlay-replace-region symbol new-name start end)))
 
   ;; 現在の関数・メソッド内のシンボルをリネーム
   (defun my-symbol-overlay-rename-in-function ()
@@ -354,10 +371,7 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
                  ((derived-mode-p 'python-mode)
                   (save-excursion (python-nav-end-of-defun) (point)))
                  (t (point-max))))) ;; その他のモードではファイル全体
-      (save-excursion
-        (goto-char start)
-        (while (re-search-forward (regexp-quote symbol) end t)
-          (replace-match new-name)))))
+      (my/symbol-overlay-replace-region symbol new-name start end)))
   )
 
 (provide '31-editing)
