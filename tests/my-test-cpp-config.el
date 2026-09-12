@@ -286,7 +286,18 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
       ;; (case-label . +): switch から 1 段下げる
       (should (= (funcall column-of "switch (x) {") 8))
       (should (= (funcall column-of "case 1:") 12))
-      (should (= (funcall column-of "break;") 16)))))
+      (should (= (funcall column-of "break;") 16))))
+  ;; C/C++ 共通の構造体でも、標準規則と差分規則が両方効くこと。
+  (dolist (mode (if (my/treesit-cc-grammar-ready-p 'c)
+                   '(c-ts-mode c++-ts-mode)
+                 '(c++-ts-mode)))
+    (with-temp-buffer
+      (funcall mode)
+      (insert "struct A {\nint value;\n};\nint f(int x) {\nswitch (x) {\n"
+              "case 1:\nreturn x;\n}\nreturn 0;\n}\n")
+      (indent-region (point-min) (point-max))
+      (should (equal (buffer-string)
+                     "struct A {\n    int value;\n};\nint f(int x) {\n    switch (x) {\n        case 1:\n            return x;\n    }\n    return 0;\n}\n")))))
 
 ;;;;; [Group] C++ Config - ts モードの入力途中（ERROR 状態）のインデント ;;;;;
 ;; 波括弧が 2 段以上開いていると tree-sitter は木全体を ERROR へ落とし、既定の
@@ -589,6 +600,8 @@ helper の直接呼び出しでは electric-layout / electric-indent との連�
                     . "int a[][2] = {\n    {\n        1,2\n    },{\n        3,4\n    }\n};\n")
                    ;; scope-operator 相当: public がマクロ・名前空間名のとき
                    ;; `public::X' が書ける。アクセス指定子の改行で割らない
+                   ("class A {public:};"
+                    . "class A {\n  public:\n};\n")
                    ("class A {public::X;};"
                     . "class A {\n  public::X;\n};\n")
                    ;; 入力途中で木が ERROR へ落ちる 2 段以上のネスト。

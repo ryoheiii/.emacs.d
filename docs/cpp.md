@@ -21,6 +21,8 @@
   フォントロックを失うためである。
 - ts モードのインデントは google-c-style 相当（offset 4、namespace 非インデント、
   アクセス指定子は半段、case は 1 段）へ揃えてある。
+  標準の K&R を選び、モードフックから `treesit-simple-indent-rules` へ差分を前置する。
+  ベース規則の取得に Emacs 内部関数は使わない。
 - `c-toggle-auto-hungry-state` は ts モードに存在しないため、組み込み機能で再現している。
   - 自動改行: `electric-layout-mode` で
     `{` の後 / `}` の前後 / 文末の `;` の後 / アクセス指定子の `:` の後 に改行する。

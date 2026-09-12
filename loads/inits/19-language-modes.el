@@ -6,6 +6,7 @@
 
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function c-toggle-auto-hungry-state "cc-cmds")
+(defvar c-ts-mode-indent-offset)
 
 ;;;;;; [Group] Code Folding - コード折りたたみ ;;;;;;
 (use-package hideshow
@@ -140,7 +141,7 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
          (c++-ts-mode . my/c-ts-mode-setup))
   :custom
   (c-ts-mode-indent-offset 4)
-  (c-ts-mode-indent-style #'my/c-ts-mode-indent-style)
+  (c-ts-mode-indent-style 'k&r)
   ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
   :preface
   ;; --- c-toggle-auto-hungry-state 相当 ---------------------------------
@@ -272,6 +273,15 @@ point の後ろに空白以外が残る行では何もしない。cc-mode の cl
 
   (defun my/c-ts-mode-setup ()
     "C/C++ ts モード共通の設定（cc-mode 側の `my/cc-mode-setup' と対応）."
+    ;; 標準スタイルの初期化後、公開された規則へ差分だけを前置する。
+    ;; 他バッファの規則を変更しないよう言語ごとのリストを新しく作る。
+    (setq-local treesit-simple-indent-rules
+                (mapcar (lambda (entry)
+                          (if (memq (car entry) '(c cpp))
+                              (cons (car entry)
+                                    (append (my/c-ts-indent-rules) (cdr entry)))
+                            entry))
+                        treesit-simple-indent-rules))
     (local-set-key (kbd "C-c c") 'compile)          ; コンパイル
     (local-set-key (kbd "DEL") 'my/c-ts-hungry-delete-backward) ; hungry delete 相当
     (setq-local electric-layout-rules my/c-ts-electric-layout-rules)
@@ -361,28 +371,22 @@ ERROR へ落とすため、既定の規則が桁 0 しか返せなくなる。�
            (closing (save-excursion (goto-char bol) (looking-at-p "[ \t]*[)}]"))))
       (* offset (max 0 (if closing (1- depth) depth)))))
 
-  (defun my/c-ts-mode-indent-style ()
-    "k&r をベースに google-c-style 相当の差分を前置した indent 規則を返す.
-前置した規則が先に照合されるためベース側の同種規則を上書きできる。
-ベース取得に使う `c-ts-mode--indent-styles' は内部関数のため、
-失われた場合でも差分規則だけで動作を継続する（エラーにしない）。"
-    (let* ((offset (if (boundp 'c-ts-mode-indent-offset) c-ts-mode-indent-offset 4))
-           (half (/ offset 2))
-           (base (when (fboundp 'c-ts-mode--indent-styles)
-                   (alist-get 'k&r (c-ts-mode--indent-styles
-                                    (if (derived-mode-p 'c++-ts-mode) 'cpp 'c))))))
-      (append
-       `(;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く。
-         ;; ERROR 状態でも access_specifier は照合できるため ERROR 規則より前へ置く
-         ;; （順序を逆にすると入力途中だけ 1 段深くなる）。
-         ((node-is "access_specifier") parent-bol ,half)
-         ;; 入力途中で構文木が壊れている間の桁（`my/c-ts-error-context-p' を参照）
-         (my/c-ts-error-context-p column-0 my/c-ts-error-offset)
-         ;; google-c-style の (innamespace . 0): namespace 本体をインデントしない
-         ((n-p-gp nil "declaration_list" "namespace_definition") parent-bol 0)
-         ;; google-c-style の (case-label . +): case を switch から 1 段下げる
-         ((node-is "case_statement") standalone-parent ,offset))
-       base)))
+  (defun my/c-ts-indent-rules ()
+    "標準の k&r へ前置する google-c-style 相当の差分規則を返す."
+    (let* ((offset c-ts-mode-indent-offset)
+           (half (/ offset 2)))
+      `(;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く。
+        ;; ERROR 状態でも access_specifier は照合できるため ERROR 規則より前へ置く
+        ;; （順序を逆にすると入力途中だけ 1 段深くなる）。
+        ((node-is "access_specifier") parent-bol ,half)
+        ;; 入力途中で構文木が壊れている間の桁（`my/c-ts-error-context-p' を参照）
+        (my/c-ts-error-context-p column-0 my/c-ts-error-offset)
+        ;; snapshot の直前アクセス指定子規則より、クラス・構造体の閉じ括弧を優先する。
+        ((match "}" "field_declaration_list") parent-bol 0)
+        ;; google-c-style の (innamespace . 0): namespace 本体をインデントしない
+        ((n-p-gp nil "declaration_list" "namespace_definition") parent-bol 0)
+        ;; google-c-style の (case-label . +): case を switch から 1 段下げる
+        ((node-is "case_statement") standalone-parent ,offset))))
   )
 
 ;;;;;; [Group] Text Editing - テキスト編集 ;;;;;;
