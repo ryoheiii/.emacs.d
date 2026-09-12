@@ -194,8 +194,6 @@ make test-cpp-config TEST_TREESIT_EXPECT=with TEST_TREESIT_DIR=/tmp/emacs-test-g
 固定 CAPF 候補の表示・確定、保存後の undo 再読込、固定入力メソッドの状態遷移を確認する。
 undo 検証だけは fixture 自体が `/tmp` 内にあるため、一時ファイルの除外を局所的に無効化する。
 
-実機での日本語入力は `M-x toggle-input-method`（再実行で解除）から文章を入力し、
-確定・削除を確認する。`C-\` は本設定の別コマンドに割り当て済みなので IME 切り替えには使わない。
 clipboard の ERT は転送コールバックに渡る文字列を固定fixtureで確認する。
-実 X11 では `DISPLAY` と xclip を用意し、Emacs でコピーした日本語・改行を別アプリへ貼り付け、
-逆方向の貼り付けも確認する。これらの実サービス検証と GUI・macOS・Windows は通常 CI の保証範囲外である。
+実 Mozc・clipboard・clangd・irony・Copilot の再現手順と実測結果は
+[tty の実サービス検証](integration.md) を参照する。これらは通常 CI の保証範囲外である。
