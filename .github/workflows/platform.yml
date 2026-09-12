@@ -44,7 +44,11 @@ jobs:
             --eval '(defun my-test--record-warning (type message &optional level &rest _) (push (list type message level) my-test--recorded-warnings))'
             --eval '(advice-add (quote display-warning) :before (quote my-test--record-warning))'
             -l early-init.el -l init.el)
-          emacs "${args[@]}" -f straight-thaw-versions -f straight-check-all
+          # Linux の straight-thaw と同じく、対話的なブランチ調整はキャンセルする。
+          # 最後の lockfile 照合が、必要なリビジョンの未適用を失敗にする。
+          emacs "${args[@]}" \
+            --eval '(advice-add (quote straight--popup-raw) :override (lambda (_prompt actions) (funcall (nth 2 (assoc "c" actions)))))' \
+            -f straight-thaw-versions -f straight-check-all
           emacs "${args[@]}" -l tests/my-test-startup.el -l tests/my-test-platform.el \
             --eval '(ert-run-tests-batch-and-exit (quote (tag :platform)))'
           if [ "$RUNNER_OS" = Windows ]; then
