@@ -15,14 +15,14 @@ STRAIGHT_BUILD_NAME ?= build
 STRAIGHT_BUILD ?= $(STRAIGHT_DIR)/$(STRAIGHT_BUILD_NAME)
 STRAIGHT_VERSIONS ?= $(STRAIGHT_DIR)/versions
 TEST_STRAIGHT_DIR ?= $(STRAIGHT_DIR)
+TEST_TREESIT_EXPECT ?= auto
+TEST_TREESIT_DIR ?=
+# 条件付き宣言に対応する未導入例外だけを呼び出し側で明示する。
+LOCK_ALLOW_MISSING ?=
 
-# native-comp 無効ビルド（CI の Nix Emacs 等）では native-comp-eln-load-path が
-# 未定義のまま early-init.el の startup-redirect-eln-cache が呼ばれて落ちるため、
-# ロード前に defvar で定義する（native ビルドでは既存値を上書きしない）。
 EMACS_TEST_OPTIONS = \
 	--batch \
 	--eval "(setq user-emacs-directory \"$$test_root/\")" \
-	--eval "(defvar native-comp-eln-load-path nil)" \
 	--eval "(setq native-comp-jit-compilation nil)" \
 	--eval "(setq use-package-expand-minimally t)" \
 	--eval "(setq use-package-verbose 'errors)" \
@@ -49,7 +49,11 @@ if [[ -e "$$test_root/loads/straight" || -L "$$test_root/loads/straight" ]]; the
 	find "$$test_root/loads/straight" -depth -delete; \
 fi; \
 mkdir -p "$$test_root/loads"; \
-ln -s "$(TEST_STRAIGHT_DIR)" "$$test_root/loads/straight";
+ln -s "$(TEST_STRAIGHT_DIR)" "$$test_root/loads/straight"; \
+if [ -n "$(TEST_TREESIT_DIR)" ]; then \
+	mkdir -p "$$test_root/var/package/tree-sitter"; \
+	cp -a "$(TEST_TREESIT_DIR)/." "$$test_root/var/package/tree-sitter/"; \
+fi;
 endef
 
 define MY_TTY_LIVE_SETUP_BODY
@@ -61,8 +65,7 @@ cat > "$$test_root/early-init.el" <<'MY_TTY_EARLY_INIT'
 ;; = 既存ハーネス(EMACS_TEST_OPTIONS)と同じ loads/ ディレクトリ。
 ;; straight は内部で straight/ を付加するため loads/straight を渡してはならない。
 (setq my-straight-base-dir-override (getenv "MY_TTY_TEST_STRAIGHT_BASE_DIR"))
-;; native-comp 設定は EMACS_TEST_OPTIONS とのパリティ(CI の Nix Emacs 対応)
-(defvar native-comp-eln-load-path nil)
+;; 生成物の隔離は実 early-init が担当する。
 (setq native-comp-jit-compilation nil)
 ;; 起動時警告の構造化レコーダー(my-test-startup-check-warnings が照合する)
 (defvar my-test--recorded-warnings nil)
@@ -70,8 +73,15 @@ cat > "$$test_root/early-init.el" <<'MY_TTY_EARLY_INIT'
   (push (list type message level) my-test--recorded-warnings))
 (advice-add 'display-warning :before #'my-test--record-warning)
 (load (expand-file-name "my-tty-early-init-real.el" user-emacs-directory) nil t)
+(defvar my-test-tty-after-init-handlers nil)
+(add-hook 'after-init-hook
+          (lambda ()
+            (setq my-test-tty-after-init-handlers
+                  (find-file-name-handler "fixture.txt.gz" 'insert-file-contents))))
 MY_TTY_EARLY_INIT
 mkdir -p "$$test_root/xdg-cache"
+printf '%s\n' 'tty gzip fixture' | gzip > "$$test_root/tty-fixture.txt.gz"
+printf '%s\n' 'before' > "$$test_root/tty-persistent.txt"
 cat > "$$test_root/run-tty-test.sh" <<MY_TTY_TEST_RUNNER
 #!/bin/sh
 set -eu
@@ -82,6 +92,7 @@ export XDG_CACHE_HOME="$$test_root/xdg-cache"
 export MY_TTY_TEST_STRAIGHT_BASE_DIR="$(STRAIGHT_DIR)/../"
 exec $(EMACS) -nw --no-site-file --no-site-lisp \
   --init-directory="$$test_root" \
+  "$$test_root/tty-fixture.txt.gz" \
   -L "$(TESTS_DIR)" \
   -l "$(TESTS_DIR)/my-test-startup.el" \
   -l "$(TESTS_DIR)/my-test-tty-live.el"
@@ -126,7 +137,7 @@ lint-el: | prepare-straight
 	lint_dir="$$(mktemp -d)"; \
 	trap 'find "$$lint_dir" -depth -delete; find "$$test_root" -depth -delete' EXIT; \
 	mapfile -t sources < <($(GIT) ls-files -- \
-		'loads/inits/*.el' 'loads/site-elisp/my-*.el'); \
+		'*.el'); \
 	test "$${#sources[@]}" -gt 0; \
 	$(EMACS) $(EMACS_TEST_OPTIONS) \
 		-l "$$test_root/early-init.el" \
@@ -136,7 +147,8 @@ lint-el: | prepare-straight
 			  (expand-file-name \
 			   (concat (file-name-nondirectory source) \"c\") \
 			   \"$$lint_dir/\")))" \
-		-f batch-byte-compile "$${sources[@]}"
+		-l "$(TESTS_DIR)/my-lint-el.el" \
+		-f my-lint-el-run "$${sources[@]}"
 
 test-unit: | prepare-straight
 	@set -eu; \
@@ -145,6 +157,20 @@ test-unit: | prepare-straight
 		-l "$$test_root/early-init.el" \
 		-l "$(TESTS_DIR)/my-test-unit.el" \
 		--eval "(ert-run-tests-batch-and-exit '(tag :unit))"
+
+# 監査で見つかったデータ保全・入力境界の回帰検査。
+.PHONY: test-audit test-audit-shell
+test-audit: | prepare-straight
+	@set -eu; \
+	$(prepare_test_root) \
+	$(EMACS) $(EMACS_TEST_OPTIONS) \
+		-l "$$test_root/early-init.el" \
+		-l "$$test_root/init.el" \
+		-l "$(TESTS_DIR)/my-test-audit.el" \
+		--eval "(ert-run-tests-batch-and-exit '(tag :audit))"
+
+test-audit-shell:
+	@python3 tests/my-test-audit-shell.py
 
 test-startup: | prepare-straight
 	@set -eu; \
@@ -214,8 +240,10 @@ test-tty-live: | prepare-straight
 	export test_root; \
 	$(SHELL) -eu -c "$$MY_TTY_LIVE_SETUP"; \
 	sh -n "$$test_root/run-tty-test.sh"; \
-	timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null
+	MY_TTY_TEST_PHASE=write timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null; \
+	MY_TTY_TEST_PHASE=read timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null
 
+test-cpp-config: export TEST_TREESIT_EXPECT := $(TEST_TREESIT_EXPECT)
 test-cpp-config: | prepare-straight
 	@set -eu; \
 	$(prepare_test_root) \
@@ -224,7 +252,8 @@ test-cpp-config: | prepare-straight
 		-l "$$test_root/init.el" \
 		-l "$(TESTS_DIR)/my-test-startup.el" \
 		-l "$(TESTS_DIR)/my-test-cpp-config.el" \
-		--eval "(ert-run-tests-batch-and-exit '(tag :cpp-config))"
+		-l "$(TESTS_DIR)/my-test-cpp-lane.el" \
+		-f my-test-cpp-lane-run
 
 test-setup:
 	@set -eu; \
@@ -254,6 +283,8 @@ test:
 	+@$(MAKE) test-tty-live
 	+@$(MAKE) test-setup
 	+@$(MAKE) test-guards
+	+@$(MAKE) test-audit
+	+@$(MAKE) test-audit-shell
 
 # CI の部分一致キャッシュを lockfile のリビジョンへ揃える。
 # thaw 中の対話プロンプト（例: straight.el 自身のブランチ正規化確認）は
@@ -280,6 +311,23 @@ straight-thaw: | prepare-straight
 			  (funcall (nth 2 (assoc \"c\" actions)))))" \
 		-f straight-thaw-versions \
 		-f straight-check-all
+	+@$(MAKE) check-lockfile
+
+.PHONY: check-lockfile install-test-grammars
+check-lockfile:
+	@python3 tests/my-check-lockfile.py loads/straight/versions/default.el "$(STRAIGHT_REPOS)" $(foreach repo,$(LOCK_ALLOW_MISSING),--allow-missing $(repo))
+
+# 導入先は必須。固定タグの取得元は my-treesit.el のみで管理する。
+install-test-grammars: | prepare-straight
+	@set -eu; \
+	test -n "$(TEST_TREESIT_DIR)"; \
+	mkdir -p "$(TEST_TREESIT_DIR)"; \
+	$(prepare_test_root) \
+	$(EMACS) $(EMACS_TEST_OPTIONS) \
+		-l "$$test_root/early-init.el" \
+		--eval "(setq my/treesit-grammar-dir (expand-file-name \"$(TEST_TREESIT_DIR)/\"))" \
+		-l "$$test_root/loads/site-elisp/my-treesit.el" \
+		-f my/treesit-install-c-grammars
 
 clean-test:
 	@find "$(TESTS_DIR)" -type f -name '*.elc' -delete

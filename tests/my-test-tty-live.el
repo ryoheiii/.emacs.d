@@ -1,11 +1,11 @@
 ;;; my-test-tty-live.el --- 実 pty での tty 起動回帰テスト  -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; shim と `--init-directory` により、実起動と同一のライフサイクルで検証する。
-;; shim は straight override、native-comp パリティ、警告レコーダー、load のみに
-;; 限定し、実 early-init 本体は無改変のまま load する。
+;; shim はパッケージ配置先、生成物の隔離、警告と after-init の観測を設定する。
+;; 実 early-init 本体は無改変のまま load する。
 ;; 検査対象のフック面と宣言は依存パッケージ更新で変わり得る可変集合である。
 ;; 失敗時は設定の不具合と断定する前に、まず依存側の変化を確認して切り分ける。
-;; 回帰点を絞るため、アサーションをこの最小集合より増やさない方針とする。
+;; 起動宣言に加え、データを読み書きする主要操作を固定fixtureで検査する。
 
 ;;; Code:
 
@@ -143,6 +143,74 @@
                    (getenv "DISPLAY")
                    (executable-find "xclip")
                    t))))
+
+(ert-deftest my-test-tty-live-gzip-command-line ()
+  :tags '(:tty-live)
+  (should (bound-and-true-p my-test-tty-after-init-handlers))
+  (let ((buffer (get-file-buffer (my-set-emacs "tty-fixture.txt.gz"))))
+    (should (buffer-live-p buffer))
+    (with-current-buffer buffer
+      (should (equal (buffer-string) "tty gzip fixture\n")))))
+
+(ert-deftest my-test-tty-live-capf-commit ()
+  :tags '(:tty-live)
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (corfu-mode 1)
+      (setq-local completion-at-point-functions
+                  (list (lambda () (list (point-min) (point-max) '("alpha" "alpine")))))
+      (insert "al")
+      (unwind-protect
+          (progn
+            (completion-at-point)
+            (corfu--exhibit)
+            (should (member "alpha" corfu--candidates))
+            (should (bound-and-true-p corfu-terminal-mode))
+            (corfu-next (- (cl-position "alpha" corfu--candidates :test #'equal) corfu--index))
+            (corfu-insert)
+            (should (equal (buffer-string) "alpha")))
+        (corfu-quit)))))
+
+(ert-deftest my-test-tty-live-persistent-undo ()
+  :tags '(:tty-live)
+  ;; fixture の HOME 自体が /tmp にあるため、この検査中だけ一時パス除外を外す。
+  (let* ((undo-fu-session-ignore-temp-files nil)
+         (buffer (find-file-noselect (my-set-emacs "tty-persistent.txt"))))
+    (unwind-protect
+        (with-current-buffer buffer
+          (should (bound-and-true-p undo-fu-session-mode))
+          (if (equal (getenv "MY_TTY_TEST_PHASE") "write")
+              (progn
+                (should (equal (buffer-string) "before\n"))
+                (setq buffer-undo-list nil)
+                (goto-char (point-max))
+                (insert "after\n")
+                (undo-boundary)
+                (save-buffer))
+            (should (equal (buffer-string) "before\nafter\n"))
+            (should (consp buffer-undo-list))
+            (undo-only 1)
+            (should (equal (buffer-string) "before\n"))))
+      (with-current-buffer buffer (set-buffer-modified-p nil))
+      (kill-buffer buffer))))
+
+(ert-deftest my-test-tty-live-input-method-transition ()
+  :tags '(:tty-live)
+  ;; 実 Mozc との通信は手動統合検証。ここでは標準コマンドからの状態遷移を守る。
+  (let ((input-method-alist (copy-tree input-method-alist)))
+    (register-input-method "my-test-japanese" "Japanese"
+                           (lambda (&rest _)
+                             (setq input-method-function #'list
+                                   deactivate-current-input-method-function
+                                   (lambda () (setq input-method-function nil)))) "試" "固定fixture")
+    (with-temp-buffer
+      (let ((default-input-method "my-test-japanese"))
+        (call-interactively #'toggle-input-method)
+        (should (equal current-input-method "my-test-japanese"))
+        (should (equal (funcall input-method-function ?あ) '(?あ)))
+        (call-interactively #'toggle-input-method)
+        (should-not current-input-method)))))
 
 ;;;;; [Group] TTY Live - window-setup ランナー ;;;;;
 (defun my-test-tty-live--deferred-ready-p ()
