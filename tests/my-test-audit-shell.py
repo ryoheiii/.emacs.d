@@ -233,7 +233,7 @@ class AuditShellTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'mozc: repo がありません'):
                 check(lock, repos, allowed)
 
-    def ship_fixture(self):
+    def ship_fixture(self, push_task=True):
         main, bare, worktree = (self.root / name for name in ('main', 'remote.git', 'task'))
         for args in [('git', 'init', '--bare', '--initial-branch=main', str(bare)),
                      ('git', 'init', '--initial-branch=main', str(main)),
@@ -242,11 +242,12 @@ class AuditShellTests(unittest.TestCase):
                      ('git', '-C', str(main), 'commit', '--allow-empty', '-qm', 'base'),
                      ('git', '-C', str(main), 'remote', 'add', 'origin', str(bare)),
                      ('git', '-C', str(main), 'push', '-u', 'origin', 'main'),
-                     ('git', '-C', str(main), 'worktree', 'add', '-b', 'fix/fixture', str(worktree)),
-                     ('git', '-C', str(worktree), 'commit', '--allow-empty', '-qm', 'task'),
-                     ('git', '-C', str(worktree), 'push', '-u', 'origin', 'fix/fixture')]:
+                     ('git', '-C', str(main), 'worktree', 'add', '-b', 'fix/fixture', str(worktree), 'origin/main'),
+                     ('git', '-C', str(worktree), 'commit', '--allow-empty', '-qm', 'task')]:
             result = self.run_cmd(*args)
             self.assertEqual(result.returncode, 0, result.stderr)
+        if push_task:
+            self.assertEqual(self.run_cmd('git', '-C', str(worktree), 'push', '-u', 'origin', 'fix/fixture').returncode, 0)
         self.env['GIT_MERGE_AUTOEDIT'] = 'no'
         self.env['GH_ARGS_LOG'] = str(self.root / 'gh-args')
         self.stub('gh', 'printf "%s\n" "$*" >> "$GH_ARGS_LOG"\nif [ "$2" = list ]; then echo 42; fi\n')
@@ -297,6 +298,35 @@ class AuditShellTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.run_cmd('git', '-C', str(main), 'rev-parse', 'HEAD').stdout, head)
         self.assertTrue(worktree.exists())
+
+    def test_ship_no_push_cleans_task_tracking_origin_main(self):
+        main, bare, worktree = self.ship_fixture(push_task=False)
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'branch', '--track', 'fix/other', 'origin/main').returncode, 0)
+        remote_head = self.run_cmd('git', '-C', str(bare), 'rev-parse', 'main').stdout
+        self.env['SHIP_PUSH'] = 'no'
+        self.assertEqual(self.ship_step(6, worktree).returncode, 0)
+        self.assertEqual(self.ship_step(7, worktree).returncode, 0)
+        result = self.ship_step(8, worktree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(worktree.exists())
+        self.assertNotEqual(self.run_cmd('git', '-C', str(main), 'show-ref', '--verify', 'refs/heads/fix/fixture').returncode, 0)
+        self.assertNotEqual(self.run_cmd('git', '-C', str(bare), 'show-ref', '--verify', 'refs/heads/fix/fixture').returncode, 0)
+        self.assertEqual(self.run_cmd('git', '-C', str(bare), 'rev-parse', 'main').stdout, remote_head)
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'rev-parse', 'fix/other').stdout, remote_head)
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'rev-parse', '--abbrev-ref', 'fix/other@{upstream}').stdout.strip(), 'origin/main')
+
+    def test_ship_cleanup_rejects_unmerged_task_without_changing_upstream(self):
+        main, _bare, worktree = self.ship_fixture(push_task=False)
+        # マージしていない状態で、後片付けに必要なタスク情報だけを保存する。
+        result = self.run_cmd('bash', '-c',
+                              'printf "MAIN_ROOT=%q\\nTASK_BRANCH=%q\\nTASK_WORKTREE=%q\\nSHIP_PUSH=no\\n" '
+                              '"$1" fix/fixture "$2" > "$(git rev-parse --absolute-git-dir)/ship-state"',
+                              'fixture', str(main), str(worktree), cwd=worktree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.ship_step(8, worktree)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(worktree.exists())
+        self.assertEqual(self.run_cmd('git', '-C', str(worktree), 'rev-parse', '--abbrev-ref', '@{upstream}').stdout.strip(), 'origin/main')
 
     def test_node_active_path_states(self):
         live = self.node_archive()
