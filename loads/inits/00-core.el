@@ -15,8 +15,9 @@
 (prefer-coding-system 'utf-8)
 (cond
  (IS-MAC
-  (set-file-name-coding-system 'utf-8-hfs)
-  (setq locale-coding-system 'utf-8-hfs))
+  (when (coding-system-p 'utf-8-hfs)
+    (set-file-name-coding-system 'utf-8-hfs)
+    (setq locale-coding-system 'utf-8-hfs)))
  (IS-WINDOWS
   (setq-default default-process-coding-system '(utf-8-unix . japanese-cp932-dos))))
 
