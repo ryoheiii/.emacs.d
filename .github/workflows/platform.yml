@@ -24,6 +24,7 @@ jobs:
     env:
       # ホストごとのネイティブなパスを Elisp に渡す。runner は使い捨て。
       MY_TEST_ROOT: ${{ github.workspace }}
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v6.0.2
       - uses: purcell/setup-emacs@v8.0
