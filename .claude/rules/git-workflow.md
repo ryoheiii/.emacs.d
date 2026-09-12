@@ -88,8 +88,10 @@ globs: ["**/*"]
    git worktree list
    ```
 
-- `git branch -D` による強制削除を行わない。`-d` が拒否する場合は未マージであり、
-  原因を調べてユーザーへ報告する。
+- `git branch -D` による強制削除を行わない。`-d` は upstream を優先して判定するため、
+  main にマージ済みでも拒否する場合がある。`git merge-base --is-ancestor <ブランチ名> main`
+  の成功を確認した場合に限り、削除対象の upstream を `git branch --unset-upstream <ブランチ名>`
+  で解除して `-d` を再実行する。それ以外の拒否は原因を調べて報告する。
 - 未マージのブランチ、および今回のタスク以外のブランチは削除しない。
 - 削除したブランチと worktree を完了報告へ記載する。
 

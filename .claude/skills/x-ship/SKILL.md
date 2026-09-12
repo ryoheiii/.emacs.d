@@ -161,6 +161,10 @@ git merge-base --is-ancestor "$TASK_BRANCH" main
 cd "$MAIN_ROOT"
 git worktree remove "$TASK_WORKTREE"
 git worktree prune
+# -d は upstream を優先する。main への取り込み確認済みの対象だけ解除する。
+if [ -n "$(git for-each-ref --format='%(upstream)' "refs/heads/$TASK_BRANCH")" ]; then
+  git branch --unset-upstream "$TASK_BRANCH"
+fi
 git branch -d "$TASK_BRANCH"
 if [ "$SHIP_PUSH" = yes ] && git show-ref --verify --quiet "refs/remotes/origin/$TASK_BRANCH"; then
   git push origin --delete "$TASK_BRANCH"
