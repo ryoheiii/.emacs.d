@@ -20,6 +20,10 @@
   ;;; ロードテーマ
   ;; (load-theme 'doom-one t)
   (load-theme 'doom-dracula t)
+  ;; Gnus の標準 face と doom の逆向き継承が、遅延ロード中に循環するのを防ぐ。
+  ;; user テーマで設定し、F6 によるテーマ切替後も同じ空グループの色を継承する。
+  (custom-theme-set-faces 'user
+                         '(gnus-group-news-low-empty ((t (:inherit gnus-group-mail-1-empty)))))
   ;; (load-theme 'doom-gruvbox t)
 
   ;; 各種設定

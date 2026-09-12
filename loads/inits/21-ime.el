@@ -8,7 +8,7 @@
 ;;; Tr-ime - windows 用設定
 (use-package tr-ime
   :straight t
-  :if IS-WINDOWS
+  :if (and IS-WINDOWS (eq window-system 'w32))
   :config
   (setq default-input-method "W32-IME")
   (tr-ime-standard-install)

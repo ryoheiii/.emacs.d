@@ -19,8 +19,10 @@
 ;;;;; [Group] TTY - 端末向け Corfu ;;;;;
 (ert-deftest my-test-tty-corfu-terminal-enabled ()
   :tags '(:tty)
-  (should (featurep 'corfu-terminal))
-  (should (default-value 'corfu-terminal-mode)))
+  (if (featurep 'tty-child-frames)
+      (should-not (featurep 'corfu-terminal))
+    (should (featurep 'corfu-terminal))
+    (should (default-value 'corfu-terminal-mode))))
 
 ;;;;; [Group] TTY - GUI 限定 feature ;;;;;
 (defconst my-test-tty--gui-only-features

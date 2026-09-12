@@ -127,7 +127,9 @@
 
 (ert-deftest my-test-tty-live-corfu-terminal-enabled ()
   :tags '(:tty-live)
-  (should (default-value 'corfu-terminal-mode)))
+  (if (featurep 'tty-child-frames)
+      (should-not (bound-and-true-p corfu-terminal-mode))
+    (should (default-value 'corfu-terminal-mode))))
 
 (defun my-test-tty-live--xclip-expected-p ()
   "現在の端末環境で xclip-mode が有効になるべき場合は non-nil を返す。"
@@ -166,7 +168,12 @@
             (completion-at-point)
             (corfu--exhibit)
             (should (member "alpha" corfu--candidates))
-            (should (bound-and-true-p corfu-terminal-mode))
+            (if (featurep 'tty-child-frames)
+                (progn
+                  (should (frame-live-p corfu--frame))
+                  (should (frame-visible-p corfu--frame))
+                  (should (eq (frame-parent corfu--frame) (selected-frame))))
+              (should (bound-and-true-p corfu-terminal-mode)))
             (corfu-next (- (cl-position "alpha" corfu--candidates :test #'equal) corfu--index))
             (corfu-insert)
             (should (equal (buffer-string) "alpha")))

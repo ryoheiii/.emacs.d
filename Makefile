@@ -243,6 +243,30 @@ test-tty-live: | prepare-straight
 	MY_TTY_TEST_PHASE=write timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null; \
 	MY_TTY_TEST_PHASE=read timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null
 
+# GUI も tty-live と同じ early-init shim でユーザーデータと依存を隔離する。
+.PHONY: test-platform test-gui
+test-platform: | prepare-straight
+	@set -eu; \
+	$(prepare_test_root) \
+	$(EMACS) $(EMACS_TEST_OPTIONS) \
+		-l "$$test_root/early-init.el" -l "$$test_root/init.el" \
+		-l "$(TESTS_DIR)/my-test-startup.el" -l "$(TESTS_DIR)/my-test-platform.el" \
+		--eval "(ert-run-tests-batch-and-exit '(tag :platform))"
+
+test-gui: export MY_TTY_LIVE_SETUP = $(MY_TTY_LIVE_SETUP_BODY)
+test-gui: | prepare-straight
+	@set -eu; \
+	$(prepare_test_root) \
+	export test_root; \
+	$(SHELL) -eu -c "$$MY_TTY_LIVE_SETUP"; \
+	status=0; \
+	HOME="$$test_root" XDG_CACHE_HOME="$$test_root/xdg-cache" \
+	MY_TTY_TEST_STRAIGHT_BASE_DIR="$(STRAIGHT_DIR)/../" \
+	timeout 180 $(EMACS) --no-site-file --no-site-lisp --init-directory="$$test_root" \
+		-L "$(TESTS_DIR)" -l "$(TESTS_DIR)/my-test-gui.el" || status=$$?; \
+	cat "$$test_root/gui-results.log"; \
+	exit "$$status"
+
 test-cpp-config: export TEST_TREESIT_EXPECT := $(TEST_TREESIT_EXPECT)
 test-cpp-config: | prepare-straight
 	@set -eu; \
@@ -285,6 +309,7 @@ test:
 	+@$(MAKE) test-guards
 	+@$(MAKE) test-audit
 	+@$(MAKE) test-audit-shell
+	+@$(MAKE) test-platform
 
 # CI の部分一致キャッシュを lockfile のリビジョンへ揃える。
 # thaw 中の対話プロンプト（例: straight.el 自身のブランチ正規化確認）は

@@ -7,6 +7,11 @@
 (require 'symbol-overlay)
 (require 'my-gtags)
 
+(ert-deftest my-test-audit-gnus-theme-load ()
+  :tags '(:audit)
+  ;; 遅延ロード時にテーマと標準 face の継承が循環すると Emacs 31 は失敗する。
+  (should (require 'gnus)))
+
 (ert-deftest my-test-audit-rename-visible-boundaries ()
   :tags '(:audit)
   (dolist (names '(("foo" "longer_name") ("count" "x") ("foo" "x\\&%s")))

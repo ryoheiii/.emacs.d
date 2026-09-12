@@ -123,6 +123,14 @@ class AuditShellTests(unittest.TestCase):
             self.assertEqual((self.repo / 'var/package' / part / 'sentinel').read_text(), part)
         self.assertFalse((self.repo / 'var/package/eln-cache').exists())
 
+    def test_package_archive_replacement_with_native_mv(self):
+        tree = self.package_tree()
+        self.assertEqual(self.setup_cmd('--packing-package').returncode, 0)
+        (tree / 'repos/example/data').write_bytes(b'replacement package')
+        self.assertEqual(self.setup_cmd('--packing-package').returncode, 0)
+        with tarfile.open(self.repo / 'package.tar.gz') as archive:
+            self.assertEqual(archive.extractfile('straight/repos/example/data').read(), b'replacement package')
+
     def test_node_failed_verification_is_failure(self):
         for node, npm in [('exit 9\n', 'echo 10.0.0\n'), ('echo v22.0.0\n', 'exit 10\n'),
                           ('echo v22.0.0\n', None), ('echo nonsense\n', 'echo 10.0.0\n')]:

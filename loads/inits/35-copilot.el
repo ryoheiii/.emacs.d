@@ -48,9 +48,9 @@ nil にする。`my/copilot-toggle' から切り替えると custom.el へ保存
     (setq exec-path (delete dir exec-path))
     (push dir exec-path)
     (let* ((current (or (getenv "PATH") ""))
-           (entries (split-string current ":" t))
+           (entries (split-string current path-separator t))
            (cleaned (delete dir entries)))
-      (setenv "PATH" (string-join (cons dir cleaned) ":")))))
+      (setenv "PATH" (string-join (cons dir cleaned) path-separator)))))
 
 (defun my/copilot--resolve-nvm-alias (alias-value nvm-dir &optional depth)
   "ALIAS-VALUE を再帰的に解決し、バージョン文字列を返す.
