@@ -46,6 +46,20 @@ class AuditShellTests(unittest.TestCase):
     def setup_cmd(self, *args):
         return self.run_cmd('bash', str(ROOT / 'emacs-setup.sh'), *args)
 
+    def fail_after_move(self, destination, mode):
+        """対象の rename 後に一度だけ失敗または親シェルへのシグナルを注入する。"""
+        marker = self.root / 'move-fault-fired'
+        marker.unlink(missing_ok=True)
+        self.env.update(FAIL_DEST=str(destination), FAIL_MODE=mode, FAIL_MARKER=str(marker))
+        self.stub('mv', 'if [ "${!#}" = "$FAIL_DEST" ] && [ ! -e "$FAIL_MARKER" ]; then\n'
+                  '  /bin/mv "$@" || exit $?\n'
+                  '  : > "$FAIL_MARKER"\n'
+                  '  if [ "$FAIL_MODE" = error ]; then exit 9; fi\n'
+                  '  kill -s "$FAIL_MODE" "$PPID"\n'
+                  '  exit 0\n'
+                  'fi\nexec /bin/mv "$@"\n')
+        return marker
+
     def package_tree(self):
         s = self.repo / 'loads/straight'
         (s / 'repos/example').mkdir(parents=True)
@@ -319,6 +333,44 @@ class AuditShellTests(unittest.TestCase):
         self.assertNotEqual(self.setup_cmd('--setup-node').returncode, 0)
         self.assertEqual((Path(str(live) + '.bak') / 'bin/node').read_bytes(), old)
 
+    def test_node_move_completed_then_failed_or_signalled_restores_state(self):
+        for kind in ('same-version', 'other-version', 'broken-link', 'absent'):
+            phases = ('backup', 'install', 'link') if kind == 'same-version' else ('install', 'link')
+            for phase in phases:
+                for mode in ('error', 'INT', 'TERM'):
+                    with self.subTest(kind=kind, phase=phase, mode=mode):
+                        shutil.rmtree(self.home / '.local', ignore_errors=True)
+                        live = self.node_archive()
+                        active = self.home / '.local/node'
+                        old_tree = live if kind == 'same-version' else live.parent / 'old-version'
+                        if kind in ('same-version', 'other-version'):
+                            old_tree.mkdir(parents=True)
+                            (old_tree / 'precious').write_bytes(b'old node installation')
+                            old_link = Path('share/nodejs') / old_tree.name
+                        else:
+                            old_link = Path('missing-node')
+                        if kind != 'absent':
+                            active.symlink_to(old_link)
+                        destination = {'backup': Path(str(live) + '.bak'),
+                                       'install': live, 'link': active}[phase]
+                        marker = self.fail_after_move(destination, mode)
+                        result = self.setup_cmd('--setup-node')
+                        self.assertNotEqual(result.returncode, 0, result.stdout)
+                        if mode != 'error':
+                            self.assertEqual(result.returncode, {'INT': 130, 'TERM': 143}[mode])
+                        self.assertTrue(marker.exists(), '故障点へ到達していない')
+                        if kind == 'absent':
+                            self.assertFalse(active.is_symlink())
+                            self.assertFalse(active.exists())
+                        else:
+                            self.assertTrue(active.is_symlink(), result.stderr)
+                            self.assertEqual(active.readlink(), old_link)
+                        if kind in ('same-version', 'other-version'):
+                            self.assertEqual((old_tree / 'precious').read_bytes(), b'old node installation')
+                        if kind != 'same-version':
+                            self.assertFalse(live.exists())
+                        self.assertFalse(Path(str(live) + '.bak').exists())
+
     def test_node_archive_links_cannot_escape(self):
         live = self.node_archive()
         archive = next((self.home / '.local/downloads/node').glob('*.tar.xz'))
@@ -384,6 +436,32 @@ class AuditShellTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         for path in (reply, Path(str(reply) + '.log'), session):
             self.assertEqual(path.read_text(), 'old ' + path.name)
+
+    def test_review_move_completed_then_failed_or_signalled_restores_outputs(self):
+        prompt, reply, session = (self.root / name for name in ('prompt', 'reply', 'session'))
+        prompt.write_text('review')
+        outputs = (reply, Path(str(reply) + '.log'), session)
+        self.stub('codex', 'while [ "$#" -gt 0 ]; do if [ "$1" = -o ]; then shift; echo NEW > "$1"; fi; shift; done\necho "session id: new-id"\n')
+        for existing in (True, False):
+            for destination in outputs:
+                for mode in ('error', 'INT', 'TERM'):
+                    with self.subTest(existing=existing, destination=destination.name, mode=mode):
+                        for path in outputs:
+                            path.unlink(missing_ok=True)
+                            if existing:
+                                path.write_text('old ' + path.name)
+                        marker = self.fail_after_move(destination, mode)
+                        result = self.run_cmd('bash', str(ROOT / '.claude/scripts/codex-review.sh'),
+                                              str(prompt), str(reply), str(session))
+                        self.assertNotEqual(result.returncode, 0, result.stdout)
+                        if mode != 'error':
+                            self.assertEqual(result.returncode, {'INT': 130, 'TERM': 143}[mode])
+                        self.assertTrue(marker.exists(), '故障点へ到達していない')
+                        for path in outputs:
+                            if existing:
+                                self.assertEqual(path.read_text(), 'old ' + path.name)
+                            else:
+                                self.assertFalse(path.exists())
 
     def test_bench_manifest_excludes_failed_and_stale_trials(self):
         out = self.root / 'out'

@@ -183,7 +183,7 @@ find_node_tarball() {
 setup_node_offline() (
     require_commands python3 tar mktemp
     local tarball="$1" topdir members member staging live backup link_stage
-    local had_live=no installed=no committed=no
+    local had_live=no installed=no committed=no had_active=no link_started=no
     local node_version npm_version
     mkdir -p "$NODE_INSTALL_BASE"
     members="$(tar -tf "$tarball")"
@@ -249,15 +249,29 @@ NODE_VALIDATE
     # commit 前の失敗・シグナルでは旧版へ戻す。復元失敗時の .bak は保持する。
     trap '
         rc=$?
+        trap "" INT TERM
         if [ "$committed" = no ]; then
-            if [ "$installed" = yes ]; then rm -rf "$live"; fi
-            if [ "$had_live" = yes ] && ! mv_replace "$backup" "$live"; then
-                echo "Error: 復元に失敗しました。$backup を保持しています。" >&2
-                rc=1
+            if [ "$installed" = yes ]; then rm -rf "$live" || rc=1; fi
+            if [ "$had_live" = yes ] && { [ -e "$backup" ] || [ -L "$backup" ]; }; then
+                if ! mv_replace "$backup" "$live"; then
+                    echo "Error: 復元に失敗しました。$backup を保持しています。" >&2
+                    rc=1
+                fi
+            fi
+            if [ "$link_started" = yes ]; then
+                if [ "$had_active" = yes ]; then
+                    if ! mv_replace_file "$link_stage/old-node" "$NODE_ACTIVE_LINK"; then
+                        echo "Error: 旧リンクを $link_stage/old-node に保持しています。" >&2
+                        link_stage=""
+                        rc=1
+                    fi
+                else
+                    rm -f "$NODE_ACTIVE_LINK" || rc=1
+                fi
             fi
         fi
-        rm -rf "$staging"
-        if [ -n "$link_stage" ]; then rm -rf "$link_stage"; fi
+        rm -rf "$staging" || rc=1
+        if [ -n "$link_stage" ]; then rm -rf "$link_stage" || rc=1; fi
         exit "$rc"
     ' EXIT
     trap 'exit 130' INT
@@ -288,13 +302,20 @@ NODE_LINKS
         exit 1
     fi
     link_stage="$(mktemp -d "$HOME/.local/.node-link-XXXXXX")"
-    ln -s "$live" "$link_stage/node"
-    if [ -e "$live" ] || [ -L "$live" ]; then
-        mv_replace "$live" "$backup"
-        had_live=yes
+    # 相対リンク・切れたリンクも、元のリンク文字列のまま退避する。
+    if [ -L "$NODE_ACTIVE_LINK" ]; then
+        cp -P "$NODE_ACTIVE_LINK" "$link_stage/old-node"
+        had_active=yes
     fi
-    mv_replace "$staging/$topdir" "$live"
+    ln -s "$live" "$link_stage/node"
+    # rename 後の異常終了にも備え、各移動の前に復元対象を記録する。
+    if [ -e "$live" ] || [ -L "$live" ]; then
+        had_live=yes
+        mv_replace "$live" "$backup"
+    fi
     installed=yes
+    mv_replace "$staging/$topdir" "$live"
+    link_started=yes
     mv_replace_file "$link_stage/node" "$NODE_ACTIVE_LINK"
     committed=yes
     if [ "$had_live" = yes ]; then rm -rf "$backup"; fi

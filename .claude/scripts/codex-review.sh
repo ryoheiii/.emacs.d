@@ -60,6 +60,8 @@ fi
 new_files=() old_files=() existed=() published=0 success=no
 cleanup() {
   local rc=$? i
+  # 復元中の追加シグナルで、退避済み成果物の回収を中断しない。
+  trap '' INT TERM
   if [ "$success" = no ]; then
     for ((i=published-1; i>=0; i--)); do
       if [ "${existed[i]}" = yes ]; then
@@ -107,8 +109,9 @@ for ((i=0; i<${#targets[@]}; i++)); do
   fi
 done
 for ((i=0; i<${#targets[@]}; i++)); do
-  mv -f -- "${new_files[i]}" "${targets[i]}" || exit 1
+  # rename 後に mv が失敗・シグナル終了しても、この公開先を復元する。
   published=$((published + 1))
+  mv -f -- "${new_files[i]}" "${targets[i]}" || exit 1
 done
 success=yes
 if [ "$MODE_ARG" != --resume ]; then echo "OK: session=$SESSION_ID"; fi
