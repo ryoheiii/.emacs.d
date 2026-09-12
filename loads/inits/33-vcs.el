@@ -29,8 +29,7 @@
 (use-package diff-hl
   :straight t
   :defer 1
-  :hook ((magit-pre-refresh . diff-hl-magit-pre-refresh)
-         (magit-post-refresh . diff-hl-magit-post-refresh)
+  :hook ((magit-post-refresh . diff-hl-magit-post-refresh)
          (dired-mode . diff-hl-dired-mode))
   :config
   (global-diff-hl-mode +1)

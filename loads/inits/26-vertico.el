@@ -20,8 +20,8 @@
   ;; ディレクトリを先に表示し、ファイルはアルファベット順にソート
   (defun my/vertico-sort-directories-first (files)
     "ディレクトリを先にソートし、それ以外をアルファベット順にする."
-    (let ((dirs (seq-filter #'file-directory-p files))
-          (nondirs (seq-remove #'file-directory-p files)))
+    (let ((dirs (seq-filter #'directory-name-p files))
+          (nondirs (seq-remove #'directory-name-p files)))
       (append (sort dirs #'string<) (sort nondirs #'string<))))
 
   ;; `file` カテゴリに限定してソート適用

@@ -26,14 +26,21 @@
          (xrefs '()))
     (with-temp-buffer
       (let ((exit-code (call-process "global" nil t nil
-                                     "--result=grep" flag "--" input)))
-        (when (>= exit-code 2)
-          (user-error "global エラー (exit %d): %s"
+                                     "--result=grep" "--encode-path=:%" flag "--" input)))
+        (unless (and (integerp exit-code) (memq exit-code '(0 1)))
+          (user-error "global エラー (exit %s): %s"
                       exit-code (string-trim (buffer-string)))))
       (goto-char (point-min))
       (while (not (eobp))
-        (when (looking-at "^\\(.+\\):\\([0-9]+\\):\\(.*\\)$")
-          (let ((file (expand-file-name (match-string 1) root))
+        (when (looking-at "^\\([^:]+\\):\\([0-9]+\\):\\(.*\\)$")
+          (let ((file (expand-file-name
+                       (replace-regexp-in-string
+                        "%[[:xdigit:]][[:xdigit:]]"
+                        (lambda (encoded)
+                          (pcase (downcase encoded)
+                            ("%3a" ":") ("%25" "%") (_ encoded)))
+                        (match-string 1) t t)
+                       root))
                 (lnum (string-to-number (match-string 2)))
                 (text (string-trim (match-string 3))))
             (push (xref-make text (xref-make-file-location file lnum 0)) xrefs)))

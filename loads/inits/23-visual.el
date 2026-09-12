@@ -41,9 +41,9 @@
            :right-divider-width 30
            :scroll-bar-width 8))
 
-  ;; Read the doc string of `spacious-padding-subtle-mode-line' as it
+  ;; Read the doc string of `spacious-padding-subtle-frame-lines' as it
   ;; is very flexible and provides several examples.
-  (setq spacious-padding-subtle-mode-line
+  (setq spacious-padding-subtle-frame-lines
         `( :mode-line-active 'default
            :mode-line-inactive vertical-border))
   (spacious-padding-mode 1)

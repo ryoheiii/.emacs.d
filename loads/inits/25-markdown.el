@@ -37,7 +37,6 @@
   (require 'my-markdown)
   ;; Pandoc コマンドと CSS を遅延設定（markdown-mode ロード時に初めて構築）
   (setq markdown-command (my-markdown-pandoc-command))
-  (setq markdown-export-command (my-markdown-pandoc-command))
   (setq markdown-xhtml-header-content
         (format "<meta charset='utf-8'>\n
                 <meta name='viewport' content='width=device-width, initial-scale=1'>\n

@@ -43,7 +43,7 @@
   :custom
   (recentf-max-saved-items 2000)                                 ; 保存するファイルの数
   (recentf-max-menu-items 15)                                    ; メニューに表示するアイテム数
-  (recentf-exclude '("recentf-" user-full-name))                 ; 除外するファイルパターン
+  (recentf-exclude '("recentf-"))                 ; 除外するファイルパターン
   (recentf-auto-cleanup 'never)                                  ; 自動整理の設定
   (recentf-save-file (my-set-history "recentf-" user-full-name)) ; recentf の保存パス
   :config
