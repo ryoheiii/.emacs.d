@@ -127,7 +127,7 @@ macOS では実 BSD `mv` によるパッケージアーカイブの置換・復�
 Linux 固有のビルド・apt 導入は macOS / Windows の対象外。
 Windows の検査はバッチ起動と IME の GUI ガード・パスに限定し、GUI の日本語入力は含まない。
 
-Emacs 30 の tty 補完は `corfu-terminal`、標準の `tty-child-frames` がある Emacs 31 は
+Emacs 30 の tty 補完は `corfu-terminal`、標準の `tty-child-frames` がある Emacs 31 以降は
 Corfu 本体を使う。snapshot の文法あり C/C++ 互換性は #19 で別途検証する。
 
 ## 起動コストの計測
