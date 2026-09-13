@@ -360,10 +360,55 @@ class AuditShellTests(unittest.TestCase):
         del self.env['SHIP_PUSH']
         self.assertEqual(self.ship_step(7, worktree).returncode, 0)
         self.assertFalse((self.root / 'gh-args').exists())
+        # --no-push の後片付けはリモートへ接続できなくても成立する。
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'remote', 'set-url',
+                                      'origin', str(self.root / 'unavailable.git')).returncode, 0)
         self.assertEqual(self.ship_step(8, worktree).returncode, 0)
         self.assertFalse(worktree.exists())
         self.assertEqual(self.run_cmd('git', '-C', str(bare), 'rev-parse', 'main').stdout, remote_head)
         self.assertEqual(self.run_cmd('git', '-C', str(bare), 'show-ref', '--verify', 'refs/heads/fix/fixture').returncode, 0)
+
+    def test_ship_cleanup_accepts_remote_branch_already_deleted(self):
+        main, bare, worktree = self.ship_fixture()
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'branch', 'fix/other').returncode, 0)
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'push', 'origin', 'fix/other').returncode, 0)
+        other_head = self.run_cmd('git', '-C', str(main), 'rev-parse', 'fix/other').stdout
+        self.assertEqual(self.ship_step(6, worktree).returncode, 0)
+        self.assertEqual(self.ship_step(7, worktree).returncode, 0)
+        # GitHub の自動削除を再現し、ローカルには古い追跡 ref を残す。
+        self.assertEqual(self.run_cmd('git', '-C', str(bare), 'update-ref', '-d',
+                                      'refs/heads/fix/fixture').returncode, 0)
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'show-ref', '--verify',
+                                      'refs/remotes/origin/fix/fixture').returncode, 0)
+        result = self.ship_step(8, worktree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(worktree.exists())
+        for ref in ('refs/heads/fix/fixture', 'refs/remotes/origin/fix/fixture'):
+            self.assertNotEqual(self.run_cmd('git', '-C', str(main), 'show-ref', '--verify', ref).returncode, 0)
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'rev-parse', 'fix/other').stdout, other_head)
+        self.assertEqual(self.run_cmd('git', '-C', str(bare), 'rev-parse', 'fix/other').stdout, other_head)
+
+    def test_ship_cleanup_remote_failure_preserves_task(self):
+        main, _bare, worktree = self.ship_fixture()
+        self.assertEqual(self.ship_step(6, worktree).returncode, 0)
+        self.assertEqual(self.run_cmd('git', '-C', str(main), 'remote', 'set-url',
+                                      'origin', str(self.root / 'unavailable.git')).returncode, 0)
+        result = self.ship_step(8, worktree)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(worktree.exists())
+        self.assertEqual(self.run_cmd('git', '-C', str(worktree), 'rev-parse', '--abbrev-ref',
+                                      '@{upstream}').stdout.strip(), 'origin/fix/fixture')
+
+    def test_ship_cleanup_remote_delete_rejection_is_not_success(self):
+        main, bare, worktree = self.ship_fixture()
+        self.assertEqual(self.ship_step(6, worktree).returncode, 0)
+        hook = bare / 'hooks/pre-receive'
+        hook.write_text('#!/bin/sh\nexit 1\n')
+        hook.chmod(0o755)
+        result = self.ship_step(8, worktree)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.run_cmd('git', '-C', str(bare), 'show-ref', '--verify',
+                                      'refs/heads/fix/fixture').returncode, 0)
 
     def test_ship_rejects_main_advanced_before_step(self):
         main, _bare, worktree = self.ship_fixture()

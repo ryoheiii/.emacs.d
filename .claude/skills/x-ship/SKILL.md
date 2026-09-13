@@ -165,6 +165,11 @@ source "$SHIP_STATE"
 test "$(git branch --show-current)" = "$TASK_BRANCH"
 test "$(git rev-parse --show-toplevel)" = "$TASK_WORKTREE"
 git merge-base --is-ancestor "$TASK_BRANCH" main
+# GitHub が自動削除したブランチの古い追跡 ref を取り除く。
+# 通信失敗時は、再実行に必要な worktree と状態を残して停止する。
+if [ "$SHIP_PUSH" = yes ]; then
+  git fetch --prune origin
+fi
 cd "$MAIN_ROOT"
 git worktree remove "$TASK_WORKTREE"
 git worktree prune
