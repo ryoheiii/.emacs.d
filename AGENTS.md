@@ -1,224 +1,99 @@
 # AGENTS.md
 
-この文書は、このリポジトリで作業するすべての AI エージェントに適用する正本である。
-エージェント固有の設定より先に読み、矛盾する場合は安全側の指示を優先する。
+この文書は全エージェント共通の正本である。エージェント固有の設定より先に読み、
+矛盾する場合は安全側の指示を優先する。コメント、ドキュメント、完了報告は日本語で記述する。
 
-## リポジトリ概要
+## リポジトリと変更範囲
 
-- モジュール構成の Emacs 設定リポジトリである。
-- コメントおよびドキュメントは日本語で記述する。
-- 日常利用は端末上の `emacs -nw`（CLI モード）が主であり、GUI は副である。
-- 主な用途は C/C++ 開発、Markdown／Org によるドキュメント作成、Mozc／Migemo による日本語入力に対応した汎用編集である。
-- `early-init.el`、`init.el`、`loads/inits/` の責務を保ち、設定を単一ファイルへ集約しない。
-- 変更は依頼された範囲に限定し、既存のモジュール境界を尊重する。
-
-## 判断原則
-
-1. 秘密情報とユーザーデータの保護を最優先する。
-2. 既存の動作と不変条件を維持する。とくに `emacs -nw`（tty）の動作は最優先の不変条件である。
-3. 必要最小限の変更で目的を達成する。
-4. 実装と説明を読みやすく保つ。
-5. 検証結果を根拠として完了を判断する。
+C/C++ 開発、Markdown／Org、Mozc／Migemo による日本語編集に使う Emacs 設定である。
+`early-init.el`（環境・パス・パッケージ基盤）→ `init.el`（use-package・init-loader）→
+`loads/inits/NN-name.el`（番号／アルファベット順）の責務とモジュール境界を保つ。
+変更は依頼された目的を達成する範囲に限定する。
 
 ## 【最優先】CLI (`emacs -nw`) 前提
 
-このリポジトリの設定は、端末上の `emacs -nw` で日常利用される。
-tty での動作を第一級として扱い、退行（デグレ）を絶対に許さない。
+日常利用は端末上の `emacs -nw` である。tty の動作を最優先の不変条件とし、
+機能強化も tty 側を優先する。GUI だけを改善して tty を据え置く設計は選ばない。
 
-- tty を既定の対象として設計・実装する。GUI 前提の変更で tty を退行させない。
-- GUI 限定機能は `:if (display-graphic-p)` などで分離し、tty 側の代替を維持する。
-- tty で成立しない前提（アイコンフォント、画像表示、ピクセル単位のレイアウト、
-  GUI 専用のキーイベントやマウス操作）を、共通設定や必須依存へ持ち込まない。
-- キーバインドは端末が送出できるキーで機能させる。GUI でだけ通る修飾キーの
-  組み合わせへ移さない。
-- 端末向けの代替実装（`corfu-terminal`、`xclip` など）を削除・無効化・弱体化しない。
-- 機能強化は tty 側の体験を優先して進める。GUI だけが良くなり tty が据え置きに
-  なる設計を選ばない。
-- tty へ影響し得る変更では `make test-tty` と `make test-tty-live` を必ず実行する。
-  既存テストで守れない挙動を変更する場合は、テストを追加してから変更する。
-- GUI 側だけを変更した場合も、tty が退行していないことを確認する。
-- 判断に迷う場合は tty 側を優先する。
+- GUI 限定機能は `:if (display-graphic-p)` などで分離する。
+- アイコンフォント、画像、ピクセル指定、GUI 専用キーやマウスを共通設定の前提にしない。
+  キーバインドは端末が送出できるキーで機能させる。
+- `corfu-terminal`、`xclip` など端末向けの代替を削除・無効化・弱体化しない。
+- tty に影響し得る変更と GUI 分岐の変更では `make test-tty` と `make test-tty-live` を
+  必ず実行する。既存テストで守れない挙動はテストを追加してから変更する。
+  GUI 側だけの変更でも tty の退行がないことを確認する。
 
-## 基本作業手順
+## 安全と作業の継続
 
-1. 依頼、適用範囲、禁止事項を読み、変更対象を確定する。
-2. `git status --porcelain` で既存差分を把握し、ユーザーの変更を保護する。
-3. 関連する実装とルールを読み、変更前の動作を理解する。
-4. 必要な場合は調査、実装、検証を含む計画を作る。
-5. 既存の設計に沿って、必要最小限の差分を作る。
-6. 変更に対応する検証を実行し、結果を確認する。
-7. `git diff` と `git status` で意図しない差分を除外する。
-8. 変更内容、検証結果、残る制約を日本語で報告する。
-
-不明点が結果を大きく左右する場合は、推測で範囲を広げずユーザーへ確認する。
-読み取り調査で解消できる不明点は、まず安全な範囲で調べる。
-
-## 主要コマンド
-
-以下は、このリポジトリのセットアップ、保守、復旧に使用する標準コマンドである。
-
-```sh
-# Emacs ビルドに必要な依存パッケージをインストール
-# --gui no のときだけ GUI パッケージを除外する（gtk3/lucid/pgtk は既定と同じ）
-./emacs-setup.sh --setup [--gui <gtk3|lucid|pgtk|no>]
-
-# C/C++ の tree-sitter 文法を var/package/tree-sitter/ へ導入
-# （--setup も、tree-sitter 有効な Emacs がある環境では併せて導入する）
-./emacs-setup.sh --setup-treesit
-
-# インストール可能な Emacs バージョンを一覧表示
-./emacs-setup.sh --list
-
-# 指定バージョンの Emacs をビルド・インストール（GUI オプション: gtk3, lucid, pgtk, no）
-./emacs-setup.sh --install <バージョン> [--gui <バックエンド>]
-
-# ローカルへインストールした Emacs をアンインストール
-./emacs-setup.sh --uninstall
-
-# var/ 配下の生成物とユーザー操作履歴、および直下へ迷い込んだ eln-cache/ を削除
-# ※パッケージは保持。直下の eln-cache/ が symlink の場合は残す
-# ミニバッファ履歴・カーソル位置・undo 履歴など復元不能なデータを含む
-./emacs-setup.sh --clean
-
-# 上記に加えてパッケージも削除
-./emacs-setup.sh --clean-all
-
-# straight.el パッケージのアーカイブ／復元
-./emacs-setup.sh --packing-package
-./emacs-setup.sh --extract-package
-
-# 回帰テストを一括実行
-make test
-
-# バッチモードで全パッケージをリビルド
-emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
-  -l early-init.el -l init.el -f straight-rebuild-all
-```
-
-破壊的なクリーンアップやパッケージ全体の再構築は、目的と影響を確認してから実行する。
-
-## アーキテクチャ概要
-
-起動シーケンスは次の 3 段階である。
-
-1. `early-init.el` が UI 描画前の環境、パス、パッケージ基盤を初期化する。
-2. `init.el` が `use-package` と `init-loader` を準備する。
-3. `loads/inits/` 配下の設定を番号／アルファベット順に読み込む。
-
-`loads/inits/` のファイル名は `NN-name.el` とし、2 桁の番号で読み込み順と責務を表す。
-番号帯、各ディレクトリの用途、パスヘルパーの詳細は `.claude/rules/codebase-map.md` を参照する。
-
-## コーディング規約
-
-- 外部パッケージは `straight.el` と `use-package` で宣言する。
-- 組み込みパッケージと外部パッケージを区別する。
-- 設定、フック、キーバインドを `use-package` の対応する節へ整理する。
-- プラットフォーム固有設定には既存の環境プレフィックスを使う。
-- パスをハードコーディングせず、既存のパスヘルパーを使う。
-- 外部パッケージ同梱データのパスは、パッケージが公開する変数を使い、
-  パッケージマネージャの内部レイアウトを自前で再現しない。
-- C/C++ タグナビゲーションの固定キーバインドを変更しない。
-- yasnippet のスニペットディレクトリ構成（個人スニペットの 2 レイアウト対応を含む）を
-  変更しない。
-- 自動生成ファイルをリポジトリルート直下へ置かない。
-
-具体的な `use-package` 規約、命名、セクションヘッダ、不変条件は
-`.claude/rules/elisp-conventions.md` を参照する。
-
-シェルスクリプトのエラー処理、記法、shellcheck の採用方針は
-`.claude/rules/shell-conventions.md` を参照する。
-
-## 検証
-
-- 変更の種類に応じた最小十分な検証を実行する。
-- 設定変更ではバッチ起動時のエラーを確認する。
-- 表示、モードライン、キーバインド、補完、クリップボード、端末初期化に影響する
-  変更では `make test-tty` と `make test-tty-live` を実行し、`emacs -nw` の退行を防ぐ。
-- パッケージ状態が影響する場合のみ、全パッケージのリビルドを行う。
-- セットアップスクリプトを変更した場合は、専用テストを実行する。
-- 完了前に `git status` と `git diff` を確認する。
-- 動作または整合性を証明できない状態で完了としない。
-
-コマンドと確認観点は `.claude/rules/verification.md` を参照する。
+- 作業開始時に `git status --porcelain` で既存差分を確認する。
+  ユーザーや他セッションの変更を上書き・破棄・整形しない。
+- 秘密情報、資格情報、個人情報を出力・ログ記録・コミットしない。
+  発見した場合は内容を表示せず、場所と対処方針だけを報告する。
+- `var/`、`loads/straight/`、`eln-cache`、`package.tar.gz` などの自動生成物を手で編集せず、
+  リポジトリルートへ生成物を置かない。削除には `emacs-setup.sh` の対応コマンドを使う。
+  `--clean` はバックアップ・自動保存・操作履歴など復元不能なデータも消し、
+  `--clean-all` はさらにパッケージを消すため、目的と影響について承認を得てから実行する。
+- 依頼範囲の調査・編集・検証と、その変更に起因する失敗の修正・再検証は継続して行う。
+  実装の初稿で止めず、完了条件まで進める。既に承認された操作の再確認は不要である。
+- 結果を大きく左右する不明点は、まず読み取り調査で解消する。
+  解消できない仕様判断、範囲拡大、未承認の破壊的操作・外部公開が必要な場合に確認する。
 
 ## Git 運用
 
-- `main`／`master` へ直接コミットしない。
-- 開発時は複数セッションを同時に走らせる。**1 タスク = 1 worktree = 1 ブランチを必須とする。**
-  タスク専用 worktree を作成し、その中だけで作業する。
-- メインチェックアウト（リポジトリルート）で直接実装しない。他セッションが使用している
-  可能性があるため、そのブランチを切り替えない。
-- 他セッションの worktree、ブランチ、未コミット変更へ触れない。想定外のブランチや差分を
-  見つけたら、上書きせず停止してユーザーへ報告する。
-- コミットは小さな論理単位に分ける。
-- 整形・自動生成とロジック変更を同じコミットに混在させない。
-- マージ前に履歴を論理単位へ整理する。
-- デフォルトブランチへのマージは必ず `git merge --no-ff` でマージコミットを作る。
-- マージ済みブランチと不要になった worktree は、同じ作業の中で必ず削除する
-  （ローカル、push 済みならリモートも）。後片付けを次の作業へ持ち越さない。
-- `git branch -D` による強制削除を行わない。
-- force push を行わない。
-- ユーザーの明示指示なく rebase、squash、その他の履歴改変を行わない。
+- **1 タスク = 1 worktree = 1 ブランチを必須とする。** タスク専用 worktree 内だけで編集し、
+  メインチェックアウトで直接実装したり、そのブランチを切り替えたりしない。
+- 他セッションの worktree・ブランチへ触れない。想定外のブランチや差分を見つけたら、
+  上書きせず停止して報告する。作成・再利用の手順は
+  [.claude/rules/git-workflow.md](.claude/rules/git-workflow.md) に従う。
+- `main`／`master` へ直接コミットしない。コミットは小さな論理単位とし、
+  整形・自動生成とロジック変更を混在させない。
+- マージ前に履歴を確認・整理するが、明示指示なしの rebase・squash・履歴改変は行わない。
+  デフォルトブランチへのマージは必ず `git merge --no-ff` とする。
+- マージ済みのタスクブランチと worktree は同じ作業中に削除する
+  （push 済みならリモートも）。他タスクや未マージのものは削除しない。
+  `git branch -D` と force push は禁止する。
 
-ブランチ、worktree、PR、マージの詳細は `.claude/rules/git-workflow.md` を参照する。
-コミットメッセージの形式は `.claude/rules/commit-conventions.md` を参照する。
+## 変更に応じて読む規約
 
-## 安全・禁止事項
+該当する作業の規約を読み、無関係な文書まで一括で読み込まない。
 
-- API キー、パスワード、資格情報、トークン、個人情報を出力、ログ記録、コミットしない。
-- 秘密情報を発見しても内容を表示せず、場所と対処方針だけを報告する。
-- ユーザーの未コミット変更を上書き、破棄、整形しない。
-- 指示のないファイルを変更しない。
-- `var/`、`loads/straight/`、`eln-cache`、`package.tar.gz` などの自動生成物を手で編集しない。
-- 自動生成物の削除が必要な場合は、対応する `emacs-setup.sh` のコマンドを使う。
-- 調査やデバッグで `emacs --batch` を直接実行する場合は、必ず `early-init.el` を
-  読み込む。読み込まないと `startup-redirect-eln-cache` を通らず、native-comp の
-  生成物がリポジトリ直下の `eln-cache/` へ落ちる
-  （本設定での正規の保存先は `var/package/eln-cache/`）。
-  取り残した場合は `./emacs-setup.sh --clean` で回収する。
-
-  ```sh
-  emacs --batch --eval '(setq user-emacs-directory (expand-file-name "~/.emacs.d/"))' \
-    -l early-init.el -l init.el -l <調査用の elisp>
-  ```
-
-- ユーザーの指示なく Git 履歴を書き換えない。
-- `main`／`master` への直コミットと force push を行わない。
-- 検証中に生成された意図しないファイルをコミット対象へ含めない。
-
-## エージェントスキル
-
-開発ワークフロー用の共通スキルを `.claude/skills/<name>/SKILL.md` に置く。
-このファイルが Claude Code / Codex 共通の正本であり、`.codex/skills` は
-`.claude/skills` への symlink である（内容を複製しない）。
-
-| スキル | 用途 |
+| 作業 | 参照先と守る契約 |
 |---|---|
-| `/x-deep-plan` | 多観点深堀りによる決定完全な実装計画の作成 |
-| `/x-codex-review-plan` | Codex CLI による実装前の計画レビュー |
-| `/x-codex-review-impl` | Codex CLI による実装レビュー（step / final） |
-| `/x-ship` | コミット → 検証 → 最終レビューゲート → `--no-ff` マージ → push・CI 確認 |
-| `/x-preflight` | 実装開始前の環境チェック |
-| `/x-rewrite-docs` | ドキュメントと実装の乖離検証・修正 |
-| `/x-tidy-settings` | `.claude/settings*.json` の分類・整理 |
+| Elisp の変更 | [.claude/rules/elisp-conventions.md](.claude/rules/elisp-conventions.md): straight.el・use-package、組み込みの `:straight nil`、`:custom`・`:hook`・`:bind`、環境プレフィックス |
+| 配置・起動順・パスの変更 | [.claude/rules/codebase-map.md](.claude/rules/codebase-map.md): 番号帯とパスヘルパー。パスをハードコードせず、パッケージ同梱データは公開変数で参照する |
+| C/C++・スニペットの変更 | [.claude/rules/elisp-conventions.md](.claude/rules/elisp-conventions.md): 固定タグナビゲーションと yasnippet の個人用 2 レイアウトを維持する |
+| シェルの変更 | [.claude/rules/shell-conventions.md](.claude/rules/shell-conventions.md): エラー処理と shellcheck 方針 |
+| 検証の選択・実行 | [.claude/rules/verification.md](.claude/rules/verification.md)、[docs/testing.md](docs/testing.md): 対象別ターゲットと実行条件 |
+| コミット・マージ・後片付け | [.claude/rules/git-workflow.md](.claude/rules/git-workflow.md)、[.claude/rules/commit-conventions.md](.claude/rules/commit-conventions.md) |
+| セットアップ・保守・復旧 | [README.md](README.md)、[docs/packages.md](docs/packages.md)、`emacs-setup.sh --help` |
 
-- スキルは本書と `.claude/rules/*.md` の規約に従う。矛盾する場合は本書と rules を優先する。
-- Codex 側のスラッシュコマンド解決は `.codex/README.md` を参照する。
+## 検証と完了条件
 
-## エージェント別設定
+変更範囲に対応する最小十分な検証を行う。設定変更は `make test-startup`、
+セットアップ動作の変更は `make test-setup` に加えて、該当する回帰テストを選ぶ。
+tty の必須検証は上記のとおり。文書・指示だけの変更では参照先・コマンド・整合性を検査し、
+無関係な Emacs テストやパッケージ再構築を要求しない。
+全パッケージの再構築はパッケージ状態が影響する場合のみ、目的と影響を確認して行う。
 
-- `.claude/` は Claude Code 固有の設定と詳細ルールを置く。
-- `.codex/` は Codex 固有の共有設定と案内を置く。
-- 共通ルールをエージェント別ディレクトリへ複製しない。
-- 共通方針を変更する場合は、この `AGENTS.md` を更新する。
-- エージェント固有設定を変更する場合も、共通ルールとの整合性を確認する。
-- 文書間で規約が重複した場合は、正本へ集約して参照に置き換える。
-- 実在しないファイルを前提とした手順や参照を追加しない。
+調査で `emacs --batch` を直接実行するときは必ず `early-init.el` を読み込む。
+省くと native-comp の生成物が直下の `eln-cache/` に落ちる
+（正規の保存先は `var/package/eln-cache/`）。作業中のチェックアウトを指す例:
 
-## 完了条件
+```sh
+emacs --batch --eval '(setq user-emacs-directory (file-name-as-directory default-directory))' \
+  -l early-init.el -l init.el -l <調査用の elisp>
+```
 
-- 依頼された変更がすべて実装されている。
-- 関連する検証が成功している。
-- 意図しない差分や自動生成物が含まれていない。
-- 残る制約、未検証事項、既知のリスクを明示している。
-- 作業結果を日本語で簡潔に報告している。
+依頼された変更と関連検証を終え、`git diff` と `git status` で意図しない差分・生成物を
+除外して完了とする。成功した検証、未検証事項と理由、残る制約・リスクを日本語で簡潔に報告する。
+動作・整合性を確認できなければ完了扱いにしない。
+
+## エージェント設定とスキル
+
+- 共通スキルの正本は `.claude/skills/<name>/SKILL.md`。
+  `.codex/skills` は `.claude/skills` への symlink とし、内容を複製しない。
+- 共通方針は本書、詳細は `.claude/rules/`、エージェント固有設定は `.claude/`・`.codex/`
+  に置く。重複は正本への参照に置き換え、実在しない参照を作らない。
+- スキルは本書と該当 rules に従う。明示されたスキル、または依頼に必要な専門手順を選び、
+  計画・レビュー・ship をすべての編集へ自動適用しない。
+- Codex のスキルとスラッシュコマンド、設定の扱いは [.codex/README.md](.codex/README.md) を参照する。

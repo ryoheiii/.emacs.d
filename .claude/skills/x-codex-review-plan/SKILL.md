@@ -1,156 +1,55 @@
 ---
 name: x-codex-review-plan
-description: 現在の実装計画を Codex CLI で外部レビューし、REVISE なら計画を修正して同一セッションで再レビューする。修正が発生した場合のみ新規セッションで最終監査を行う。
+description: 具体的な実装計画を Codex CLI でレビューし、指摘を修正・再確認する。計画レビューの依頼や x-deep-plan の仕上げに使う。
 allowed-tools: Bash, Read, Write
 ---
 
-現在の会話にある具体的な実装計画を、Codex CLI を厳格な外部レビュアーとして使ってレビューする。
+実装ステップと検証方法を含む計画をレビューする。会話または計画ファイルに具体的な計画が
+なければ不足を伝える。このスキルから x-deep-plan は呼ばない（再入禁止）。
+作業中のチェックアウトのルートで実行する。
+レビューだけの依頼なら指摘の報告で完了し、元の計画を編集しない。
+修正ループと書き戻しは、修正までの依頼や x-deep-plan の仕上げなど、計画の編集が承認済みの場合に行う。
 
-## 前提条件
+## 初回レビュー
 
-- レビュー可能な具体的計画（実装ステップ・検証手順を含む）が会話または計画ファイルに存在すること。
-  無い場合は停止し「先にレビュー可能な具体的 plan を作成してください」と伝える。
-- リポジトリルートで実行する。
-
-## 実行環境による差異
-
-- **Claude Code**: 前景 Bash には 10 分の上限があるため、`codex-review.sh` は
-  `run_in_background: true` で起動し、完了通知を待つ。`sleep` による能動ポーリングは禁止。
-  完了通知の task-id が起動時の bash_id と一致することを確認してから、
-  exit code と reply ファイル非空の **両方** を検証する。
-- **Codex**: 通常のシェル実行でよい（背景実行の制約はない）。
-
-## ルール
-
-- Codex 呼び出しは必ず `.claude/scripts/codex-review.sh` を使う
-  （モデル gpt-5.6-sol / effort xhigh / sandbox read-only を既定で固定）。
-- レビューは最大 3 ラウンド。
-- 再レビュー前に必ず計画へ実質的な修正を加える。
-- 再レビューは closure-first: 既出指摘の解決・処置の確認を先に行い、
-  同一セッション内で新規の広域探索を再開しない。
-- REVISE が 1 回以上発生した場合のみ、新規セッションで最終監査を 1 回行う。
-  初回 APPROVED の場合は監査をスキップする（anchoring リスクがないため）。
-- このスキルから x-deep-plan を呼び出さない（再入禁止）。
-- usage limit / rate limit / 認証エラー時は自動リトライせず、原因を報告して停止する。
-
-## 手順
-
-### Step 1: 状態ファイルの準備
-
-1. `REVIEW_ID` を生成する（Bash）: `date +%Y%m%d-%H%M%S` の値に `-$$` を付けた形式。
-2. 計画全文を Write ツールで `/tmp/x-plan-<REVIEW_ID>.md` に書き出す。
-3. 計画ヘッダに `<!-- plan-file: <path> -->` メタデータがあり、パスが
-   `~/.claude/plans/` 配下または `/tmp` 配下の `.md` なら `ORIGINAL_PLAN_PATH` として記録する。
-   無ければ空のまま続行する。
-
-### Step 2: 初回レビュー
-
-**Step 2a** — レビュープロンプトを Write ツールで `/tmp/x-plan-prompt-<REVIEW_ID>.txt` に書く:
-
-```
-You are reviewing an implementation plan for an Emacs configuration repository
-(~/.emacs.d, module-based init with early-init.el / init.el / loads/inits/).
-
-Review the plan in:
-/tmp/x-plan-<REVIEW_ID>.md
-
-Focus on:
-- missing steps
-- risky assumptions
-- validation/testing gaps (make test / make test-startup / make test-tty /
-  make test-tty-live coverage)
-- tty regressions: the primary usage is a terminal (`emacs -nw`); the plan must keep
-  GUI-only code guarded, preserve terminal alternatives, and verify tty explicitly
-- sequencing problems (init-loader load order, module numbering)
-- violations of repo conventions (use-package sections, :straight nil for
-  built-ins, path helpers instead of hardcoded paths, fixed C-t tag-navigation
-  keybindings must not change)
-- startup-performance regressions
-- hidden edge cases that may break implementation
-- systemic issues or inconsistencies across the whole plan
-- anything only visible when reading the plan end-to-end
-
-Be concrete and actionable.
-End with exactly one line:
-VERDICT: APPROVED
-or
-VERDICT: REVISE
-```
-
-**Step 2b** — 実行（Claude Code では `run_in_background: true`）:
+1. 一意な `REVIEW_ID` を作り、計画全文を `/tmp/x-plan-<REVIEW_ID>.md` に保存する。
+   ユーザーまたは呼び出し元が編集対象として明示した計画ファイルを、書き戻し先として記録する。
+   `~/.codex/plans/` やリポジトリ内の計画も対象にできる。
+   ヘッダは保持するが、埋め込み `plan-file` だけから編集権限を推定しない。
+   書き戻し先が未指定なら、一時ファイルを成果物として報告する。
+2. レビュープロンプトを `/tmp/x-plan-prompt-<REVIEW_ID>.txt` に書く。
+   計画の絶対パス、ユーザーの要求、制約、検証結果を渡し、欠落した要件・危険な前提・
+   実行順・検証不足を根拠付きで指摘させる。対象に関係する規約だけを参照させる。
+   Emacs 設定では tty・起動順・use-package・パス・固定キーバインド・起動性能を確認し、
+   tty に影響する計画は `make test-tty` と `make test-tty-live` の不足も確認する。
+   最終行は必ず `VERDICT: APPROVED` または `VERDICT: REVISE` と指定する。
+3. 次のラッパーで実行する。プレースホルダーを実際の値へ置換する。
 
 ```bash
 bash .claude/scripts/codex-review.sh /tmp/x-plan-prompt-<REVIEW_ID>.txt /tmp/x-plan-reply-<REVIEW_ID>.md /tmp/x-plan-session-<REVIEW_ID>.txt
 ```
 
-完了後、exit code を確認して reply と session id を読む。非ゼロなら
-（1=codex 失敗 / 2=reply 空 / 3=session id 抽出失敗 / 124=タイムアウト）を報告して停止する。
+ラッパーは read-only で実行し、モデル・effort はスクリプトの既定値を使う。
+Claude Code は `run_in_background: true` で起動して完了通知を待ち、task-id と bash_id を照合する
+（sleep ポーリングはしない）。Codex は通常のシェル実行でよい。
+終了コード 0、新しい非空 reply、有効な session ID、指定形式の verdict を確認する。
+失敗・不明な verdict は承認扱いにしない。usage limit・rate limit・認証失敗は自動リトライしない。
 
-### Step 3: VERDICT: REVISE の場合
+## 修正と再レビュー
 
-1. 指摘に基づき計画を自分で修正する。
-2. `/tmp/x-plan-<REVIEW_ID>.md` を修正後の全文で上書きする
-   （ヘッダの `<!-- ... -->` メタデータ行は保持する）。
-3. 再レビュープロンプトを Write で書き直す:
+レビューだけの依頼なら REVISE と指摘を報告し、ここから先の編集は行わない。
 
-```
-Re-review the updated implementation plan in:
-/tmp/x-plan-<REVIEW_ID>.md
+- REVISE なら計画へ実質的な修正を加え、同じ計画ファイルとプロンプトを更新する。
+- 再レビューは同じラッパーの第 3 引数以降を `--resume <SESSION_ID>` とする。
+- 既出指摘の解決・処置を先に確認させ、同一セッションで広域探索をやり直さない。
+  新規指摘は具体的根拠のある High/Critical に限る。既出指摘が閉じ、新たな重大問題がなければ
+  `VERDICT: APPROVED` を返させる。
+- 初回を含め最大 3 ラウンド。未解決なら指摘と計画の所在を報告して停止する。
+- REVISE があった場合だけ、APPROVED 後に [最終監査](references/final-audit.md) を 1 回行う。
+  初回 APPROVED なら監査は不要。
 
-Check whether the previously raised issues are actually fixed.
-Close or explicitly disposition every prior finding before looking for anything new.
-Do not re-report an unchanged finding that the current plan resolves, and do not
-restart broad discovery inside this corrective session.
-A net-new finding is allowed only when it is High/Critical and concretely anchored.
-If all prior findings are closed and no qualifying novel blocker exists, return
-VERDICT: APPROVED immediately.
+## 成果物
 
-End with exactly one line:
-VERDICT: APPROVED
-or
-VERDICT: REVISE
-```
-
-4. セッション ID を読み、`--resume` で再実行する:
-
-```bash
-bash .claude/scripts/codex-review.sh /tmp/x-plan-prompt-<REVIEW_ID>.txt /tmp/x-plan-reply-<REVIEW_ID>.md --resume <SESSION_ID>
-```
-
-計 3 ラウンドまで繰り返す。3 ラウンドで APPROVED に達しない場合は、
-未解決の指摘を列挙してユーザーの判断を仰ぐ。
-
-### Step 4: 最終監査（REVISE が発生した場合のみ）
-
-新規セッション（`--resume` を使わない）で監査プロンプトを実行する:
-
-```
-You are performing a FINAL AUDIT of an implementation plan.
-
-Review the plan in:
-/tmp/x-plan-<REVIEW_ID>.md
-
-Do NOT repeat minor feedback from incremental review.
-Check for:
-1. systemic issues missed by iterative review
-2. consistency across the whole plan
-3. naming / state / error-handling drift
-4. anything only visible when reading the plan as a whole
-
-End with exactly one line:
-AUDIT: PASS
-or
-AUDIT: CONCERNS
-```
-
-### Step 5: 最終報告
-
-1. APPROVED（かつ AUDIT: PASS または監査スキップ）で `ORIGINAL_PLAN_PATH` が非空なら、
-   `/tmp/x-plan-<REVIEW_ID>.md` を Read し、ORIGINAL_PLAN_PATH へ Write で書き戻す。
-2. 次を報告する:
-   - レビューした計画の要約
-   - 主要指摘と実際に加えた修正
-   - 最終 verdict と監査結果（スキップ時はその旨）
-   - final plan artifact path: `/tmp/x-plan-<REVIEW_ID>.md`
-   - Codex セッション ID
-   - 残る懸念
+APPROVED かつ監査 PASS（または監査不要）の場合だけ、記録した元の計画へ修正済み全文を
+書き戻す。計画の要点、主な修正、verdict・監査結果、計画の絶対パス、session ID、残る懸念を報告する。
+計画全文を会話へ複製する必要はない。

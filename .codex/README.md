@@ -1,50 +1,47 @@
-# .codex/ — Codex 向け案内
+# Codex 向け案内
 
-このディレクトリは、Codex CLI でこのリポジトリを扱うための共有設定と案内を置く。
+共通ルールは [AGENTS.md](../AGENTS.md)、作業別の詳細はそこから参照する
+`.claude/rules/` が正本である。Codex 固有の `agent.md` や規約のコピーは作らない。
 
-## 正本
+## スキルの利用と編集
 
-- このリポジトリの全エージェント共通ルールの正本は、リポジトリルートの `AGENTS.md` である。
-- 状況依存の詳細ルールは `.claude/rules/*.md` にある。Codex もこれらを読み取り参照する。
-- 単一情報源を保つため、共通ルールを `.codex/` 配下へミラーしない。
-- とくに `AGENTS.md` の「【最優先】CLI (`emacs -nw`) 前提」は必ず適用する。
-  日常利用は端末の `emacs -nw` であり、tty の退行を許さず、tty へ影響する変更では
-  `make test-tty` と `make test-tty-live` を実行する。
+`.codex/skills` は `../.claude/skills` への symlink である。
+このリポジトリの Codex スキルの変更依頼は、リンク先の共通スキルの編集として扱う。
+Claude Code も使うため、特定モデルだけを前提にした指示にしない。
 
-## `.claude/` の扱い
+| スキル | 用途 |
+|---|---|
+| `x-preflight` | 実装前の作業環境と worktree の準備 |
+| `x-deep-plan` | 設計上の未決事項を調査し、実装計画を作成 |
+| `x-codex-review-plan` | 具体的な計画の外部レビュー |
+| `x-codex-review-impl` | 差分の外部レビュー。`final` は ship の承認記録を作成 |
+| `x-ship` | コミットからマージ・push・CI・後片付けまで |
+| `x-rewrite-docs` | ドキュメントと実装の乖離を修正 |
+| `x-tidy-settings` | Claude Code の共有・ローカル設定を整理 |
 
-- `.claude/` 配下（settings、rules など）は Claude Code の設定領域である。
-- Codex は既定で読み取りのみとし、変更はユーザーの明示指示がある場合に限る。
-- 変更する場合も、`AGENTS.md` と `.claude/rules/*.md` の整合性を保つ。
+- `/x-deep-plan` などは `~/.codex/prompts/` の汎用シムが、現在のチェックアウトの
+  `.codex/skills/<name>/SKILL.md` を読み込む。シムがなければそのファイルを直接読む。
+- `SKILL.md` の適用条件でスキルを選び、用途に対応する参照だけを必要な時点で読む。
+- 依頼された `.codex/` と共通スキルの編集、およびレビューが作る
+  `.claude/review-state/` の実行時記録は Codex から更新できる。
+  その他の Claude Code 固有設定は、変更依頼がある場合だけ編集する。
 
-## スキルとスラッシュコマンド
+## 設定
 
-- スキルの正本は `.claude/skills/<name>/SKILL.md` であり、`.codex/skills` は
-  `.claude/skills` への symlink である（一覧と用途は `AGENTS.md` を参照）。
-- `/x-deep-plan` などのスラッシュコマンドは、`~/.codex/prompts/` に置かれた汎用シム
-  （現在のチェックアウトの `.codex/skills/<name>/SKILL.md` を読み込んで従う形式）で解決する。
-  シムが無い環境では、`.codex/skills/<name>/SKILL.md` を直接読み込んで実行する。
-- レビュー系スキルが書き込む `.claude/review-state/`（git 管理外の実行時記録）は、
-  「`.claude/` は読み取りのみ」の原則の例外として Codex からの書き込みを認める。
+| ファイル | 用途 |
+|---|---|
+| [.codex/config.toml](config.toml) | 信頼済みチェックアウト向けの共有デフォルト（Git 管理） |
+| `~/.codex/config.toml` | マシン固有の trust 判断、writable roots、モデル設定（リポジトリ外） |
 
-## 設定の使い分け
+共有の `approval_policy = "never"` と `sandbox_mode = "danger-full-access"` は
+2026-07-25 のユーザー決定である。承認プロンプトとサンドボックス保護を無効化し、
+第三者が trust したチェックアウトや `.codex/` 自身への書き込みにも適用される。
+この 2 値は安全側への変更も含め、ユーザーが明示的に変更を依頼した場合だけ更新する。
+権限設定にかかわらず [AGENTS.md](../AGENTS.md) の安全規約を守る。
 
-| ファイル | 用途 | Git 管理 |
-|---|---|---|
-| `.codex/config.toml` | 信頼済みチェックアウト向けの共有デフォルト | コミット対象 |
-| `~/.codex/config.toml` | マシン固有の trust 判断、writable roots、モデル設定 | リポジトリ外 |
+## 指示を保守するとき
 
-- 共有デフォルトは `approval_policy = "never"`、`sandbox_mode = "danger-full-access"` である。
-  2026-07-25 にユーザーが明示決定した、信頼済みチェックアウト前提の設定である。
-- この 2 値は承認プロンプトとサンドボックス保護を無効化する。第三者がこのチェックアウトを
-  trust した場合も同じ権限が適用されることを理解して扱う。
-- エージェントはこの 2 値を勝手に変更しない。緩める方向も、安全側（`on-request` /
-  `workspace-write`）へ戻す方向も、ユーザーの明示指示がある場合だけ行う。
-- API キー、トークン、個人情報をこのリポジトリへ置かない。`AGENTS.md` の禁止事項は
-  権限設定にかかわらず適用される。
-
-## 補足
-
-- `sandbox_mode = "danger-full-access"` ではサンドボックスの保護が働かないため、
-  `.codex/` 配下への自己書き込みも技術的には防げない。運用ルールとして、
-  このディレクトリの変更はユーザーまたは Codex 以外のエージェントが明示的に行う。
+[OpenAI の記事](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)
+を踏まえ、短く具体的な適用条件、必要時に読む詳細、作業に応じた検証を使う。
+一般的な心得や固定回数の作業を重ねず、tty・Git・承認境界など実際の制約を残す。
+最適化は指示の長さだけで判断せず、通常の編集と境界条件で判断が保たれるかを確認する。

@@ -1,6 +1,6 @@
 ---
 name: x-ship
-description: 現在のブランチの変更を論理単位でコミットし、検証と Codex 最終レビューゲートを通してから main へ --no-ff でマージし、push と CI 確認、後片付けまで一気通貫で行う。
+description: タスクブランチを検証・最終レビュー後にマージし、push・CI・後片付けまで行う。ship またはマージ完了までの依頼で使う。
 allowed-tools: Bash, Read, Grep, Glob, Edit, Write, Skill, ExitWorktree
 disable-model-invocation: true
 ---
@@ -67,12 +67,19 @@ git rev-list main..HEAD --oneline
 clean tree で、Codex final レビューの承認記録が現在の HEAD と一致することを確認する:
 
 ```bash
-BRANCH_SAFE="$(git branch --show-current | tr '/' '-')"
+set -eu
+CURRENT_BRANCH="$(git branch --show-current)"
+CURRENT_HEAD="$(git rev-parse HEAD)"
+CURRENT_STATUS="$(git status --porcelain)"
+case "$CURRENT_BRANCH" in main|master|'') exit 2;; esac
+test -z "$CURRENT_STATUS"
+BRANCH_SAFE="$(printf '%s' "$CURRENT_BRANCH" | tr '/' '-')"
 RECORD=".claude/review-state/final-approval-${BRANCH_SAFE}"
-if [ -f "$RECORD" ] && [ "$(cat "$RECORD")" = "$(git rev-parse HEAD)" ]; then
+if [ -f "$RECORD" ] && [ "$(cat "$RECORD")" = "$CURRENT_HEAD" ]; then
   echo "final review gate: APPROVED"
 else
   echo "final review gate: MISSING_OR_STALE"
+  exit 1
 fi
 ```
 
