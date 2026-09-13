@@ -23,7 +23,7 @@ test "$CURRENT_HEAD" = "$REVIEWED_HEAD"
 test -z "$CURRENT_STATUS"
 git merge-base --is-ancestor "$REVIEWED_BASE" "$REVIEWED_HEAD"
 mkdir -p .claude/review-state
-BRANCH_SAFE="$(git branch --show-current | tr '/' '-')"
+BRANCH_SAFE="$(printf '%s' "$CURRENT_BRANCH" | tr '/' '-')"
 printf '%s\n' "$REVIEWED_HEAD" > ".claude/review-state/final-approval-${BRANCH_SAFE}"
 ```
 
