@@ -267,6 +267,74 @@ class AuditShellTests(unittest.TestCase):
         script = re.search(r'```bash\n(.*?)\n```', section, re.S).group(1)
         return self.run_cmd('bash', '-c', script, cwd=cwd)
 
+    def record_final_approval(self, worktree, reviewed_head, reviewed_branch='fix/fixture', reviewed_base=None):
+        contract = (ROOT / '.claude/skills/x-codex-review-impl/references/final-approval.md').read_text()
+        script = re.search(r'```bash\n(.*?)\n```', contract, re.S).group(1)
+        self.env['REVIEWED_HEAD'] = reviewed_head
+        self.env['REVIEWED_BRANCH'] = reviewed_branch
+        self.env['REVIEWED_BASE'] = reviewed_base or self.run_cmd(
+            'git', '-C', str(worktree), 'rev-parse', 'HEAD^').stdout.strip()
+        return self.run_cmd('bash', '-c', script, cwd=worktree)
+
+    def test_final_approval_records_reviewed_clean_head(self):
+        main, _bare, worktree = self.ship_fixture()
+        # 実リポジトリと同様、承認記録は Git 管理外にする。
+        with (main / '.git/info/exclude').open('a') as stream:
+            stream.write('\n.claude/review-state/\n')
+        head = self.run_cmd('git', '-C', str(worktree), 'rev-parse', 'HEAD').stdout.strip()
+        result = self.record_final_approval(worktree, head)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        record = worktree / '.claude/review-state/final-approval-fix-fixture'
+        self.assertEqual(record.read_text(), head + '\n')
+        self.assertEqual(self.run_cmd('git', '-C', str(worktree), 'status', '--porcelain').stdout, '')
+        self.assertEqual(self.ship_step(5, worktree).returncode, 0)
+        (worktree / 'after-review.txt').write_text('new change\n')
+        result = self.ship_step(5, worktree)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn('gate: APPROVED', result.stdout)
+
+    def test_final_approval_rejects_changed_head_branch_or_dirty_tree(self):
+        main, _bare, worktree = self.ship_fixture()
+        head = self.run_cmd('git', '-C', str(worktree), 'rev-parse', 'HEAD').stdout.strip()
+        base = self.run_cmd('git', '-C', str(main), 'rev-parse', 'HEAD').stdout.strip()
+        record_dir = worktree / '.claude/review-state'
+        # 承認後の現在値でレビュー対象をすり替えず、書き込み前に拒否する。
+        self.assertNotEqual(self.record_final_approval(worktree, base).returncode, 0)
+        self.assertFalse(record_dir.exists())
+        self.assertNotEqual(self.record_final_approval(worktree, head, 'fix/other').returncode, 0)
+        self.assertFalse(record_dir.exists())
+        (worktree / 'unreviewed.txt').write_text('keep user data\n')
+        self.assertNotEqual(self.record_final_approval(worktree, head).returncode, 0)
+        self.assertFalse(record_dir.exists())
+        self.assertEqual((worktree / 'unreviewed.txt').read_text(), 'keep user data\n')
+
+    def test_final_approval_rejects_unintegrated_base(self):
+        main, _bare, worktree = self.ship_fixture()
+        head = self.run_cmd('git', '-C', str(worktree), 'rev-parse', 'HEAD').stdout.strip()
+        result = self.run_cmd('git', '-C', str(main), 'commit', '--allow-empty', '-qm', 'advanced base')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        base = self.run_cmd('git', '-C', str(main), 'rev-parse', 'HEAD').stdout.strip()
+        self.assertNotEqual(self.record_final_approval(worktree, head, reviewed_base=base).returncode, 0)
+        self.assertFalse((worktree / '.claude/review-state').exists())
+
+    def test_final_approval_and_ship_gate_reject_git_status_failure(self):
+        main, _bare, worktree = self.ship_fixture()
+        with (main / '.git/info/exclude').open('a') as stream:
+            stream.write('\n.claude/review-state/\n')
+        head = self.run_cmd('git', '-C', str(worktree), 'rev-parse', 'HEAD').stdout.strip()
+        self.assertEqual(self.record_final_approval(worktree, head).returncode, 0)
+        record = worktree / '.claude/review-state/final-approval-fix-fixture'
+        record.unlink()
+        self.env['FINAL_APPROVAL_REAL_GIT'] = shutil.which('git')
+        self.stub('git', 'if [ "$1" = status ]; then exit 17; fi\nexec "$FINAL_APPROVAL_REAL_GIT" "$@"\n')
+        # 空 stdout を clean と誤認せず、Git の失敗を伝播する。
+        self.assertNotEqual(self.record_final_approval(worktree, head).returncode, 0)
+        self.assertFalse(record.exists())
+        record.write_text(head + '\n')
+        result = self.ship_step(5, worktree)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn('gate: APPROVED', result.stdout)
+
     def test_ship_independent_shells_push_ci_and_cleanup(self):
         main, bare, worktree = self.ship_fixture()
         self.assertEqual(self.ship_step(6, worktree).returncode, 0)

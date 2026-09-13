@@ -1,59 +1,35 @@
 ---
 name: x-tidy-settings
-description: .claude/settings.json（共有）と .claude/settings.local.json（ローカル）を分類・重複排除・整列する。絶対パスやマシン固有の権限をローカル側へ移動し、共有設定を共有可能な状態に保つ。
+description: Claude Code の共有・ローカル設定を、権限を広げず分類・重複排除・整列する。settings の整理を依頼されたときに使う。
 allowed-tools: Bash, Read, Write, Grep, Glob
 ---
 
-`.claude/settings.json`（共有・コミット対象）と `.claude/settings.local.json`
-（ローカル・gitignored）を整理する。CLAUDE.md の「設定ファイル」節の運用を実施するスキル。
+`.claude/settings.json`（共有）と `.claude/settings.local.json`（gitignored）を整理する。
+[CLAUDE.md](../../../CLAUDE.md) の「設定ファイル」節を参照する。
+Codex 自体の権限設定の変更には使わない。
 
-## Steps
+## 分類と編集
 
-### 1. 読み込み
+両ファイルを読み、local がなければ空の設定として扱う。
 
-- `.claude/settings.json` を読む。
-- `.claude/settings.local.json` を読む（存在しなければ
-  `{"permissions":{"allow":[],"additionalDirectories":[]}}` として扱う）。
+| 共有に残す | ローカルへ移す |
+|---|---|
+| 絶対パスを含まないコマンド名ベースの許可、共通 Skill・WebSearch・WebFetch、`Read(//tmp/**)` など環境非依存パス、hooks | `/home/`・`/mnt/`・`C:\` を含むエントリ、マシン固有コマンド・権限・additionalDirectories |
 
-### 2. 分類（shared vs local）
+- 同一ファイル内で、既存の広いパターンに包含されると確認できる狭いエントリだけを削除する。
+  広い許可を新設しない。意味が不明な形式、deny・ask やその他の設定キー、hooks は保持する。
+- `allow` は WebFetch/WebSearch → Skill → Read → Bash 読み取り系 → Bash 開発ツール → その他の順、
+  各カテゴリ内はアルファベット順に並べる。未知の形式は削除せず末尾に残す。
+- 整理が依頼されていれば、差分を作り検証まで進める。
+  分類不能な権限や実効権限が変わる操作は、該当部分を保持して確認する。
+  ローカル値・秘密情報を報告や差分出力に露出させない。
 
-- **settings.json（共有）に残す:**
-  - コマンド名ベースの `Bash(コマンド名:*)` 許可（絶対パスを含まないもの）
-  - `WebFetch(domain:...)` / `WebSearch` などプロジェクト共通のもの
-  - `Skill(...)`: リポジトリ共通のスキル
-  - `Read(//tmp/**)` など環境非依存のパス
-  - `hooks` 設定
-- **settings.local.json（ローカル）へ移動する:**
-  - `/home/`・`/mnt/`・`C:\` を含むパスのエントリ（`Read` / `Bash` / `additionalDirectories`）
-  - マシン固有のコマンドや個人環境だけで必要な権限
+## 検証と報告
 
-### 3. 重複排除と整列
+- 両ファイルを JSON として読み取れることを確認する。
+- 共有にマシン固有パスが残らず、移動したエントリと local の既存エントリが保持されていることを確認する。
+- hooks と対象外キーの値を変更せず、削除は包含を確認した重複だけであることを照合する。
 
-- 同一ファイル内で、広いパターンに包含される狭いエントリのみ削除する
-  （例: `Bash(git:*)` があれば `Bash(git status:*)` は不要）。
-- 広いパターンを新規に作り出さない（既存エントリの削除・移動のみ）。
-- `allow` 配列はカテゴリ順に整列する:
-  1. `WebFetch` / `WebSearch` → 2. `Skill` → 3. `Read` →
-  4. Bash 読み取り系ユーティリティ → 5. Bash 開発ツール（git, gh, make, emacs, codex など）→
-  6. その他（各カテゴリ内はアルファベット順）。
-- 未知の形式のエントリは削除せず各カテゴリ末尾に置く。
-
-### 4. 確認と更新
-
-- 変更前後の差分を表示し、ユーザーに確認を求める。
-- 確認後、両ファイルを更新する。
-
-### 5. 検証
-
-- JSON 構文チェック: `python3 -c "import json; json.load(open('.claude/settings.json'))"`
-  （local 側も同様）。
-- 共有側にローカルパス（`/home/`・`/mnt/`・`C:\`）が残っていないことを確認する。
-- ローカル側の既存エントリが失われていないことを確認する。
-- `hooks` 設定が壊れていないことを確認する。
-
-### 6. コミット
-
-- `.claude/settings.json` に差分がある場合は、`chore/` プレフィックスのブランチで
-  `chore(settings): 要約` としてコミットする（main へ直接コミットしない。
-  マージと push は通常の Git 運用に従い、push はユーザーの明示依頼時のみ）。
-- `.claude/settings.local.json` は git 管理外のためコミットしない。
+分類・削除した重複の概要と検証結果、判断できず残した項目を報告する。
+コミット対象は共有ファイルだけ。コミットを依頼された場合は `chore(settings): 要約` とし、
+マージ・push は依頼された範囲でのみ行う。

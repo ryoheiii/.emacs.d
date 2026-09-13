@@ -1,163 +1,53 @@
 ---
 name: x-deep-plan
-description: プラン要求を構造化し、コードベース調査と多ラウンド 3 観点深堀りを経て決定完全な実装計画を作成する。3 ステップ以上・設計判断あり・影響範囲不明のタスクで使う。完了後に /x-codex-review-plan を自動実行する。x-codex-review-plan からは呼ばない（再入禁止）。
+description: 設計案や影響範囲の未決事項を調査し、実装・検証まで判断できる計画を作る。単純な修正の手順列挙には使わない。
 allowed-tools: Bash, Read, Grep, Glob, Agent, Write, EnterPlanMode, ExitPlanMode, AskUserQuestion, WebSearch, WebFetch, Skill
 ---
 
-実装前に「決定完全（decision-complete）」な計画を作る。計画には調査・実装・検証を含め、
-実装者が判断に迷う箇所を残さない。
+実装者が迷う設計判断を解消し、変更ファイル、実装内容、検証方法、完了基準を含む計画を作る。
+計画の作成とレビューがこのスキルの成果物である。
 
-## Usage
+## 呼び出しと詳細の選択
 
-```
-/x-deep-plan <プラン要求テキスト>        # 既定 s2（Sonnet 2 ラウンド）
-/x-deep-plan s2|s3|s2o1|o1 <要求>       # ラウンド構成の明示指定
-```
+`/x-deep-plan <要求>` が通常形。調査量と追加分析は未解決の設計判断に応じて選ぶ。
+既存の `s2` / `s3` / `s2o1` / `o1` 指定も受け付ける。
+指定された場合だけ [ラウンド指定](references/rounds.md) を読み、その構成で分析する。
 
-- `s2` = Sonnet 2 ラウンド（既定）/ `s3` = Sonnet 3 ラウンド
-- `s2o1` = Sonnet 2 ラウンド + 最終 Opus 1 ラウンド（最高精度）
-- `o1` = Opus 1 ラウンドのみ
-- 要求が空なら Step 1 で 1 回だけ質問して確定する。
+- Claude Code は Plan Mode とその計画ファイルを使う。
+- Codex は自身で調査・分析し、計画を `/tmp/x-deep-plan-<RUN_ID>.md` に保存する。
+  Plan Mode への切替や別モデルを前提にしない。
+- `RUN_ID` は日時とプロセス ID などで一意にし、関連成果物に同じ値を使う。
 
-**適切な場面**: 3 ステップ以上を要する / 設計判断が必要 / 影響範囲が不明 /
-複数モジュール（`loads/inits/` の複数ファイル）に及ぶ変更。
+## 計画の作成
 
-## 実行環境による差異
+1. 依頼から目的、完了条件、対象外、制約を整理する。重要な仕様だけが不明な場合に確認し、
+   既存の依頼や調査で決められることは再質問しない。
+2. 関連実装と該当規約を読み、設計案を実装の根拠とともに比較する。
+   Emacs 設定なら起動順・モジュール境界・use-package・パス・不変条件・tty・起動時間のうち
+   影響する項目を確認する。文書変更にこれらの全項目を要求しない。
+3. 前提の穴、コードでの実証、適切な既存手法の観点で案を点検する。
+   外部調査はローカルの根拠だけで判断できない場合に行う。
+   追加の分析は具体的な未解決事項がある場合に絞り、同じ指摘の反復を避ける。
+4. 計画へ目的・完了条件・対象外・制約・実装ステップ・検証・リスクをまとめる。
+   各ステップに変更ファイル、内容、検証方法、完了基準を記す。
+   文書なら参照・整合性検査、設定なら該当 make ターゲットを選び、tty に影響する場合は
+   `make test-tty` と `make test-tty-live` を含める。
+   不明事項を推測で埋めず、実装を妨げるものと実装中に確認できるものを区別する。
 
-- **Claude Code**（以下の手順の正本）: Plan Mode 外から呼ばれたら `EnterPlanMode` で遷移する。
-  Step 2 は読み取り専用サブエージェント（Explore）、Step 3 は 3 並列サブエージェント
-  （`general-purpose`、ラウンドごとに model 指定）で実行する。
-  計画は Plan Mode の計画ファイル（`~/.claude/plans/` 配下）へ書く。
-- **Codex**: Plan Mode・サブエージェントを使わない。Step 2 は自身の読み取り調査、
-  Step 3 は各ラウンドの 3 観点を同一セッションで逐次実行する（ラウンド数は同じ）。
-  計画は `/tmp/x-deep-plan-<RUN_ID>.md` へ書く。モデル切替は行わない。
+計画ファイルの冒頭に、実際の値で次を付ける。
 
-## Step 0: 準備
-
-1. Claude Code で Plan Mode 外なら `EnterPlanMode` を呼ぶ。
-2. `RUN_ID` を生成する: `date +%Y%m%d-%H%M%S` の値に `-$$` を付けた形式。
-3. 中間成果物ディレクトリ `/tmp/x-deep-plan-<RUN_ID>/` を作成する。
-4. 以降、生成した値はリテラル値として記録し、プレースホルダーのまま
-   サブエージェントやファイルに渡さない。
-
-## Step 1: プラン要求の構造化
-
-要求から次を抽出し、リテラル値として記録する:
-
-- `WHAT`（何を実装するか）
-- `WHY`（なぜ必要か)
-- `DONE`（完了条件。検証コマンドで確認できる形にする）
-- `SCOPE_OUT`（今回やらないこと。無ければ「なし」と明記）
-- `CONSTRAINTS`（制約。`AGENTS.md`・`.claude/rules/*.md` の該当規約を含める）
-
-`WHAT` または `DONE` が不明なら質問して確定する（質問は 1 回だけにまとめる）。
-その他の不明項目は「未定義」として続行する。構造化した値をユーザーに表示する。
-
-## Step 2: コードベース事前調査
-
-読み取り専用で関連コードを調査する（Claude Code: Explore サブエージェント / Codex: 自身で調査）。
-調査プロンプトには Step 1 のリテラル値を展開し、次の構造で結果を得る:
-
-```
-### RELATED_FILES        # 関連ファイルと理由（最大 10 件）
-### DESIGN_PATTERNS      # 従うべき既存パターン（file:line 付き、最大 5 件）
-### RISK_AREAS           # 壊しやすい箇所（file:line 付き、最大 5 件）
-### TEST_PATTERNS        # 対応する検証手段（make ターゲット、最大 5 件)
-### PROJECT_CONSTRAINTS  # 影響する規約・不変条件
-### SUMMARY              # 300 tokens 以内の要約
-```
-
-.emacs.d 固有の観点を必ず含める: `loads/inits/` の番号帯責務（`.claude/rules/codebase-map.md`）、
-use-package 規約と不変条件（`.claude/rules/elisp-conventions.md`）、パスヘルパー、起動シーケンス、
-tty（`emacs -nw`）前提（`AGENTS.md` の「【最優先】CLI (`emacs -nw`) 前提」）。
-
-出力全文を `/tmp/x-deep-plan-<RUN_ID>/codebase.md` に Write で保存する。
-失敗・タイムアウト時は `SUMMARY = 調査未完了` として続行する。
-
-## Step 3: 多ラウンド 3 観点深堀り
-
-ラウンド構成（`s2` 等)に従い、各ラウンドで次の 3 観点を実行する:
-
-- **A 批判（critic)**: 計画前提の穴、見落としたリスク、暗黙の仮定を攻撃的に探す。
-- **B 実証（empiricist)**: 主張をコードの実態と突き合わせ、実行可能性・検証可能性を確認する
-  （file:line の根拠を要求する）。
-- **C 世界水準（world-standard)**: Emacs コミュニティのベストプラクティスや
-  類似設定リポジトリの標準と比較する（WebSearch 可）。
-
-共通コンテキスト（各プロンプト冒頭）: Step 1 のリテラル値 + Step 2 の SUMMARY +
-`codebase.md` のパス。R2 以降は前ラウンド出力の Critical/High 指摘要約（15 行以内）と
-前ラウンド出力ファイルの Read 指示を追加する。
-
-- **Claude Code**: 1 メッセージで 3 サブエージェント（`general-purpose`）を並列起動する。
-  model はラウンド割当に従う（Sonnet ラウンドを先、Opus ラウンドは最後に配置し、
-  新鮮な視点で監査させる）。1 体失敗なら残り 2 体で続行、2 体以上失敗ならユーザーに確認する。
-- **Codex**: A→B→C を逐次実行する。
-
-指摘には `[FINDING-<観点><連番>-R<ラウンド>]` の番号を付け、重要度
-（Critical/High/Medium/Low）と根拠（file:line または実測）を必須とする。
-前ラウンドの指摘を覆す場合は `[CORRECTS: FINDING-...]` を付ける。
-
-各観点の出力を `/tmp/x-deep-plan-<RUN_ID>/r<N>-{a,b,c}.md` に保存する。
-
-## Step 4: 統合と計画ファイル作成
-
-**4a: 統合の優先順位**
-
-1. Critical（複数観点一致） > 2. Critical（単独 + 根拠あり） > 3. High（複数） >
-4. High 単独・Medium > 5. Low（参考）。重要度が食い違えば高い方を採用。
-ACTION が矛盾すれば両論併記してユーザー決定を求める。`[CORRECTS]` は元指摘を上書きする。
-
-**4b: Write ガード（計画を書く前の必須チェック)**
-
-全条件を満たすまで補完する:
-
-- 実装ステップが 1 つ以上あり、各ステップに変更ファイル・変更内容・検証コマンド・完了基準がある
-- テスト計画が非空（`make test` 系の実行可能コマンドを含む）
-- SCOPE_OUT が明記されている
-- .emacs.d 固有チェックに各 1 文以上言及している:
-  モジュール境界と読み込み順 / use-package 規約（`:custom`・`:hook`・`:bind`、
-  組み込みは `:straight nil`）/ パスヘルパー使用 / タグナビゲーション不変条件 / 起動時間への影響 /
-  tty（`emacs -nw`）への影響（影響し得る場合はテスト計画へ `make test-tty` と
-  `make test-tty-live` を含める）
-
-**フェイル・クローズド**: 根拠のある証拠で埋められない項目を推測で埋めない。
-埋められない場合は停止し、「追加情報提供 / 調査再実行 / スキル中止」から選んでもらう。
-
-**4c: 自己検証（2-pass）**
-
-Write 前に 3 問に答え、問題があれば修正する:
-(1) 最大リスクは FINDING に含まれているか
-(2) 実装者が最も迷うステップは十分詳細か
-(3) DONE は具体コマンドで検証可能か
-
-**4d: 計画ファイルの Write**
-
-計画ファイル（実行環境による差異の節を参照）に書く。冒頭にメタデータを付ける:
-
-```
+```markdown
 <!-- generated by x-deep-plan -->
 <!-- plan-file: <このファイルの絶対パス> -->
 <!-- run-id: <RUN_ID> -->
 ```
 
-本文構成: 目的（WHAT/WHY）/ 完了条件（DONE）/ スコープ外 / 制約 /
-実装ステップ（ファイル・内容・検証・完了基準）/ テスト計画 / リスクと対策 / 主要 FINDING 要約。
+## レビューと引き渡し
 
-## Step 5: Codex 自動レビュー
+[x-codex-review-plan](../x-codex-review-plan/SKILL.md) へ計画ファイルを渡してレビューし、
+結果と修正済みの計画を同ファイルに保存する。このレビューから本スキルへの再入は禁止する。
 
-1. 計画全文を会話に出力する（x-codex-review-plan の前提条件を満たすため）。
-2. `/x-codex-review-plan` を実行する（Claude Code: Skill ツール /
-   Codex: `.codex/skills/x-codex-review-plan/SKILL.md` を読み込んで実行）。
-3. verdict（APPROVED/REVISE/CONCERNS/FAILED）を抽出し、レビュー後の計画があれば
-   計画ファイルへ書き戻す。無ければ末尾にメタデータのみ追記する:
-
-```markdown
-> Codex review status: <verdict>
-> Reviewed at: <YYYY-MM-DD HH:MM> (JST)
-```
-
-## Step 6: 完了
-
-計画を提示し、フィードバックを求める。実装は承認後に
-`.claude/rules/git-workflow.md` に従いタスク専用ブランチ・worktree で開始する
-（Claude Code では ExitPlanMode の承認を経る）。
+計画の要点、ファイル、レビュー結果、残る判断事項を報告する。
+計画だけの依頼ならここで完了する。実装まで既に依頼されている場合は、
+レビューが APPROVED（必要な監査も PASS）で、未解決の重要判断がなければ承認済みの範囲で継続する。
+Claude Code の Plan Mode に承認が必要な場合は、その承認手順に従う。
