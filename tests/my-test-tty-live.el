@@ -13,6 +13,7 @@
 (require 'my-test-keybindings)
 (require 'my-test-deferred)
 (require 'my-test-startup)
+(require 'my-gtags)
 
 (when noninteractive
   (error "my-test-tty-live は実 pty 専用"))
@@ -124,6 +125,167 @@
   (dolist (binding my-test-keybindings--bindings)
     (should (eq (lookup-key ggtags-mode-map (kbd (car binding)))
                 (cdr binding)))))
+
+;;;;; [Group] TTY Live - タグ検索の入力と結果選択 ;;;;;
+(defmacro my-test-tty-live--with-gtags (result-lines &rest body)
+  "RESULT-LINES に対応する検索結果を供給し、実ミニバッファで BODY を検査する。
+BODY では source-buffer、target-buffer、source-point、requests、
+candidate-flags、stages を参照できる。Global と LSP だけを隔離し、
+completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
+  (declare (indent 1) (debug t))
+  `(let* ((directory (make-temp-file "my-test-tty-gtags-" t))
+          (source-file (expand-file-name "source.txt" directory))
+          (target-file (expand-file-name "target.txt" directory))
+          (source-text "alpha_symbol\nunchanged source\n")
+          (target-text "first match\nsecond match\n")
+          (lines ,result-lines)
+          (xref--history (cons nil nil))
+          (xref-history-storage #'xref-global-history)
+          source-buffer target-buffer source-point
+          requests candidate-flags stages)
+     (unwind-protect
+         (save-window-excursion
+           (write-region source-text nil source-file nil 'silent)
+           (write-region target-text nil target-file nil 'silent)
+           (setq source-buffer (find-file-noselect source-file)
+                 target-buffer (find-file-noselect target-file))
+           (switch-to-buffer source-buffer)
+           ;; ggtags のプロジェクト初期化や C モードの Eglot 起動には依存しない。
+           (use-local-map ggtags-mode-map)
+           (goto-char (point-min))
+           (setq source-point (point))
+           (let ((minibuffer-setup-hook
+                  (cons (lambda ()
+                          (push (list (minibuffer-contents-no-properties)
+                                      (eq (selected-window)
+                                          (active-minibuffer-window))
+                                      (and minibuffer-completion-table t))
+                                stages))
+                        minibuffer-setup-hook)))
+             (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () nil))
+                       ((symbol-function 'my/gtags--candidates)
+                        (lambda (flag)
+                          (push flag candidate-flags)
+                          '("alpha_symbol" "beta_symbol" "gamma_symbol")))
+                       ((symbol-function 'my/gtags--run)
+                        (lambda (flag input)
+                          (push (list flag input) requests)
+                          (mapcar
+                           (lambda (line)
+                             (xref-make (if (= line 1) "first match" "second match")
+                                        (xref-make-file-location target-file line 0)))
+                           lines))))
+               ,@body))
+           ;; 早期ジャンプ後に RET や検索語が本文へ入る退行を両バッファで検出する。
+           (with-current-buffer source-buffer
+             (should (equal (buffer-string) source-text))
+             (should-not (buffer-modified-p)))
+           (with-current-buffer target-buffer
+             (should (equal (buffer-string) target-text))
+             (should-not (buffer-modified-p))))
+       (dolist (buffer (list source-buffer target-buffer))
+         (when (buffer-live-p buffer)
+           (with-current-buffer buffer (set-buffer-modified-p nil))
+           (kill-buffer buffer)))
+       (delete-directory directory t))))
+
+(defun my-test-tty-live--assert-gtags-stages (stages count)
+  "STAGES が COUNT 回の補完入力を正しいウィンドウで開いたことを検査する。"
+  (should (= (length stages) count))
+  (should (equal (caar (last stages)) "alpha_symbol"))
+  (dolist (stage stages)
+    (should (nth 1 stage))
+    (should (nth 2 stage))))
+
+(ert-deftest my-test-tty-live-gtags-single-result-confirm-and-history ()
+  :tags '(:tty-live)
+  (dolist (binding '(("C-t C-d" . "-d")
+                     ("C-t C-u" . "-r")
+                     ("C-t C-v" . "-s")))
+    (my-test-tty-live--with-gtags '(1)
+      ;; 初期シンボルを編集し、TAB で補完してから結果を別の RET で確定する。
+      (execute-kbd-macro
+       (kbd (concat (car binding) " C-a C-k beta TAB RET C-n C-p RET")))
+      (my-test-tty-live--assert-gtags-stages stages 2)
+      (should (equal candidate-flags (list (cdr binding))))
+      (should (equal requests (list (list (cdr binding) "beta_symbol"))))
+      (should (eq (current-buffer) target-buffer))
+      (should (= (line-number-at-pos) 1))
+      (xref-go-back)
+      (should (eq (current-buffer) source-buffer))
+      (should (= (point) source-point))
+      (xref-go-forward)
+      (should (eq (current-buffer) target-buffer))
+      (should (= (line-number-at-pos) 1)))))
+
+(ert-deftest my-test-tty-live-gtags-multiple-results-filter-and-select ()
+  :tags '(:tty-live)
+  (my-test-tty-live--with-gtags '(1 2)
+    ;; 検索語は初期値を確定し、Consult 側で結果本文を絞り込む。
+    (execute-kbd-macro
+     (kbd "C-t C-u RET C-n C-p second TAB RET"))
+    (my-test-tty-live--assert-gtags-stages stages 2)
+    (should (equal requests '(("-r" "alpha_symbol"))))
+    (should (eq (current-buffer) target-buffer))
+    (should (= (line-number-at-pos) 2))
+    (xref-go-back)
+    (should (eq (current-buffer) source-buffer))
+    (should (= (point) source-point))
+    (xref-go-forward)
+    (should (eq (current-buffer) target-buffer))
+    (should (= (line-number-at-pos) 2))))
+
+(ert-deftest my-test-tty-live-gtags-lsp-ret-preserves-at-point-symbol ()
+  :tags '(:tty-live)
+  (my-test-tty-live--with-gtags nil
+    (write-region "" nil (expand-file-name "GTAGS" directory) nil 'silent)
+    (let ((find-executable (symbol-function 'executable-find))
+          lsp-input)
+      (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () t))
+                ((symbol-function 'executable-find)
+                 (lambda (program &optional remote)
+                   (if (equal program "global")
+                       (expand-file-name "global" directory)
+                     (funcall find-executable program remote))))
+                ((symbol-function 'my/gtags--candidates)
+                 (lambda (flag)
+                   (push flag candidate-flags)
+                   '("alpha_symbol_more")))
+                ((symbol-function 'xref-find-definitions)
+                 (lambda (symbol)
+                   (setq lsp-input symbol)
+                   nil)))
+        ;; Global に似た名前しかなくても、RET は LSP の元シンボルを確定する。
+        (execute-kbd-macro (kbd "C-t C-d RET"))
+        (my-test-tty-live--assert-gtags-stages stages 1)
+        (should (equal candidate-flags '("-d")))
+        (should (equal lsp-input "alpha_symbol"))
+        (should-not requests)
+        (should (eq (current-buffer) source-buffer))
+        (should (= (point) source-point))))))
+
+(ert-deftest my-test-tty-live-gtags-cancel-query ()
+  :tags '(:tty-live)
+  (my-test-tty-live--with-gtags '(1)
+    (condition-case nil
+        (execute-kbd-macro (kbd "C-t C-d C-a C-k beta TAB C-g"))
+      (quit nil))
+    (my-test-tty-live--assert-gtags-stages stages 1)
+    (should-not requests)
+    (should (eq (current-buffer) source-buffer))
+    (should (= (point) source-point))))
+
+(ert-deftest my-test-tty-live-gtags-cancel-results ()
+  :tags '(:tty-live)
+  (dolist (lines '((1) (1 2)))
+    (my-test-tty-live--with-gtags lines
+      (condition-case nil
+          (execute-kbd-macro (kbd "C-t C-v RET C-n C-p C-g"))
+        (quit nil))
+      (my-test-tty-live--assert-gtags-stages stages 2)
+      (should (equal requests '(("-s" "alpha_symbol"))))
+      (should (eq (current-buffer) source-buffer))
+      (should (= (point) source-point)))))
 
 (ert-deftest my-test-tty-live-corfu-terminal-enabled ()
   :tags '(:tty-live)

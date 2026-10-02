@@ -105,13 +105,28 @@ Emacs からは `M-x my/treesit-install-c-grammars`（C/C++ をまとめて導�
 キーバインドは [keybindings.md](keybindings.md) の「C/C++ タグナビゲーション」を参照。
 `C-t` プレフィックスは不変条件であり、バックエンドが変わっても変更しない。
 
-検索の委譲は次の順で決まる（`loads/site-elisp/my-gtags.el`）。
+`C-t d/u/v/f`（`C-t C-d/C-u/C-v/C-f` も同じ）は、次の 2 段階で検索する。
 
-1. eglot 管理下のバッファでカーソル位置にシンボルがある → `xref`（LSP）で検索する。
-2. LSP が見つけられない、または非 LSP 環境 → `global` コマンドを `call-process` で直接実行する。
+1. ミニバッファで名前を補完する。カーソル位置のシンボル名・ファイル名が初期入力になり、
+   GNU Global の候補を Vertico で表示する。Orderless による途中一致と、スペース区切りの
+   複数語で絞り込める。
+2. 検索結果から移動先を選ぶ。結果が 1 件でも選択を待ち、`RET` でジャンプする。
+   複数件は Consult のプレビュー付き、1 件はファイル名・行番号・本文の表示のみとなる。
 
-`global` の結果は `consult-xref` → vertico で表示する。候補が 1 件なら直接ジャンプする。
-ggtags の xref バックエンド・プロセス管理は経由しない（最短パスで結果を得るため）。
+候補は `C-n` / `C-p` で移動、`TAB` で入力欄へ挿入、`RET` で確定する。
+`C-g` は検索を中止する。名前入力で候補にない名前や正規表現を使う場合は、
+`M-RET`（端末では `ESC RET` でも可）で入力そのものを確定できる。
+`C-t v` は GNU Global の `-s` に対応し、GTAGS に定義のないシンボルの出現箇所を検索する。
+
+定義・参照検索（`d/u`）の委譲は次の順で決まる（`loads/site-elisp/my-gtags.el`）。
+
+1. eglot 管理下で、初期入力のシンボル名を変えずに確定する → `xref`（LSP）で検索する。
+2. 名前を変更した場合、LSP が見つけられない場合、非 LSP 環境 → GNU Global で検索する。
+
+`C-u C-t d` / `C-u C-t u` は GNU Global を指定して検索する。
+GTAGS や `global` コマンドがない環境でも、LSP 検索では元のシンボル名を候補にして検索を続けられる。
+候補の取得に失敗した場合も診断を残し、LSP での検索を続ける。
+GNU Global は `call-process` で直接実行し、ggtags の xref バックエンド・プロセス管理は経由しない。
 
 GTAGS は初回だけ作成が必要である。`update-gtags` は `global -uv` を実行するだけで、
 GTAGS が無い状態では何も作られない（`global` が終了コード 3 で失敗する）。

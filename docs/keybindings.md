@@ -90,12 +90,16 @@ Migemo はミニバッファ補完の絞り込み（Orderless の matching style
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-t d` / `C-t C-d` | `my/gtags-find-definition` | 定義へジャンプ（`C-u` でシンボルを手入力） |
+| `C-t d` / `C-t C-d` | `my/gtags-find-definition` | 定義を検索 |
 | `C-t u` / `C-t C-u` | `my/gtags-find-references` | 参照を検索 |
-| `C-t v` / `C-t C-v` | `my/gtags-find-symbol` | シンボルの出現箇所を検索 |
+| `C-t v` / `C-t C-v` | `my/gtags-find-symbol` | GTAGS に定義のないシンボルの出現箇所を検索 |
 | `C-t f` / `C-t C-f` | `my/gtags-find-file` | ファイル名で検索 |
 | `C-t p` / `C-t C-p` | `xref-go-back` | ジャンプ履歴を戻る |
 | `C-t n` / `C-t C-n` | `xref-go-forward` | ジャンプ履歴を進む |
+
+検索は毎回、名前の補完 → 移動先の選択の順で進む。結果が 1 件でも `RET` で選択する。
+`C-u C-t d` / `C-u C-t u` は GNU Global を指定する。
+補完中の操作と LSP への委譲条件は [タグナビゲーション](cpp.md#タグナビゲーション) を参照。
 
 C/C++ バッファでは `C-c c` が `compile` に割り当てられる。
 

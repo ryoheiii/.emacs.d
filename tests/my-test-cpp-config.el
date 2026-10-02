@@ -753,46 +753,143 @@ my/irony-maybe-enable がサーバー未導入時のロードを止めるため�
       (when (timerp my/focus-change-timer)
         (cancel-timer my/focus-change-timer)))))
 
-(ert-deftest my-test-cpp-config-gtags-non-lsp-fallback ()
-  :tags '(:cpp-config)
-  (with-temp-buffer
-    (insert "sample")
-    (goto-char (point-min))
-    (let (global-args xref-called)
-      (cl-letf (((symbol-function 'my/gtags--run)
-                 (lambda (flag input)
-                   (setq global-args (list flag input))
-                   nil))
-                ((symbol-function 'xref-find-definitions)
-                 (lambda (_identifier)
-                   (setq xref-called t))))
-        (should-not (my/gtags--lsp-p))
-        (my/gtags-find-definition)
-        (should (equal global-args '("-d" "sample")))
-        (should-not xref-called)))))
-
 (defmacro my-test-cpp-config--with-gtags-stubs (lsp-p &rest body)
-  "LSP-P を my/gtags--lsp-p の返り値として BODY を実行する.
-BODY 内では global-calls / xref-def-calls / xref-ref-calls で呼び出しを観測できる。"
+  "LSP-P を管理状態として BODY を実行する.
+Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-calls で観測する。"
   (declare (indent 1))
-  `(with-temp-buffer
-     (insert "sample")
-     (goto-char (point-min))
-     (let (global-calls xref-def-calls xref-ref-calls)
-       (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () ,lsp-p))
-                 ((symbol-function 'my/gtags--find-via-global)
-                  (lambda (flag symbol)
-                    (push (list flag symbol) global-calls)))
-                 ((symbol-function 'xref-find-definitions)
-                  (lambda (identifier)
-                    (push identifier xref-def-calls)))
-                 ((symbol-function 'xref-find-references)
-                  (lambda (identifier)
-                    (push identifier xref-ref-calls))))
-         ,@body))))
+  `(let ((root (make-temp-file "my-test-gtags-" t)))
+     (unwind-protect
+         (with-temp-buffer
+           (setq default-directory (file-name-as-directory root))
+           (with-temp-file (expand-file-name "GTAGS" root))
+           (insert "sample")
+           (goto-char (point-min))
+           (let (global-calls xref-def-calls xref-ref-calls
+                 candidate-calls read-calls)
+             (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () ,lsp-p))
+                       ((symbol-function 'executable-find)
+                        (lambda (name) (and (equal name "global") "/stub/global")))
+                       ((symbol-function 'my/gtags--candidates)
+                        (lambda (flag)
+                          (push flag candidate-calls)
+                          '("sample" "memory_pool_allocate" "cache_release")))
+                       ((symbol-function 'completing-read)
+                        (lambda (prompt collection &optional predicate require-match
+                                        initial history default &rest _)
+                          (push (list prompt collection predicate require-match
+                                      initial history default) read-calls)
+                          (or initial default "")))
+                       ((symbol-function 'my/gtags--find-via-global)
+                        (lambda (flag symbol)
+                          (push (list flag symbol) global-calls)))
+                       ((symbol-function 'xref-find-definitions)
+                        (lambda (identifier)
+                          (push identifier xref-def-calls)))
+                       ((symbol-function 'xref-find-references)
+                        (lambda (identifier)
+                          (push identifier xref-ref-calls))))
+               ,@body)))
+       (delete-directory root t))))
+
+(ert-deftest my-test-cpp-config-gtags-non-lsp-fallback ()
+  "非 LSP 環境では補完した名前を Global へ渡す."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs nil
+    (my/gtags-find-definition)
+    (should (equal global-calls '(("-d" "sample"))))
+    (should (= (length read-calls) 1))
+    (should-not xref-def-calls)))
+
+(ert-deftest my-test-cpp-config-gtags-command-completion ()
+  "全検索が種類に応じた候補と編集可能な初期入力を提供する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs nil
+    (pcase-dolist (`(,command ,flag)
+                  '((my/gtags-find-definition "-d")
+                    (my/gtags-find-references "-r")
+                    (my/gtags-find-symbol "-s")
+                    (my/gtags-find-file "-P")))
+      (funcall command)
+      (should (equal (car candidate-calls) flag))
+      (should (equal (car global-calls) (list flag "sample")))
+      (should (equal (nth 4 (car read-calls)) "sample"))
+      ;; 未登録名や Global の正規表現もそのまま検索できる。
+      (should-not (nth 3 (car read-calls)))
+      (should (member "memory_pool_allocate"
+                      (all-completions "" (nth 1 (car read-calls))))))
+    (should (= (length read-calls) 4))
+    ;; シンボル名とファイル名の履歴は混ぜない。
+    (let ((file-history (nth 5 (nth 0 read-calls)))
+          (symbol-history (nth 5 (nth 1 read-calls))))
+      (should (symbolp file-history))
+      (should (symbolp symbol-history))
+      (should file-history)
+      (should symbol-history)
+      (should-not (eq file-history symbol-history))
+      (should (eq symbol-history (nth 5 (nth 2 read-calls))))
+      (should (eq symbol-history (nth 5 (nth 3 read-calls)))))))
+
+(ert-deftest my-test-cpp-config-gtags-orderless-completion ()
+  "候補全体へ途中一致と順不同の複数語絞り込みが効く."
+  :tags '(:cpp-config)
+  (require 'orderless)
+  (my-test-cpp-config--with-gtags-stubs nil
+    (cl-letf (((symbol-function 'completing-read)
+               (lambda (_prompt collection &rest _)
+                 (dolist (input '("allocate" "allocate pool" "pool memory"))
+                   (let ((matches (completion-all-completions
+                                   input collection nil (length input))))
+                     (should (equal (car matches) "memory_pool_allocate"))
+                     (should-not (consp (cdr matches)))))
+                 "memory_pool_allocate")))
+      (my/gtags-find-definition)
+      (should (equal global-calls '(("-d" "memory_pool_allocate"))))
+      (should (equal candidate-calls '("-d"))))))
+
+(ert-deftest my-test-cpp-config-gtags-no-symbol-and-free-input ()
+  "カーソル位置に名前が無くても補完でき、候補外の正規表現を渡せる."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs nil
+    (erase-buffer)
+    (cl-letf (((symbol-function 'my/gtags--candidates) (lambda (_flag) nil))
+              ((symbol-function 'completing-read)
+               (lambda (_prompt collection &optional _predicate require-match
+                                initial &rest _)
+                 (should-not (all-completions "" collection))
+                 (should-not require-match)
+                 (should (member initial '(nil "")))
+                 "memory_.*")))
+      (my/gtags-find-references)
+      (should (equal global-calls '(("-r" "memory_.*")))))))
+
+(ert-deftest my-test-cpp-config-gtags-empty-input ()
+  "空文字・空白のみの入力では検索を実行しない."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs nil
+    (dolist (input '("" " " "  \t"))
+      (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) input)))
+        (should-error (my/gtags-find-definition) :type 'user-error)))
+    (should-not global-calls)
+    (should-not xref-def-calls)))
+
+(ert-deftest my-test-cpp-config-gtags-input-cancel ()
+  "補完を C-g で中止した場合は検索せず、本文を変えない."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs t
+    (set-buffer-modified-p nil)
+    (cl-letf (((symbol-function 'completing-read)
+               (lambda (&rest _) (signal 'quit nil))))
+      (should (eq (condition-case nil
+                      (my/gtags-find-definition)
+                    (quit 'cancelled))
+                  'cancelled)))
+    (should-not global-calls)
+    (should-not xref-def-calls)
+    (should (equal (buffer-string) "sample"))
+    (should-not (buffer-modified-p))))
 
 (ert-deftest my-test-cpp-config-gtags-lsp-dispatch ()
-  "LSP 管理下の at-point 検索は xref へ委譲し、global は呼ばない."
+  "LSP 管理下で初期入力を確定した場合は xref へ委譲する."
   :tags '(:cpp-config)
   (my-test-cpp-config--with-gtags-stubs t
     (my/gtags-find-definition)
@@ -800,10 +897,57 @@ BODY 内では global-calls / xref-def-calls / xref-ref-calls で呼び出しを
     (should-not global-calls)
     (my/gtags-find-references)
     (should (equal xref-ref-calls '("sample")))
+    (should-not global-calls)
+    (should (= (length read-calls) 2))))
+
+(ert-deftest my-test-cpp-config-gtags-lsp-keeps-exact-default ()
+  "GTAGS に前方一致名しか無くても元の名前を LSP 用候補として残す."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs t
+    (cl-letf (((symbol-function 'my/gtags--candidates)
+               (lambda (_flag) '("sample_more")))
+              ((symbol-function 'completing-read)
+               (lambda (_prompt collection &optional _predicate _require-match
+                                initial &rest _)
+                 (let ((candidates (all-completions "" collection)))
+                   (should (equal initial "sample"))
+                   (should (= (cl-count "sample" candidates :test #'equal) 1))
+                   (should (member "sample_more" candidates)))
+                 "sample")))
+      (my/gtags-find-definition)
+      (my/gtags-find-references))
+    (should (equal xref-def-calls '("sample")))
+    (should (equal xref-ref-calls '("sample")))
     (should-not global-calls)))
 
+(ert-deftest my-test-cpp-config-gtags-global-keeps-indexed-candidates ()
+  "Global 専用経路の候補は DB に収録された名前のままにする."
+  :tags '(:cpp-config)
+  (pcase-dolist (`(,lsp ,prefix) '((nil nil) (t (4))))
+    (my-test-cpp-config--with-gtags-stubs lsp
+      (cl-letf (((symbol-function 'my/gtags--candidates)
+                 (lambda (_flag) '("sample_more")))
+                ((symbol-function 'completing-read)
+                 (lambda (_prompt collection &rest _)
+                   (should (equal (all-completions "" collection) '("sample_more")))
+                   "sample_more")))
+        (my/gtags-find-definition prefix))
+      (should (equal global-calls '(("-d" "sample_more"))))
+      (should-not xref-def-calls))))
+
+(ert-deftest my-test-cpp-config-gtags-lsp-changed-input ()
+  "LSP 管理下でも別名へ変更した入力は Global へ渡す."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs t
+    (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) "manual")))
+      (my/gtags-find-definition)
+      (my/gtags-find-references))
+    (should (equal global-calls '(("-r" "manual") ("-d" "manual"))))
+    (should-not xref-def-calls)
+    (should-not xref-ref-calls)))
+
 (ert-deftest my-test-cpp-config-gtags-lsp-fallback-on-user-error ()
-  "LSP が user-error を投げたら global 経路へフォールバックする."
+  "LSP が user-error を投げたら Global 経路へフォールバックする."
   :tags '(:cpp-config)
   (my-test-cpp-config--with-gtags-stubs t
     (cl-letf (((symbol-function 'xref-find-definitions)
@@ -812,14 +956,230 @@ BODY 内では global-calls / xref-def-calls / xref-ref-calls で呼び出しを
       (should (equal global-calls '(("-d" "sample")))))))
 
 (ert-deftest my-test-cpp-config-gtags-prefix-forces-global ()
-  "C-u 付き (手動入力) は LSP 管理下でも global 固定."
+  "C-u 付きは入力を変えなくても LSP 管理下で Global を使う."
   :tags '(:cpp-config)
   (my-test-cpp-config--with-gtags-stubs t
-    (cl-letf (((symbol-function 'read-string)
-               (lambda (&rest _) "manual")))
-      (my/gtags-find-definition '(4))
-      (should (equal global-calls '(("-d" "manual"))))
-      (should-not xref-def-calls))))
+    (my/gtags-find-definition '(4))
+    (my/gtags-find-references '(4))
+    (should (equal global-calls '(("-r" "sample") ("-d" "sample"))))
+    (should (= (length read-calls) 2))
+    (should-not xref-def-calls)
+    (should-not xref-ref-calls)))
+
+(ert-deftest my-test-cpp-config-gtags-lsp-without-global ()
+  "Global コマンドや DB が無くても LSP の at-point 検索を維持する."
+  :tags '(:cpp-config)
+  (dolist (missing '(command database))
+    (my-test-cpp-config--with-gtags-stubs t
+      (let ((process-environment (copy-sequence process-environment)))
+        (setenv "GTAGSDBPATH" nil)
+        (setenv "GTAGSROOT" nil)
+        (when (eq missing 'database)
+          (delete-file (expand-file-name "GTAGS" root)))
+        (cl-letf (((symbol-function 'executable-find)
+                   (lambda (_name) (unless (eq missing 'command) "/stub/global")))
+                  ((symbol-function 'my/gtags--candidates)
+                   (lambda (_flag) (ert-fail "Global を実行した"))))
+          (my/gtags-find-definition)
+          (my/gtags-find-references))
+        (should (equal xref-def-calls '("sample")))
+        (should (equal xref-ref-calls '("sample")))
+        (should (equal (all-completions "" (nth 1 (car read-calls)))
+                       '("sample")))
+        (should-not global-calls)))))
+
+(ert-deftest my-test-cpp-config-gtags-lsp-availability-probe-error ()
+  "Global の可用性確認が失敗しても診断後に補完入力と LSP 検索を続ける."
+  :tags '(:cpp-config)
+  (dolist (probe '(executable-find locate-dominating-file))
+    (my-test-cpp-config--with-gtags-stubs t
+      (let (diagnostics)
+        (cl-letf (((symbol-function probe)
+                   (lambda (&rest _) (signal 'file-error '("GTAGS probe failure"))))
+                  ((symbol-function 'message)
+                   (lambda (format-string &rest args)
+                     (push (apply #'format format-string args) diagnostics))))
+          (my/gtags-find-definition)
+          (my/gtags-find-references))
+        (should (= (length read-calls) 2))
+        (dolist (read-call read-calls)
+          (should (equal (all-completions "" (nth 1 read-call)) '("sample")))
+          (should (equal (nth 4 read-call) "sample")))
+        (should (equal xref-def-calls '("sample")))
+        (should (equal xref-ref-calls '("sample")))
+        (should (= (length diagnostics) 2))
+        (dolist (diagnostic diagnostics)
+          (should (string-match-p "GTAGS probe failure" diagnostic)))
+        (should-not candidate-calls)
+        (should-not global-calls)))))
+
+(ert-deftest my-test-cpp-config-gtags-lsp-existing-db-error ()
+  "候補 DB の失敗を診断しつつ、元の名前による LSP 検索を維持する."
+  :tags '(:cpp-config)
+  (dolist (error-type '(user-error file-error))
+    (my-test-cpp-config--with-gtags-stubs t
+      (let (diagnostics)
+        (cl-letf (((symbol-function 'my/gtags--candidates)
+                   (lambda (_flag) (signal error-type '("GTAGS fixture failure"))))
+                  ((symbol-function 'message)
+                   (lambda (format-string &rest args)
+                     (push (apply #'format format-string args) diagnostics))))
+          (my/gtags-find-definition))
+        (should (equal xref-def-calls '("sample")))
+        (should (equal (all-completions "" (nth 1 (car read-calls)))
+                       '("sample")))
+        (should (cl-some (lambda (text) (string-match-p "GTAGS fixture failure" text))
+                         diagnostics))
+        (should-not global-calls)))))
+
+(ert-deftest my-test-cpp-config-gtags-global-existing-db-error ()
+  "Global 専用経路では候補 DB の失敗を隠さず検索前に通知する."
+  :tags '(:cpp-config)
+  (pcase-dolist (`(,lsp ,prefix) '((nil nil) (t (4))))
+    (my-test-cpp-config--with-gtags-stubs lsp
+      (cl-letf (((symbol-function 'my/gtags--candidates)
+                 (lambda (_flag) (user-error "GTAGS の読み取りに失敗"))))
+        (should-error (my/gtags-find-definition prefix) :type 'user-error))
+      (should-not read-calls)
+      (should-not xref-def-calls)
+      (should-not global-calls))))
+
+(ert-deftest my-test-cpp-config-gtags-lsp-broken-db-changed-input ()
+  "候補 DB の失敗後でも別名入力は Global 検索となり、そのエラーを通知する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs t
+    (cl-letf (((symbol-function 'my/gtags--candidates)
+               (lambda (_flag) (user-error "GTAGS の読み取りに失敗")))
+              ((symbol-function 'completing-read) (lambda (&rest _) "manual"))
+              ((symbol-function 'my/gtags--find-via-global)
+               (lambda (flag symbol)
+                 (push (list flag symbol) global-calls)
+                 (user-error "Global 検索失敗"))))
+      (should-error (my/gtags-find-definition) :type 'user-error))
+    (should (equal global-calls '(("-d" "manual"))))
+    (should-not xref-def-calls)))
+
+(ert-deftest my-test-cpp-config-gtags-lsp-local-result-display ()
+  "LSP の結果表示だけ共通選択 UI を使い、呼び出し後は元へ戻す."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-stubs t
+    (let ((before-xrefs xref-show-xrefs-function)
+          (before-definitions xref-show-definitions-function))
+      (cl-letf (((symbol-function 'xref-find-definitions)
+                 (lambda (_identifier)
+                   (should (eq xref-show-xrefs-function #'my/gtags--show))
+                   (should (eq xref-show-definitions-function #'my/gtags--show)))))
+        (my/gtags-find-definition))
+      (should (eq xref-show-xrefs-function before-xrefs))
+      (should (eq xref-show-definitions-function before-definitions)))))
+
+(ert-deftest my-test-cpp-config-gtags-single-result-confirm ()
+  "単一結果もファイル・行・本文を表示し、明示選択後にだけ移動する."
+  :tags '(:cpp-config)
+  (let* ((item (xref-make "int sample(void)" (xref-make-file-location
+                                            "/tmp/gtags-sample.c" 7 0)))
+         (alist '((display-action . window)))
+         (fetch-count 0)
+         selected selected-action read-called)
+    (cl-letf (((symbol-function 'completing-read)
+               (lambda (_prompt collection &optional _predicate require-match &rest _)
+                 (setq read-called t)
+                 (should (eq require-match t))
+                 (should (= fetch-count 1))
+                 (should-not selected)
+                 (let ((candidates (all-completions "" collection)))
+                   (should (= (length candidates) 1))
+                   (should (string-match-p "gtags-sample.c" (car candidates)))
+                   (should (string-match-p "7" (car candidates)))
+                   (should (string-match-p "int sample" (car candidates)))
+                   (car candidates))))
+              ((symbol-function 'xref-pop-to-location)
+               (lambda (xref &optional action)
+                 (setq selected xref selected-action action)))
+              ((symbol-function 'consult-xref)
+               (lambda (&rest _) (ert-fail "単一結果を即ジャンプする UI へ渡した"))))
+      (my/gtags--show (lambda () (cl-incf fetch-count) (list item)) alist))
+    (should read-called)
+    (should (eq selected item))
+    (should (eq selected-action 'window))
+    (should (= fetch-count 1))))
+
+(ert-deftest my-test-cpp-config-gtags-single-result-cancel ()
+  "単一結果の確認を中止しても本文へジャンプしない."
+  :tags '(:cpp-config)
+  (let ((item (xref-make "sample" (xref-make-file-location "/tmp/sample.c" 1 0))))
+    (cl-letf (((symbol-function 'completing-read)
+               (lambda (&rest _) (signal 'quit nil)))
+              ((symbol-function 'xref-pop-to-location)
+               (lambda (&rest _) (ert-fail "中止後に移動した"))))
+      (should (eq (condition-case nil
+                      (my/gtags--show (lambda () (list item)))
+                    (quit 'cancelled))
+                  'cancelled)))))
+
+(ert-deftest my-test-cpp-config-gtags-multiple-results-consult ()
+  "複数の結果は既存 Consult の候補選択・プレビューへ渡す."
+  :tags '(:cpp-config)
+  (let* ((items (list (xref-make "first" (xref-make-file-location "/tmp/a.c" 1 0))
+                      (xref-make "second" (xref-make-file-location "/tmp/b.c" 2 0))))
+         (alist `((window . ,(selected-window))))
+         (fetch-count 0)
+         shown)
+    (cl-letf (((symbol-function 'consult-xref)
+               (lambda (fetcher options)
+                 (setq shown (funcall fetcher))
+                 (should (equal options alist)))))
+      (my/gtags--show (lambda () (cl-incf fetch-count) items) alist))
+    (should (equal shown items))
+    (should (= fetch-count 1))))
+
+(ert-deftest my-test-cpp-config-gtags-candidate-process-input ()
+  "補完は種別ごとに空 prefix で全候補を一度だけ問い合わせる."
+  :tags '(:cpp-config)
+  (dolist (flag '("-d" "-r" "-s" "-P"))
+    (let (calls)
+      (cl-letf (((symbol-function 'call-process)
+                 (lambda (program _in _out _display &rest args)
+                   (should (equal program "global"))
+                   (push args calls)
+                   (insert "sample\nmemory_pool_allocate\n")
+                   0)))
+        (should (equal (sort (my/gtags--candidates flag) #'string<)
+                       '("memory_pool_allocate" "sample"))))
+      (should (equal calls (list (list "-c" flag "--" "")))))))
+
+(ert-deftest my-test-cpp-config-gtags-candidate-process-status ()
+  "候補の一致なしは空、実行失敗・異常終了は user-error にする."
+  :tags '(:cpp-config)
+  (cl-letf (((symbol-function 'call-process) (lambda (&rest _) 1)))
+    (should-not (my/gtags--candidates "-d")))
+  (dolist (status '(2 "killed"))
+    (cl-letf (((symbol-function 'call-process) (lambda (&rest _) status)))
+      (should-error (my/gtags--candidates "-d") :type 'user-error)))
+  (cl-letf (((symbol-function 'call-process)
+             (lambda (&rest _) (signal 'file-missing '("global が無い")))))
+    (should-error (my/gtags--candidates "-d") :type 'user-error)))
+
+(ert-deftest my-test-cpp-config-gtags-real-candidates ()
+  "実 GTAGS で定義・参照・未定義シンボル・ファイルの候補を区別する."
+  :tags '(:gtags-integration)
+  (skip-unless (and (executable-find "global") (executable-find "gtags")))
+  (let ((root (make-temp-file "my-test-real-gtags-" t))
+        (process-environment (copy-sequence process-environment)))
+    (unwind-protect
+        (let ((default-directory (file-name-as-directory root)))
+          (dolist (name '("GTAGSROOT" "GTAGSDBPATH" "GTAGSCONF" "GTAGSLABEL"))
+            (setenv name nil))
+          (with-temp-file (expand-file-name "sample.c" root)
+            (insert "int memory_pool_allocate(void) { return external_value; }\n"
+                    "int main(void) { return memory_pool_allocate(); }\n"))
+          (should (zerop (call-process "gtags" nil nil nil)))
+          (should (equal (sort (my/gtags--candidates "-d") #'string<)
+                         '("main" "memory_pool_allocate")))
+          (should (equal (my/gtags--candidates "-r") '("memory_pool_allocate")))
+          (should (equal (my/gtags--candidates "-s") '("external_value")))
+          (should (equal (my/gtags--candidates "-P") '("sample.c"))))
+      (delete-directory root t))))
 
 (provide 'my-test-cpp-config)
 ;;; my-test-cpp-config.el ends here
