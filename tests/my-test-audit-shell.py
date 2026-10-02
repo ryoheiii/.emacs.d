@@ -123,6 +123,60 @@ class AuditShellTests(unittest.TestCase):
             self.assertEqual((self.repo / 'var/package' / part / 'sentinel').read_text(), part)
         self.assertFalse((self.repo / 'var/package/eln-cache').exists())
 
+    def package_build_fixture(self, error_log=''):
+        """実 Emacs で起動判定を評価し、依存のビルドは fixture 内へ隔離する。"""
+        emacs = shutil.which('emacs')
+        if emacs is None:
+            self.skipTest('起動判定の検査には Emacs が必要です。')
+        self.env['AUDIT_REAL_EMACS'] = emacs
+        self.stub('emacs', 'exec "$AUDIT_REAL_EMACS" -Q '
+                  '--eval "(setq native-comp-jit-compilation nil)" "$@"\n')
+        tree = self.package_tree()
+        bootstrap = tree / 'repos/straight.el/bootstrap.el'
+        bootstrap.parent.mkdir()
+        bootstrap.write_text("(provide 'straight)\n")
+        shutil.copyfile(ROOT / 'early-init.el', self.repo / 'early-init.el')
+        # init-loader の捕捉後の状態を再現する。診断本文は外へ出してはいけない。
+        self.env['AUDIT_INIT_ERROR_LOG'] = error_log or ''
+        init = '' if error_log is None else (
+            '(defun init-loader-error-log () (getenv "AUDIT_INIT_ERROR_LOG"))\n')
+        init += ('(defun straight-rebuild-all ()\n'
+                 '  (with-temp-file (expand-file-name "rebuild-ran" user-emacs-directory)\n'
+                 '    (insert "rebuilt")))\n')
+        (self.repo / 'init.el').write_text(init)
+        (tree / 'repos/example/data').write_text('restored package')
+        packed = self.setup_cmd('--packing-package')
+        self.assertEqual(packed.returncode, 0, packed.stderr)
+        (tree / 'repos/example/data').write_text('original package')
+        return tree
+
+    def test_extract_builds_after_clean_startup(self):
+        tree = self.package_build_fixture()
+        result = self.setup_cmd('--extract-package')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.repo / 'rebuild-ran').exists())
+        self.assertEqual((tree / 'repos/example/data').read_text(), 'restored package')
+        self.assertFalse(tree.with_suffix('.bak').exists())
+
+    def test_extract_keeps_backup_when_startup_errors_are_captured(self):
+        diagnostic = 'fixture-private-error-details'
+        tree = self.package_build_fixture(diagnostic)
+        result = self.setup_cmd('--extract-package')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.repo / 'rebuild-ran').exists())
+        self.assertEqual((tree.with_suffix('.bak') / 'repos/example/data').read_text(),
+                         'original package')
+        self.assertEqual((tree / 'repos/example/data').read_text(), 'restored package')
+        self.assertNotIn(diagnostic, result.stdout + result.stderr)
+
+    def test_extract_keeps_backup_when_startup_error_api_is_missing(self):
+        tree = self.package_build_fixture(None)
+        result = self.setup_cmd('--extract-package')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.repo / 'rebuild-ran').exists())
+        self.assertEqual((tree.with_suffix('.bak') / 'repos/example/data').read_text(),
+                         'original package')
+
     def test_package_archive_replacement_with_native_mv(self):
         tree = self.package_tree()
         self.assertEqual(self.setup_cmd('--packing-package').returncode, 0)
