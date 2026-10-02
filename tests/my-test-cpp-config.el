@@ -988,6 +988,31 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
                        '("sample")))
         (should-not global-calls)))))
 
+(ert-deftest my-test-cpp-config-gtags-lsp-availability-probe-error ()
+  "Global の可用性確認が失敗しても診断後に補完入力と LSP 検索を続ける."
+  :tags '(:cpp-config)
+  (dolist (probe '(executable-find locate-dominating-file))
+    (my-test-cpp-config--with-gtags-stubs t
+      (let (diagnostics)
+        (cl-letf (((symbol-function probe)
+                   (lambda (&rest _) (signal 'file-error '("GTAGS probe failure"))))
+                  ((symbol-function 'message)
+                   (lambda (format-string &rest args)
+                     (push (apply #'format format-string args) diagnostics))))
+          (my/gtags-find-definition)
+          (my/gtags-find-references))
+        (should (= (length read-calls) 2))
+        (dolist (read-call read-calls)
+          (should (equal (all-completions "" (nth 1 read-call)) '("sample")))
+          (should (equal (nth 4 read-call) "sample")))
+        (should (equal xref-def-calls '("sample")))
+        (should (equal xref-ref-calls '("sample")))
+        (should (= (length diagnostics) 2))
+        (dolist (diagnostic diagnostics)
+          (should (string-match-p "GTAGS probe failure" diagnostic)))
+        (should-not candidate-calls)
+        (should-not global-calls)))))
+
 (ert-deftest my-test-cpp-config-gtags-lsp-existing-db-error ()
   "候補 DB の失敗を診断しつつ、元の名前による LSP 検索を維持する."
   :tags '(:cpp-config)

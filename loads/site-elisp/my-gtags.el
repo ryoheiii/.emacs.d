@@ -69,20 +69,20 @@ Emacs の補完スタイルに任せる。"
 DEFAULT は編集可能な初期入力。LSP-P が non-nil なら Global の不備で
 カーソル位置の LSP 検索を妨げない。"
   (let* ((candidates
-          (if (and lsp-p
-                   (or (not (executable-find "global"))
-                       (not (or (locate-dominating-file default-directory "GTAGS")
-                                (getenv "GTAGSROOT") (getenv "GTAGSDBPATH")))))
-              (list default)
-            (condition-case err
-                (my/gtags--candidates flag)
-              ((user-error file-error)
-               (if lsp-p
-                   (progn
-                     (message "Global の補完を利用できません: %s"
-                              (error-message-string err))
-                     (list default))
-                 (signal (car err) (cdr err)))))))
+          (condition-case err
+              (if (and lsp-p
+                       (or (not (executable-find "global"))
+                           (not (or (locate-dominating-file default-directory "GTAGS")
+                                    (getenv "GTAGSROOT") (getenv "GTAGSDBPATH")))))
+                  (list default)
+                (my/gtags--candidates flag))
+            ((user-error file-error)
+             (if lsp-p
+                 (progn
+                   (message "Global の補完を利用できません: %s"
+                            (error-message-string err))
+                   (list default))
+               (signal (car err) (cdr err))))))
          ;; 古い GTAGS に元の名前が無くても、RET で別名を選んでしまわない。
          (candidates (if (and lsp-p (not (member default candidates)))
                          (cons default candidates)
