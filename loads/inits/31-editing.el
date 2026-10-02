@@ -323,18 +323,26 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
          ("C-x C-g" . symbol-overlay-rename))               ; バッファ全体のシンボルを置換
   :preface
   (defun my/symbol-overlay-replace-region (symbol new-name start end)
-    "START から END の完全一致 SYMBOL を NEW-NAME へ一括置換する。"
+    "START から END の完全一致 SYMBOL を NEW-NAME へ一括置換する。
+既存の narrowing 内だけを編集し、シンボル境界はバッファ全体で判定する。"
     (unless (and (stringp symbol) (not (string-empty-p symbol)))
       (user-error "カーソル位置にシンボルがありません"))
     (save-excursion
       (save-restriction
-        (narrow-to-region start end)
-        (goto-char (point-min))
-        (let ((case-fold-search nil)
+        (let ((start (max start (point-min)))
+              (limit (copy-marker (min end (point-max)) t))
+              (case-fold-search nil)
               (regexp (concat "\\_<" (regexp-quote symbol) "\\_>")))
-          (atomic-change-group
-            (while (re-search-forward regexp nil t)
-              (replace-match new-name t t)))))))
+          (unwind-protect
+              (progn
+                ;; narrowing の端をシンボル境界と誤認しないよう、前後も参照する。
+                ;; 編集範囲の終端はマーカーで保持し、置換による長さの変化へ追随する。
+                (widen)
+                (goto-char start)
+                (atomic-change-group
+                  (while (re-search-forward regexp limit t)
+                    (replace-match new-name t t))))
+            (set-marker limit nil))))))
 
   ;; 現在のウィンドウ内のシンボルをリネーム
   (defun my-symbol-overlay-rename-visible ()

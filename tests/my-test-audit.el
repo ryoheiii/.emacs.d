@@ -40,6 +40,37 @@
       (should (equal (buffer-string)
                      (format "void first() { int %s; %s++; }\nvoid next() { int count; }\n" new new))))))
 
+(ert-deftest my-test-audit-rename-visible-partial-symbols ()
+  :tags '(:audit)
+  ;; 画面の両端が識別子の途中でも、見えている部分だけを一致と見なさない。
+  ;; 既に narrowing されている場合も、隠れた前後の文字を境界判定に使う。
+  (dolist (narrowed '(nil t))
+    (dolist (new '("x" "longer_name" ""))
+      (with-temp-buffer
+        (emacs-lisp-mode)
+        (insert "barfoo foo foobar foo")
+        (when narrowed (narrow-to-region 4 15))
+        (goto-char 8)
+        (cl-letf (((symbol-function 'window-start) (lambda (&rest _) 4))
+                  ((symbol-function 'window-end) (lambda (&rest _) 15))
+                  ((symbol-function 'read-string) (lambda (&rest _) new)))
+          (my-symbol-overlay-rename-visible))
+        (should (= (point-min) (if narrowed 4 1)))
+        (should (= (point-max) (+ (if narrowed 15 22) (- (length new) 3))))
+        (widen)
+        (should (equal (buffer-string) (concat "barfoo " new " foobar foo")))))))
+
+(ert-deftest my-test-audit-rename-preserves-narrowed-scope ()
+  :tags '(:audit)
+  (with-temp-buffer
+    (insert "foo foo foo")
+    (narrow-to-region 5 8)
+    (my/symbol-overlay-replace-region "foo" "longer_name" 1 12)
+    (should (= (point-min) 5))
+    (should (= (point-max) 16))
+    (widen)
+    (should (equal (buffer-string) "foo longer_name foo"))))
+
 (ert-deftest my-test-audit-rename-atomic-error ()
   :tags '(:audit)
   (with-temp-buffer
