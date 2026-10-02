@@ -906,10 +906,17 @@ clean_all() {
 # 【根拠の限界】これは straight.el の実装読解に基づく判断で、動的検証はしていない。
 # 想定と違っていた場合は M-x straight-check-all の手動実行で回復できる。
 run_package_build() {
+    # init-loader が捕捉した起動エラーも失敗にする。診断本文は出力しない。
     emacs --batch \
         --eval "(setq user-emacs-directory \"$EMACS_DIR\")" \
         -l "$EMACS_DIR/early-init.el" \
         -l "$EMACS_DIR/init.el" \
+        --eval '(unless (condition-case nil
+                            (and (fboundp (quote init-loader-error-log))
+                                 (equal (init-loader-error-log) ""))
+                          (error nil))
+                  (message "Error: 起動設定の検証に失敗したため、リビルドを中止します。")
+                  (kill-emacs 1))' \
         -f straight-rebuild-all
 }
 
