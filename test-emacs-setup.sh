@@ -1068,6 +1068,27 @@ assert_clean_keeps_stray_eln_symlink() {
 }
 assert_clean_keeps_stray_eln_symlink
 
+# var/ を別の場所へ symlink している構成でも、--clean はリンクも参照先も消さないこと
+# （eln-cache の symlink と同じ扱い）。
+assert_clean_keeps_var_symlink() {
+    local var_link="$HOME/.emacs.d/var"
+    local target="$HOME/var-target"
+    rm -rf "$var_link" "$target"
+    if ! mkdir -p "$target/hist" || ! : > "$target/hist/savehist" \
+        || ! mkdir -p "$(dirname "$var_link")" || ! ln -s "$target" "$var_link"; then
+        record_fail "clean keeps var symlink — スタブを作れなかった"
+        return
+    fi
+    if "$SCRIPT" --clean >/dev/null 2>&1 \
+        && [ -L "$var_link" ] && [ -f "$target/hist/savehist" ]; then
+        record_pass "clean keeps var symlink"
+    else
+        record_fail "clean keeps var symlink — リンクか参照先が失われた"
+    fi
+    rm -rf "$var_link" "$target"
+}
+assert_clean_keeps_var_symlink
+
 echo ""
 echo "=== 出力先の分離 ==="
 

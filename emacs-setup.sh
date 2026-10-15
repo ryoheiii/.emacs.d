@@ -408,8 +408,12 @@ uninstall_node() {
 
     # オフラインインストールの削除
     if [ -L "$NODE_ACTIVE_LINK" ]; then
-        local target
-        target="$(readlink -f "$NODE_ACTIVE_LINK")"
+        # readlink -f はリンク先の親ディレクトリが無いと無出力で失敗する。
+        # set -e で黙って止まらず、リンクだけを消して先へ進む（target は空のまま）。
+        local target=""
+        if ! target="$(readlink -f "$NODE_ACTIVE_LINK" 2>/dev/null)"; then
+            target=""
+        fi
         rm -f "$NODE_ACTIVE_LINK"
         echo "Removed symlink: $NODE_ACTIVE_LINK"
 
@@ -870,7 +874,11 @@ uninstall_emacs() {
 ##### Emacs クリーンアップ（パッケージを除外） #####
 clean() {
     echo "Cleaning Emacs auto created files (excluding packages)..."
-    if [ -d "$VAR_DIR" ]; then
+    # var/ を別の場所へ symlink している構成では、リンクは利用者が意図して張ったものと
+    # みなし削除しない（rm -rf は参照先を辿らずリンク自体を消し、配置が黙って元に戻る）。
+    if [ -L "$VAR_DIR" ]; then
+        echo "Skipping $VAR_DIR (symlink)." >&2
+    elif [ -d "$VAR_DIR" ]; then
         echo "Removing $VAR_DIR ..."
         rm -rf "$VAR_DIR"
     fi

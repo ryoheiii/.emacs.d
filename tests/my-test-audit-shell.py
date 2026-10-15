@@ -526,6 +526,18 @@ class AuditShellTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertEqual(active.readlink(), live)
 
+    def test_uninstall_node_removes_link_whose_target_parent_is_missing(self):
+        # readlink -f はリンク先の親ディレクトリが無いと失敗する。set -e で黙って止まらず、
+        # リンクを消して正常終了する。
+        active = self.home / '.local/node'
+        active.parent.mkdir(parents=True, exist_ok=True)
+        active.symlink_to(self.home / '.local/share/nodejs/missing-parent/node-v0')
+        result = self.setup_cmd('--uninstall-node')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Removed symlink', result.stdout)
+        self.assertFalse(active.is_symlink())
+        self.assertFalse(active.exists())
+
     def test_node_placement_and_rollback_failures(self):
         live = self.node_archive()
         self.assertEqual(self.setup_cmd('--setup-node').returncode, 0)
