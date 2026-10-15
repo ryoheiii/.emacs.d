@@ -42,7 +42,7 @@
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :straight t
-  :bind ([f8] . my/neotree-project-toggle)
+  :bind ("<f8>" . my/neotree-project-toggle)
   :custom
   (neo-theme 'ascii)              ;; アイコンを ASCII にする
   (neo-smart-open t)              ;; カレントディレクトリを自動的に開く

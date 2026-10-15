@@ -31,7 +31,7 @@
   (doom-themes-org-config)
   )
 
-(global-set-key (kbd "<f6>") #'my/toggle-doom-theme)
+(keymap-global-set "<f6>" #'my/toggle-doom-theme)
 (defun my/toggle-doom-theme ()
   "Doomテーマを doom-dracula と doom-nord-light の間で切り替える。"
   (interactive)

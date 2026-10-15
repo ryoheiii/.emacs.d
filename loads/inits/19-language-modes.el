@@ -93,7 +93,7 @@
   :config
   (defun my/cc-mode-setup ()
     "C/C++ モード共通の設定。"
-    (local-set-key (kbd "C-c c") 'compile) ; コンパイル
+    (keymap-local-set "C-c c" 'compile)    ; コンパイル
     (c-toggle-auto-hungry-state 1)         ; 自動改行 & 連続スペース一括削除
     (setq indent-tabs-mode nil
           c-basic-offset 4))
@@ -332,8 +332,8 @@ Emacs 31 は既定の述語でも動くが、結果が同じなので版で分�
     (let ((rules (my/c-ts-indent-rules)))
       (setq-local treesit-simple-indent-override-rules
                   `((c ,@rules) (cpp ,@rules))))
-    (local-set-key (kbd "C-c c") 'compile)          ; コンパイル
-    (local-set-key (kbd "DEL") 'my/c-ts-hungry-delete-backward) ; hungry delete 相当
+    (keymap-local-set "C-c c" 'compile)             ; コンパイル
+    (keymap-local-set "DEL" 'my/c-ts-hungry-delete-backward) ; hungry delete 相当
     (setq-local electric-layout-rules my/c-ts-electric-layout-rules)
     ;; cleanup は electric-layout (深さ 40) より先に走らせる
     (add-hook 'post-self-insert-hook #'my/c-ts-pre-layout-fixups -10 t)

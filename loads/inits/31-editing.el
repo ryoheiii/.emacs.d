@@ -320,8 +320,8 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
     "O"  'mc/reverse-regions)
   ;; C-q をプレフィックスにしたため、標準の quoted-insert は C-q C-q で呼ぶ。
   ;; defvar-keymap の後に足すので :repeat の対象にならず、repeat-mode は継続しない。
-  (define-key my/mc-repeat-map (kbd "C-q") #'quoted-insert)
-  (global-set-key (kbd "C-q") my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
+  (keymap-set my/mc-repeat-map "C-q" #'quoted-insert)
+  (keymap-global-set "C-q" my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
   )
 
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
@@ -335,8 +335,8 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
 (use-package symbol-overlay
   :straight t
   :hook (prog-mode . symbol-overlay-mode)
-  :bind (([f3]      . symbol-overlay-put)                   ; シンボルの永続ハイライトをトグル
-         ([f4]      . symbol-overlay-remove-all)            ; ハイライトを全解除
+  :bind (("<f3>"    . symbol-overlay-put)                   ; シンボルの永続ハイライトをトグル
+         ("<f4>"    . symbol-overlay-remove-all)            ; ハイライトを全解除
          ("C-x C-a" . my-symbol-overlay-rename-visible)     ; ウィンドウ内のシンボルを置換
          ("C-x a"   . my-symbol-overlay-rename-in-function) ; 関数・メソッド内の置換
          ("C-x C-g" . symbol-overlay-rename))               ; バッファ全体のシンボルを置換

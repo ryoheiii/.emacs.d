@@ -46,7 +46,7 @@
   ;; c-ts-mode / c++-ts-mode は TAB を再束縛せず `tab-always-indent' がそのまま効くため、
   ;; ts モード用のフックは不要（これは cc-mode 固有の事情への対処である）。
   (defun my/corfu-remap-tab-command ()
-    (global-set-key [remap c-indent-line-or-region] #'indent-for-tab-command))
+    (keymap-global-set "<remap> <c-indent-line-or-region>" #'indent-for-tab-command))
   (add-hook 'c-mode-hook #'my/corfu-remap-tab-command)
   (add-hook 'c++-mode-hook #'my/corfu-remap-tab-command)
   (add-hook 'java-mode-hook #'my/corfu-remap-tab-command)
