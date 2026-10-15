@@ -308,5 +308,30 @@
           (should (functionp (cadr (timer--args auto-save--timer)))))
       (auto-save-visited-mode (if was 1 -1)))))
 
+(ert-deftest my-test-audit-dashboard-setup-draws-immediately ()
+  :tags '(:audit)
+  ;; after-init の実行中にフックを足しても走らないため、描画はその場で行い、
+  ;; 表示とリサイズのフック登録だけを後続へ残す。ファイル引数付き起動では何もしない。
+  (require 'dashboard)
+  (when (get-buffer dashboard-buffer-name) (kill-buffer dashboard-buffer-name))
+  (let ((command-line-args '("emacs")))
+    (unwind-protect
+        (progn
+          (my/dashboard-setup)
+          (should (memq #'dashboard-initialize emacs-startup-hook))
+          (should (memq #'dashboard-resize-on-hook window-setup-hook))
+          (should (memq #'dashboard-resize-on-hook window-size-change-functions))
+          (with-current-buffer (get-buffer dashboard-buffer-name)
+            (should (derived-mode-p 'dashboard-mode))
+            (should (> (buffer-size) 0))))
+      (remove-hook 'emacs-startup-hook #'dashboard-initialize)
+      (remove-hook 'window-setup-hook #'dashboard-resize-on-hook)
+      (remove-hook 'window-size-change-functions #'dashboard-resize-on-hook)
+      (when (get-buffer dashboard-buffer-name) (kill-buffer dashboard-buffer-name))))
+  (let ((command-line-args '("emacs" "file.txt")))
+    (my/dashboard-setup)
+    (should-not (get-buffer dashboard-buffer-name))
+    (should-not (memq #'dashboard-initialize emacs-startup-hook))))
+
 (provide 'my-test-audit)
 ;;; my-test-audit.el ends here

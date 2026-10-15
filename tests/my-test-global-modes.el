@@ -13,7 +13,7 @@
   '(which-key-mode
     global-anzu-mode
     recentf-mode
-    dashboard-setup-startup-hook
+    my/dashboard-setup
     my/global-capf
     mode-line-bell-mode
     repeat-mode

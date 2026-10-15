@@ -6,6 +6,9 @@
 
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function recentf-save-list "recentf")
+(declare-function dashboard-insert-startupify-lists "dashboard")
+(declare-function dashboard-initialize "dashboard")
+(declare-function dashboard-resize-on-hook "dashboard")
 
 ;;;;; [Group] Buffer-and-File-management - バッファとファイル管理関連 ;;;;;
 ;;; xclip - クリップボードとの共有
@@ -20,9 +23,24 @@
   )
 
 ;;; dashboard - Emacs のスタートアップ画面をカスタマイズ
+;; dashboard-setup-startup-hook は after-init-hook へ描画関数を登録するが、after-init の
+;; 実行中に同じフックへ足した関数は走らない（run-hooks は開始時点のリストを走査する）。
+;; 従来は window-setup-hook のリサイズ経路が偶然描画していた。同関数と同じ条件・フック
+;; 構成にし、描画だけはその場で行う。
 (use-package dashboard
   :straight t
-  :hook (after-init . dashboard-setup-startup-hook)
+  ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
+  :preface
+  (defun my/dashboard-setup ()
+    "引数なし起動のときだけ dashboard を描画し、表示とリサイズのフックを登録する。
+`dashboard-setup-startup-hook' と同じ条件で、ファイル引数付きの起動では何もしない。"
+    (when (< (length command-line-args) 2)
+      (require 'dashboard)
+      (dashboard-insert-startupify-lists)
+      (add-hook 'emacs-startup-hook #'dashboard-initialize)
+      (add-hook 'window-setup-hook #'dashboard-resize-on-hook)
+      (add-hook 'window-size-change-functions #'dashboard-resize-on-hook 100)))
+  :hook (after-init . my/dashboard-setup)
   )
 
 ;;; recentf - 最近使用したファイルの履歴管理
