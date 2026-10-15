@@ -415,14 +415,27 @@ uninstall_node() {
 
     # オフラインインストールの削除
     if [ -L "$NODE_ACTIVE_LINK" ]; then
-        # readlink -f はリンク先の親ディレクトリが無いと無出力で失敗する。
-        # set -e で黙って止まらず、リンクだけを消して先へ進む（target は空のまま）。
-        local target=""
-        if ! target="$(readlink -f "$NODE_ACTIVE_LINK" 2>/dev/null)"; then
-            target=""
+        # リンク先が消えている dangling link はリンクだけを消す（target は空のまま）。
+        # readlink -f は親ディレクトリが無いと無出力で失敗するため、先に生の readlink で
+        # リンク値を読み、リンク先が実在するときだけ正規化する。readlink 自体の失敗は
+        # dangling link と区別して握り潰さない。
+        local target="" link_value
+        if ! link_value="$(readlink "$NODE_ACTIVE_LINK")"; then
+            echo "Error: $NODE_ACTIVE_LINK のリンク値を読めません。" >&2
+            exit 1
+        fi
+        if [ -e "$NODE_ACTIVE_LINK" ]; then
+            if ! target="$(readlink -f "$NODE_ACTIVE_LINK")"; then
+                echo "Error: $NODE_ACTIVE_LINK のリンク先を解決できません。" >&2
+                exit 1
+            fi
         fi
         rm -f "$NODE_ACTIVE_LINK"
-        echo "Removed symlink: $NODE_ACTIVE_LINK"
+        if [ -n "$target" ]; then
+            echo "Removed symlink: $NODE_ACTIVE_LINK"
+        else
+            echo "Removed symlink: $NODE_ACTIVE_LINK (dangling -> $link_value)"
+        fi
 
         # リンク先が NODE_INSTALL_BASE 配下の場合のみ削除（任意ディレクトリ削除を防止）
         local real_install_base

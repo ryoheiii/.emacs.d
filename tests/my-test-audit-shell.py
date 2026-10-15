@@ -538,6 +538,28 @@ class AuditShellTests(unittest.TestCase):
         self.assertFalse(active.is_symlink())
         self.assertFalse(active.exists())
 
+    def test_uninstall_node_fails_closed_when_readlink_is_broken(self):
+        # readlink 自体の故障は dangling link と区別し、リンクを残して非ゼロ終了する。
+        active = self.home / '.local/node'
+        active.parent.mkdir(parents=True, exist_ok=True)
+        active.symlink_to(self.home / '.local/share/nodejs/missing-parent/node-v0')
+        self.stub('readlink', 'exit 9\n')
+        result = self.setup_cmd('--uninstall-node')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(active.is_symlink())
+
+    def test_uninstall_node_keeps_install_when_canonicalize_fails(self):
+        # 実在するリンク先の正規化に失敗したら、リンクも実体も残して非ゼロ終了する。
+        live = self.node_archive()
+        self.assertEqual(self.setup_cmd('--setup-node').returncode, 0)
+        active = self.home / '.local/node'
+        self.assertEqual(active.readlink(), live)
+        self.stub('readlink', 'case "$1" in -f) exit 9;; esac\nexec /usr/bin/readlink "$@"\n')
+        result = self.setup_cmd('--uninstall-node')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(active.is_symlink())
+        self.assertTrue((live / 'bin/node').exists())
+
     def test_node_placement_and_rollback_failures(self):
         live = self.node_archive()
         self.assertEqual(self.setup_cmd('--setup-node').returncode, 0)
