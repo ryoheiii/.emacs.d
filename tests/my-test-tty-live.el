@@ -14,6 +14,7 @@
 (require 'my-test-deferred)
 (require 'my-test-startup)
 (require 'my-gtags)
+(require 'my-lsp-nav)
 
 (when noninteractive
   (error "my-test-tty-live は実 pty 専用"))
@@ -122,7 +123,8 @@
 ;;;;; [Group] TTY Live - 宣言とモード活性化 ;;;;;
 (ert-deftest my-test-tty-live-ct-bindings ()
   :tags '(:tty-live)
-  (dolist (binding my-test-keybindings--bindings)
+  (dolist (binding (append my-test-keybindings--bindings
+                           my-test-keybindings--ct-extra-bindings))
     (should (eq (lookup-key ggtags-mode-map (kbd (car binding)))
                 (cdr binding)))))
 
@@ -286,6 +288,61 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
       (should (equal requests '(("-s" "alpha_symbol"))))
       (should (eq (current-buffer) source-buffer))
       (should (= (point) source-point)))))
+
+;;;;; [Group] TTY Live - LSP 階層ナビゲーションのフォールバック ;;;;;
+;; LSP 管理下でない実 tty では、呼び出し元検索が C-t u と同じ Global 経路へ倒れ、
+;; 呼び出し先検索は何もせずに失敗する。
+(ert-deftest my-test-tty-live-lsp-callers-fallback ()
+  :tags '(:tty-live)
+  (my-test-tty-live--with-gtags '(1 2)
+    (execute-kbd-macro (kbd "C-t C-c RET C-n C-p second TAB RET"))
+    (my-test-tty-live--assert-gtags-stages stages 2)
+    (should (equal requests '(("-r" "alpha_symbol"))))
+    (should (eq (current-buffer) target-buffer))
+    (should (= (line-number-at-pos) 2))
+    (xref-go-back)
+    (should (eq (current-buffer) source-buffer))
+    (should (= (point) source-point))))
+
+(ert-deftest my-test-tty-live-lsp-callees-requires-lsp ()
+  :tags '(:tty-live)
+  (my-test-tty-live--with-gtags nil
+    (should-error (execute-kbd-macro (kbd "C-t C-e")) :type 'user-error)
+    (should-not stages)
+    (should-not requests)
+    (should (eq (current-buffer) source-buffer))
+    (should (= (point) source-point))))
+
+;; ヘッダ/ソース切替は非 LSP では ff-find-other-file へ倒れ、同じディレクトリの対を開く。
+;; C バッファを実際に開くため、C モードのフック群 (ggtags, hideshow など) も実 tty で走る。
+(ert-deftest my-test-tty-live-lsp-other-file-fallback ()
+  :tags '(:tty-live)
+  (let* ((directory (make-temp-file "my-test-tty-other-file-" t))
+         (source-file (expand-file-name "pair.c" directory))
+         (header-file (expand-file-name "pair.h" directory))
+         (xref--history (cons nil nil))
+         (xref-history-storage #'xref-global-history)
+         source-buffer header-buffer)
+    (unwind-protect
+        (save-window-excursion
+          (write-region "#include \"pair.h\"\nint pair(void) { return 1; }\n"
+                        nil source-file nil 'silent)
+          (write-region "int pair(void);\n" nil header-file nil 'silent)
+          (setq source-buffer (find-file-noselect source-file))
+          (switch-to-buffer source-buffer)
+          (goto-char (point-max))
+          (should (eq (key-binding (kbd "C-t C-o")) 'my/lsp-find-other-file))
+          (execute-kbd-macro (kbd "C-t C-o"))
+          (setq header-buffer (current-buffer))
+          (should (equal (buffer-file-name header-buffer) header-file))
+          (xref-go-back)
+          (should (eq (current-buffer) source-buffer))
+          (should (= (point) (point-max))))
+      (dolist (buffer (list source-buffer header-buffer))
+        (when (buffer-live-p buffer)
+          (with-current-buffer buffer (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
+      (delete-directory directory t))))
 
 (ert-deftest my-test-tty-live-corfu-terminal-enabled ()
   :tags '(:tty-live)

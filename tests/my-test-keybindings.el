@@ -30,12 +30,38 @@
     my/gtags-find-file
     xref-go-back
     xref-go-forward
-    update-gtags)
+    update-gtags
+    my/lsp-find-callers
+    my/lsp-find-callees
+    my/lsp-find-type-hierarchy
+    my/lsp-find-other-file
+    my/lsp-find-workspace-symbol)
   "定義済みでなければならないタグ操作コマンド。")
+
+;; C-t 配下へ追加した読解補助のキー。固定表 (my-test-keybindings--bindings) の
+;; 対象外だが、追加後の退行を防ぐため同じ方法で固定する。
+(defconst my-test-keybindings--ct-extra-bindings
+  '(("C-t c" . my/lsp-find-callers)
+    ("C-t C-c" . my/lsp-find-callers)
+    ("C-t e" . my/lsp-find-callees)
+    ("C-t C-e" . my/lsp-find-callees)
+    ("C-t t" . my/lsp-find-type-hierarchy)
+    ("C-t C-t" . my/lsp-find-type-hierarchy)
+    ("C-t o" . my/lsp-find-other-file)
+    ("C-t C-o" . my/lsp-find-other-file)
+    ("C-t s" . my/lsp-find-workspace-symbol)
+    ("C-t C-s" . my/lsp-find-workspace-symbol))
+  "ggtags キーマップへ追加した読解補助のキーバインド。")
 
 (ert-deftest my-test-keybindings-ct-bindings ()
   :tags '(:keybinding)
   (dolist (binding my-test-keybindings--bindings)
+    (should (eq (lookup-key ggtags-mode-map (kbd (car binding)))
+                (cdr binding)))))
+
+(ert-deftest my-test-keybindings-ct-extra-bindings ()
+  :tags '(:keybinding)
+  (dolist (binding my-test-keybindings--ct-extra-bindings)
     (should (eq (lookup-key ggtags-mode-map (kbd (car binding)))
                 (cdr binding)))))
 

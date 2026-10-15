@@ -1182,8 +1182,259 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
           (should (equal (my/gtags--candidates "-P") '("sample.c"))))
       (delete-directory root t))))
 
-;;;;; [Group] C++ Config - clangd 起動引数 ;;;;;
+;;;;; [Group] C++ Config - LSP 階層ナビゲーション ;;;;;
+;; my-lsp-nav.el は eglot を require しない。ここでは eglot の実物
+;; (eglot--xref-make-match / eglot-uri-to-path / eglot--temp-location-buffers) を使い、
+;; サーバーとの通信だけをスタブする。テストは別プロセスなので、起動経路で eglot を
+;; 遅延ロードのままにする不変条件には触れない。
+(require 'my-lsp-nav)
 (require 'eglot)
+
+(defmacro my-test-cpp-config--with-lsp-stubs (lsp-p responses &rest body)
+  "LSP-P を管理状態、RESPONSES を (method . 応答) の alist として BODY を実行する.
+応答が関数なら呼び出した結果を返す (エラーを signal させる用途)。RESPONSES は
+BODY と同じ環境で評価されるため root / file / uri を参照できる。
+BODY では requests (要求の (method params) を新しい順に並べたリスト)、
+shown (表示された xref)、ref-calls (`my/gtags-find-references' への委譲引数) も
+参照できる。"
+  (declare (indent 2) (debug t))
+  `(let* ((root (make-temp-file "my-test-lsp-nav-" t))
+          (file (expand-file-name "a.cpp" root))
+          (uri (concat "file://" file))
+          requests shown ref-calls)
+     (ignore root file uri)
+     (unwind-protect
+         (progn
+           (with-temp-file file
+             (insert "int callee() { return 1; }\nint caller() { return callee(); }\n"))
+           (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () ,lsp-p))
+                     ((symbol-function 'eglot-server-capable) (lambda (&rest _) t))
+                     ((symbol-function 'eglot--current-server-or-lose) (lambda () 'server))
+                     ((symbol-function 'eglot--TextDocumentPositionParams)
+                      (lambda () (list :textDocument (list :uri uri)
+                                       :position '(:line 1 :character 4))))
+                     ((symbol-function 'eglot--TextDocumentIdentifier)
+                      (lambda () (list :uri uri)))
+                     ((symbol-function 'eglot--request)
+                      (lambda (_server method params &rest _)
+                        (push (list method params) requests)
+                        (let ((response (cdr (assq method ,responses))))
+                          (if (functionp response) (funcall response) response))))
+                     ((symbol-function 'xref-show-xrefs)
+                      (lambda (fetcher _action) (setq shown (funcall fetcher))))
+                     ((symbol-function 'my/gtags-find-references)
+                      (lambda (&optional prefix) (push prefix ref-calls))))
+             ,@body))
+       ;; eglot--xref-make-match はダミーのサーバーを xref 先の表へ登録する
+       (clrhash eglot--servers-by-xrefed-file)
+       (delete-directory root t))))
+
+(defun my-test-cpp-config--lsp-item (name line end)
+  "LINE 行目の 0〜END 桁を占め、4〜10 桁が名前 NAME の階層アイテム (plist) を返す."
+  (list :name name :kind 12
+        :range (list :start (list :line line :character 0)
+                     :end (list :line line :character end))
+        :selectionRange (list :start (list :line line :character 4)
+                              :end (list :line line :character 10))))
+
+(defun my-test-cpp-config--lsp-error (code message)
+  "`jsonrpc-request' が失敗したときと同じ形で `jsonrpc-error' を signal する関数を返す.
+CODE が nil ならタイムアウトと同じく code 無しにする。"
+  (lambda ()
+    (signal 'jsonrpc-error
+            (append (list "request id=1 failed:")
+                    (and code (list (cons 'jsonrpc-error-code code)))
+                    (list (cons 'jsonrpc-error-message message))))))
+
+(ert-deftest my-test-cpp-config-lsp-callers ()
+  "呼び出し元は incomingCalls の fromRanges を呼び出し箇所ごとに 1 件ずつ表示する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "callee" 0 26) (list :uri uri))])
+        (:callHierarchy/incomingCalls
+         . [(:from ,(append (my-test-cpp-config--lsp-item "caller" 1 33) (list :uri uri))
+            :fromRanges [(:start (:line 1 :character 22) :end (:line 1 :character 28))])]))
+    (my/lsp-find-callers)
+    (should (equal (mapcar #'car requests)
+                   '(:callHierarchy/incomingCalls :textDocument/prepareCallHierarchy)))
+    (should (= (length shown) 1))
+    (let* ((item (car shown))
+           (summary (substring-no-properties (xref-item-summary item)))
+           (location (xref-item-location item)))
+      (should (string-prefix-p "caller: " summary))
+      (should (string-match-p "return callee();" summary))
+      (should (= (xref-location-line location) 2))
+      (should (file-equal-p (xref-location-group location) file)))
+    ;; 一時バッファは表示後に片付ける
+    (should (zerop (hash-table-count eglot--temp-location-buffers)))
+    (should-not ref-calls)))
+
+(ert-deftest my-test-cpp-config-lsp-callers-fallback ()
+  "非 LSP 環境と C-u 付きは参照検索 (GNU Global 経路) へ委譲し、LSP へ要求しない."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs nil nil
+    (my/lsp-find-callers)
+    (should (equal ref-calls '(nil)))
+    (should-not requests))
+  (my-test-cpp-config--with-lsp-stubs t nil
+    (my/lsp-find-callers '(4))
+    (should (equal ref-calls '((4))))
+    (should-not requests)))
+
+(ert-deftest my-test-cpp-config-lsp-callees ()
+  "呼び出し先は outgoingCalls の to を定義名の位置で表示する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "caller" 1 33) (list :uri uri))])
+        (:callHierarchy/outgoingCalls
+         . [(:to ,(append (my-test-cpp-config--lsp-item "callee" 0 26) (list :uri uri))
+            :fromRanges [(:start (:line 1 :character 22) :end (:line 1 :character 28))])]))
+    (my/lsp-find-callees)
+    (should (= (length shown) 1))
+    (let ((item (car shown)))
+      (should (string-prefix-p "callee: " (substring-no-properties (xref-item-summary item))))
+      (should (= (xref-location-line (xref-item-location item)) 1)))
+    (should (zerop (hash-table-count eglot--temp-location-buffers)))))
+
+(ert-deftest my-test-cpp-config-lsp-callees-requires-lsp ()
+  "呼び出し先は非 LSP 環境で明示的に失敗し、Global へは倒さない."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs nil nil
+    (should-error (my/lsp-find-callees) :type 'user-error)
+    (should-not requests)
+    (should-not ref-calls)))
+
+(ert-deftest my-test-cpp-config-lsp-method-not-found ()
+  "サーバー未対応 (-32601。clangd 18 の outgoingCalls) は版の要件を含むエラーにする."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "caller" 1 33) (list :uri uri))])
+        (:callHierarchy/outgoingCalls
+         . ,(my-test-cpp-config--lsp-error -32601 "method not found")))
+    (let ((err (should-error (my/lsp-find-callees) :type 'user-error)))
+      (should (string-match-p "clangd 20" (cadr err))))))
+
+(ert-deftest my-test-cpp-config-lsp-timeout ()
+  "タイムアウト (code 無し) は原因が分かるエラーにする."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . ,(my-test-cpp-config--lsp-error nil "Timed out")))
+    (let ((err (should-error (my/lsp-find-callers) :type 'user-error)))
+      (should (string-match-p "タイムアウト" (cadr err))))))
+
+(ert-deftest my-test-cpp-config-lsp-prepare-empty ()
+  "prepare が空 (nil / 空ベクタ) なら対象が無い旨のエラーにし、次の要求を送らない."
+  :tags '(:cpp-config)
+  (dolist (empty (list nil []))
+    (my-test-cpp-config--with-lsp-stubs t
+        `((:textDocument/prepareCallHierarchy . ,empty))
+      (let ((err (should-error (my/lsp-find-callers) :type 'user-error)))
+        (should (string-match-p "対象がありません" (cadr err))))
+      (should (= (length requests) 1)))))
+
+(ert-deftest my-test-cpp-config-lsp-capability-missing ()
+  "サーバーに capability が無ければ要求せずにエラーにする."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t nil
+    (cl-letf (((symbol-function 'eglot-server-capable) (lambda (&rest _) nil)))
+      (should-error (my/lsp-find-type-hierarchy) :type 'user-error)
+      (should-error (my/lsp-find-callers) :type 'user-error)
+      (should-not requests))))
+
+(ert-deftest my-test-cpp-config-lsp-type-hierarchy ()
+  "型階層は基底と派生を両方取得し、[基底] [派生] の順でラベルを付けて並べる."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareTypeHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "Derived" 1 33) (list :uri uri))])
+        (:typeHierarchy/supertypes
+         . [,(append (my-test-cpp-config--lsp-item "Base" 0 26) (list :uri uri))])
+        (:typeHierarchy/subtypes
+         . [,(append (my-test-cpp-config--lsp-item "MoreDerived" 1 33) (list :uri uri))]))
+    (my/lsp-find-type-hierarchy)
+    (should (equal (mapcar #'car requests)
+                   '(:typeHierarchy/subtypes :typeHierarchy/supertypes
+                     :textDocument/prepareTypeHierarchy)))
+    (should (equal (mapcar (lambda (item)
+                             (cons (substring-no-properties (xref-item-summary item) 0 4)
+                                   (xref-location-line (xref-item-location item))))
+                           shown)
+                   '(("[基底]" . 1) ("[派生]" . 2)))))
+  ;; 片方が空でも他方は表示する
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareTypeHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "Base" 0 26) (list :uri uri))])
+        (:typeHierarchy/supertypes . nil)
+        (:typeHierarchy/subtypes
+         . [,(append (my-test-cpp-config--lsp-item "Derived" 1 33) (list :uri uri))]))
+    (my/lsp-find-type-hierarchy)
+    (should (= (length shown) 1))
+    (should (string-prefix-p "[派生]" (substring-no-properties (xref-item-summary (car shown)))))))
+
+(ert-deftest my-test-cpp-config-lsp-other-file ()
+  "ヘッダ/ソース切替は LSP の応答があればそのファイルへ、無ければ ff へ倒す."
+  :tags '(:cpp-config)
+  (let (visited ff-calls)
+    (cl-letf (((symbol-function 'find-file)
+               (lambda (filename &rest _) (push filename visited)))
+              ((symbol-function 'ff-find-other-file)
+               (lambda (&rest _) (push (symbol-value 'ff-always-try-to-create) ff-calls)))
+              ((symbol-function 'xref-push-marker-stack) #'ignore))
+      ;; LSP が対を返す
+      (my-test-cpp-config--with-lsp-stubs t
+          `((:textDocument/switchSourceHeader . ,(concat "file://" root "/a.h")))
+        (my/lsp-find-other-file)
+        (should (equal (mapcar #'car requests) '(:textDocument/switchSourceHeader)))
+        (should (equal visited (list (expand-file-name "a.h" root))))
+        (should-not ff-calls))
+      (setq visited nil)
+      ;; 対が無い (null)、要求失敗、非 LSP、C-u はいずれも ff (新規作成なし)
+      (my-test-cpp-config--with-lsp-stubs t
+          '((:textDocument/switchSourceHeader . nil))
+        (my/lsp-find-other-file)
+        (should (= (length requests) 1)))
+      (my-test-cpp-config--with-lsp-stubs t
+          `((:textDocument/switchSourceHeader
+             . ,(my-test-cpp-config--lsp-error -32601 "method not found")))
+        (my/lsp-find-other-file)
+        (should (= (length requests) 1)))
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (my/lsp-find-other-file)
+        (should-not requests))
+      (my-test-cpp-config--with-lsp-stubs t nil
+        (my/lsp-find-other-file '(4))
+        (should-not requests))
+      (should-not visited)
+      (should (equal ff-calls '(nil nil nil nil))))))
+
+(ert-deftest my-test-cpp-config-lsp-workspace-symbol ()
+  "横断シンボル検索は eglot → GTAGS の順でバックエンドを選び、無ければエラーにする."
+  :tags '(:cpp-config)
+  (let (apropos-calls)
+    (cl-letf (((symbol-function 'xref-backend-apropos)
+               (lambda (backend pattern) (push (list backend pattern) apropos-calls) nil))
+              ((symbol-function 'ggtags-find-project) (lambda () t)))
+      (my-test-cpp-config--with-lsp-stubs t nil
+        (my/lsp-find-workspace-symbol "alloc")
+        (should (equal apropos-calls '((eglot "alloc")))))
+      (setq apropos-calls nil)
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (my/lsp-find-workspace-symbol "alloc")
+        (should (equal apropos-calls '((ggtags "alloc")))))
+      (setq apropos-calls nil)
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (should-error (my/lsp-find-workspace-symbol " ") :type 'user-error)
+        (should-not apropos-calls)))
+    (cl-letf (((symbol-function 'xref-backend-apropos)
+               (lambda (backend pattern) (push (list backend pattern) apropos-calls) nil))
+              ((symbol-function 'ggtags-find-project) (lambda () nil)))
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (should-error (my/lsp-find-workspace-symbol "alloc") :type 'user-error)
+        (should-not apropos-calls)))))
 
 (ert-deftest my-test-cpp-config-clangd-args ()
   "clangd の起動引数と xref 追従の設定を固定する."
