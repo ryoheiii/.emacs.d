@@ -25,17 +25,6 @@
   :hook (after-init . dashboard-setup-startup-hook)
   )
 
-;;; total-lines - バッファ内の総行数をモードラインに表示
-(use-package total-lines
-  :straight t
-  :hook (after-init . global-total-lines-mode)
-  :config
-  (setq mode-line-front-space
-        (append mode-line-front-space
-                '((:eval (when (bound-and-true-p total-lines)
-                           (format " (%d)" (- total-lines 1))))))) ;; モードラインに総行数を表示
-  )
-
 ;;; recentf - 最近使用したファイルの履歴管理
 (use-package recentf
   :straight nil

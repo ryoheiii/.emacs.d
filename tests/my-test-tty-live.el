@@ -25,8 +25,7 @@
 
 (defconst my-test-tty-live--after-init-modes
   '(doom-modeline-mode
-    display-time-mode
-    global-total-lines-mode)
+    display-time-mode)
   "after-init 後に有効でなければならないグローバルモード。")
 
 (ert-deftest my-test-tty-live-after-init-modes-enabled ()
@@ -79,15 +78,14 @@
   (should (featurep 'doom-modeline))
   (should-not (default-value 'doom-modeline-icon)))
 
-(defconst my-test-tty-live--total-lines-mode-line-entry
-  '(:eval (when (bound-and-true-p total-lines)
-            (format " (%d)" (- total-lines 1))))
-  "total-lines が追加する mode-line-front-space の要素。")
-
-(ert-deftest my-test-tty-live-total-lines-mode-line-entry ()
+;; 総行数は doom-modeline の buffer-position セグメントが「行/総行数」で表示する。
+;; (旧 total-lines の mode-line-front-space 追記は main レイアウトが参照せず表示されなかった)
+(ert-deftest my-test-tty-live-total-line-number-in-mode-line ()
   :tags '(:tty-live)
-  (should (member my-test-tty-live--total-lines-mode-line-entry
-                  mode-line-front-space)))
+  (should (default-value 'doom-modeline-total-line-number))
+  (with-current-buffer (window-buffer (selected-window))
+    (should (string-match-p (regexp-quote (format "/%d" (line-number-at-pos (point-max))))
+                            (format-mode-line mode-line-format)))))
 
 (ert-deftest my-test-tty-live-format-mode-line-sanity ()
   :tags '(:tty-live)

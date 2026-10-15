@@ -78,7 +78,6 @@
  ("styleguide" . "c885dc260bf95fc8a720a03c90e2436a33d82119")
  ("symbol-overlay" . "6151f4279bd94b5960149596b202cdcb45cacec2")
  ("themes" . "53645a905dfb3055db52f5d418d5ef612027e062")
- ("total-lines" . "473fa74a5416697ecd938866518bcad423f8fda6")
  ("tr-emacs-ime-module" . "063aee5687a62c583e084d56f2b60b673961c8c9")
  ("track-changes" . "6d8fb08f6ef72e0b9bd8bea61d91d47a8b00ec81")
  ("transient" . "6e7c07a7f6363195707b2eee478fc4626211d5d7")

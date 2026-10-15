@@ -47,6 +47,9 @@
   :straight t
   :custom
   (doom-modeline-buffer-file-name-style 'truncate-with-project)
+  ;; 総行数を「行/総行数」で表示する。旧 total-lines による mode-line-front-space への
+  ;; 追記は doom-modeline の main レイアウトが参照しないため表示されなかった
+  (doom-modeline-total-line-number t)
   ;; tty では Nerd Font グリフが幅計算を狂わせレイアウトが崩れるため GUI のみ有効化
   ;; (daemon 起動時は nil に倒れる。GUI クライアントで必要なら明示的に t を設定する)
   (doom-modeline-icon (display-graphic-p))
