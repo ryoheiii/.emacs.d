@@ -151,7 +151,7 @@
   "LIBRARY の解決先が straight のビルドディレクトリ配下なら non-nil を返す。
 ディレクトリ名は公開変数 `straight-build-dir' から取る。既定値 \"build\" を
 文字列で仮定すると、`straight-use-version-specific-build-dir' 有効時
-(例 \"build-30.2\") に判定が静かに外れる。"
+(例 \"build-31.1\") に判定が静かに外れる。"
   (let ((path (locate-library library)))
     (and path
          (file-in-directory-p path (my-set-straight straight-build-dir "/")))))

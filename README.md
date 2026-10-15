@@ -25,7 +25,7 @@ git clone <このリポジトリ> ~/.emacs.d
 cd ~/.emacs.d
 
 ./emacs-setup.sh --setup          # 依存パッケージを導入
-./emacs-setup.sh --install 30.2   # Emacs をビルドして ~/.local へ導入
+./emacs-setup.sh --install 31.1   # Emacs をビルドして ~/.local へ導入
 
 # ~/.local/bin は PATH へ追加されない。シェル設定へ追記するか、フルパスで起動する
 export PATH="$HOME/.local/bin:$PATH"
@@ -39,7 +39,7 @@ emacs -nw                         # 初回起動（straight が全パッケー�
 `--install` は `~/.local` へ入れるだけで PATH を変更しない。追記しないと
 コマンドが見つからないか、既存の古い `/usr/bin/emacs` が起動する。
 
-すでに Emacs 30.x が入っているなら `--install` は不要。
+すでに Emacs 31.x が入っているなら `--install` は不要（30.2 でも動作するが、CI で検証する安定版は 31.1）。
 
 ---
 
@@ -80,8 +80,8 @@ TLS など GUI に依存しない依存は `--gui no` でも導入される。
 ./emacs-setup.sh --install <バージョン> [--gui <バックエンド>]
 
 # 例
-./emacs-setup.sh --install 30.2 --gui pgtk   # Wayland 向け
-./emacs-setup.sh --install 30.2 --gui no     # 端末専用
+./emacs-setup.sh --install 31.1 --gui pgtk   # Wayland 向け
+./emacs-setup.sh --install 31.1 --gui no     # 端末専用
 
 # アンインストール
 ./emacs-setup.sh --uninstall

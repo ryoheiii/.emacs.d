@@ -121,7 +121,7 @@ make test-tty test-tty-live STRAIGHT_DIR=/専用/straight
 `EMACS=/専用/emacs/bin/emacs` で各ターゲットへ渡す。`make test-platform` の環境行が
 `native-comp=nil` であることも確認する（JIT の停止だけでは代替しない）。
 
-macOS / Windows のバッチ起動は `.github/workflows/platform.yml` で Emacs 30.2 と
+macOS / Windows のバッチ起動は `.github/workflows/platform.yml` で Emacs 31.1 と
 lockfile の組合せを検証する。手動実行、または設定変更の PR で起動する。
 macOS では実 BSD `mv` によるパッケージアーカイブの置換・復元も検査する。
 Linux 固有のビルド・apt 導入は macOS / Windows の対象外。
@@ -167,7 +167,7 @@ tests/my-bench-summarize.sh .bench/out
 
 ## CI
 
-GitHub Actions は push と pull request で Emacs 30.2 の安定レーンと
+GitHub Actions は push と pull request で Emacs 31.1 の安定レーンと
 snapshot のカナリアレーンを実行する。snapshot の失敗は non-blocking とする。
 
 実測時間（2026-07 時点）: キャッシュミス時（全パッケージ clone）は

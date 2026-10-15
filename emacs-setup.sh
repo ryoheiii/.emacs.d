@@ -105,7 +105,7 @@ Examples:
   $0 --setup-treesit             # Install the C/C++ tree-sitter grammars.
   $0 --uninstall-node
   $0 --list
-  $0 --install 30.1              # Install Emacs version 30.1.
+  $0 --install 31.1              # Install Emacs version 31.1.
   $0 --uninstall
   $0 --clean
   $0 --clean-all

@@ -105,13 +105,13 @@ built-in へ固定する。固定は宣言ごとに置く。
 (straight-override-recipe '(project :type built-in))
 ```
 
-| パッケージ | 要求 | Emacs 30.2 組み込み | 扱い |
+| パッケージ | 要求 | Emacs 31.1 組み込み | 扱い |
 |---|---|---|---|
-| `org` | 9.4.6 (copilot-chat) | 9.7.11 | built-in へ固定 |
-| `jsonrpc` | 1.0.14 (copilot) | 1.0.25 | built-in へ固定 |
-| `project` | 0.9.8 (breadcrumb) | 0.11.1 | built-in へ固定（`tests/my-test-packages.el` の `my-test-packages-project-built-in` が固定） |
-| `track-changes` | 1.4 (copilot) | 1.2 | 要件未満のため straight から導入 |
-| `transient` | 0.8.3 (copilot-chat) | 0.7.2.2 | 要件未満のため straight から導入 |
+| `org` | 9.4.6 (copilot-chat) | 9.8.7 | built-in へ固定 |
+| `jsonrpc` | 1.0.14 (copilot) | 1.0.29 | built-in へ固定 |
+| `project` | 0.9.8 (breadcrumb) | 0.12.0 | built-in へ固定（`tests/my-test-packages.el` の `my-test-packages-project-built-in` が固定） |
+| `track-changes` | 1.4 (copilot) | 1.5 | 31.1 では要件を満たすが、built-in 化は未検証のため引き続き straight から導入（Emacs 30.2 の 1.2 は要件未満） |
+| `transient` | 0.8.3 (copilot-chat) | 0.13.3 | 31.1 では要件を満たすが、magit が使う transient の差し替えを含めて未検証のため引き続き straight から導入（Emacs 30.2 の 0.7.2.2 は要件未満） |
 
 固定したパッケージは lockfile にも載らない。組み込み版の要件を満たさなくなる
 パッケージを追加した場合は、この表とオーバーライドを見直す。
