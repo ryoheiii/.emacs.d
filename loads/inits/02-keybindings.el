@@ -26,7 +26,6 @@
 (global-set-key (kbd "M-?") 'help-for-help)                      ; ヘルプ
 (global-set-key (kbd "C-c C-i") 'hippie-expand)                  ; 補完
 (global-set-key (kbd "C-c ;") 'comment-or-uncomment-region)      ; コメントアウト
-(global-set-key (kbd "C-.") 'goto-line)                          ; 指定行へ移動
 (global-set-key (kbd "M-f") 'forward-symbol)                     ; シンボル単位の移動
 (global-set-key [f7] 'toggle-truncate-lines)                     ; 折り返しの有効無効切替
 (global-set-key (kbd "C-c 0") 'my/copy-file-name)                ; ファイル名コピー

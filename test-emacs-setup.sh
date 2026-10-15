@@ -318,7 +318,9 @@ if [ -n "${WGET_FAIL_PATTERN:-}" ] && printf '%s' "$url" | grep -q "$WGET_FAIL_P
     exit 8
 fi
 if [ -n "$out" ]; then
-    printf 'dummy-tarball\n' > "$out"
+    # 追記にする。実 wget の -O は truncate するが、truncate だと古い .part の内容が
+    # 消えてしまい「stale .part を再利用しない」検査が rm -f の有無に関わらず通る。
+    printf 'dummy-tarball\n' >> "$out"
 else
     printf 'dummy-tarball\n' > "$(basename "$url")"
 fi
@@ -1014,7 +1016,7 @@ assert_exit "install without version"     1  --install
 assert_exit "install with invalid ver"    1  --install abc
 assert_exit "install missing gui value"   1  --install 30.1 --gui
 assert_exit "install unknown sub-option"  1  --install 30.1 --unknown
-assert_exit "install treats --gui as ver" 1  --install --gui pgtk
+assert_exit "install rejects --gui without version" 1  --install --gui pgtk
 assert_exit "install multiple versions"   1  --install 30.1 30.2
 
 echo ""
@@ -1067,6 +1069,27 @@ assert_clean_keeps_stray_eln_symlink() {
     rm -rf "$stray" "$target"
 }
 assert_clean_keeps_stray_eln_symlink
+
+# var/ を別の場所へ symlink している構成でも、--clean はリンクも参照先も消さないこと
+# （eln-cache の symlink と同じ扱い）。
+assert_clean_keeps_var_symlink() {
+    local var_link="$HOME/.emacs.d/var"
+    local target="$HOME/var-target"
+    rm -rf "$var_link" "$target"
+    if ! mkdir -p "$target/hist" || ! : > "$target/hist/savehist" \
+        || ! mkdir -p "$(dirname "$var_link")" || ! ln -s "$target" "$var_link"; then
+        record_fail "clean keeps var symlink — スタブを作れなかった"
+        return
+    fi
+    if "$SCRIPT" --clean >/dev/null 2>&1 \
+        && [ -L "$var_link" ] && [ -f "$target/hist/savehist" ]; then
+        record_pass "clean keeps var symlink"
+    else
+        record_fail "clean keeps var symlink — リンクか参照先が失われた"
+    fi
+    rm -rf "$var_link" "$target"
+}
+assert_clean_keeps_var_symlink
 
 echo ""
 echo "=== 出力先の分離 ==="

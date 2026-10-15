@@ -35,12 +35,20 @@
       delete-auto-save-files t
       create-lockfiles nil)    ; .#lock は作業ディレクトリを汚すため無効を維持
 
+;; auto-save-visited-mode の idle 自動保存は save-some-buffers 経由で before-save-hook と
+;; after-save-hook を走らせる。入力途中の末尾空白を消したり 30 秒ごとにモードラインを
+;; 光らせたりしないよう、タイマー経由の保存を識別するフラグを置く。束縛するのは
+;; 18-built-in-package.el の my/auto-save-visited-save-some-buffers。
+(defvar my/auto-save-visited-in-progress nil
+  "`auto-save-visited-mode' のタイマーによる保存中なら non-nil。")
+
 ;; save 時に mode-line を一瞬光らせる
 (defvar my/mode-line-flash-timer nil
   "mode-line フラッシュの復元用タイマー。進行中は non-nil。")
 (defun my/flash-mode-line-on-save ()
-  "保存時に mode-line を一瞬光らせる。フラッシュ進行中の再入では元色を再取得しない。"
-  (unless (timerp my/mode-line-flash-timer)
+  "保存時に mode-line を一瞬光らせる。フラッシュ進行中の再入では元色を再取得しない。
+idle 自動保存では光らせない。"
+  (unless (or my/auto-save-visited-in-progress (timerp my/mode-line-flash-timer))
     (let ((orig (face-background 'mode-line)))
       (set-face-background 'mode-line "dark green")
       (setq my/mode-line-flash-timer
@@ -55,8 +63,9 @@
 
 ;; 行末の空白を保存時に削除(markdown はハードブレイク用の末尾空白があるため除外)
 (defun my/delete-trailing-whitespace-except-markdown ()
-  "Markdown 系バッファ以外で行末の空白を削除する。"
-  (unless (derived-mode-p 'markdown-mode)
+  "Markdown 系バッファ以外で行末の空白を削除する。
+idle 自動保存では入力途中の末尾空白を消さないよう何もしない（明示保存で削除する）。"
+  (unless (or my/auto-save-visited-in-progress (derived-mode-p 'markdown-mode))
     (delete-trailing-whitespace)))
 (add-hook 'before-save-hook #'my/delete-trailing-whitespace-except-markdown)
 

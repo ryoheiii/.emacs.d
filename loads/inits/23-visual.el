@@ -78,6 +78,9 @@
   (rainbow-delimiters-unmatched-face ((t (:foreground "#ffffff" :background "#af0000" :weight bold :underline t))))
   :bind (("C-c l" . rainbow-delimiters-using-stronger-colors))  ;; より強調した色に変更
   :config
+  ;; color-saturate-name は autoload されない。起動直後は color.el が未ロードで、
+  ;; 他パッケージの推移的ロードに依存していたため明示する
+  (require 'color)
   ;; 強調した括弧の色を適用する関数
   (defun rainbow-delimiters-using-stronger-colors ()
     (interactive)

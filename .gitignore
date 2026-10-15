@@ -25,6 +25,7 @@ plan.md
 
 # キャッシュ
 .cache/
+__pycache__/
 
 # Claude Code
 .claude/settings.local.json

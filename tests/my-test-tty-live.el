@@ -25,8 +25,7 @@
 
 (defconst my-test-tty-live--after-init-modes
   '(doom-modeline-mode
-    display-time-mode
-    global-total-lines-mode)
+    display-time-mode)
   "after-init 後に有効でなければならないグローバルモード。")
 
 (ert-deftest my-test-tty-live-after-init-modes-enabled ()
@@ -54,9 +53,11 @@
 ;; nerd-icons-dired / corfu-popupinfo は :hook トリガー型のため、ガードを外しても
 ;; 対象モードを開くまで feature はロードされず featurep では検出できない。
 ;; そこで「tty ではフック登録自体が行われない」ことを検査する。
+;; pixel-scroll は組み込みで featurep では判定できないため、同じく登録の有無で検査する。
 (defconst my-test-tty-live--gui-only-hook-guards
   '((nerd-icons-dired-mode . dired-mode-hook)
-    (corfu-popupinfo-mode . corfu-mode-hook))
+    (corfu-popupinfo-mode . corfu-mode-hook)
+    (pixel-scroll-precision-mode . after-init-hook))
   "tty ではフックへ登録されてはならない (関数 . フック変数) の組。")
 
 (ert-deftest my-test-tty-live-gui-only-features-not-loaded ()
@@ -79,15 +80,14 @@
   (should (featurep 'doom-modeline))
   (should-not (default-value 'doom-modeline-icon)))
 
-(defconst my-test-tty-live--total-lines-mode-line-entry
-  '(:eval (when (bound-and-true-p total-lines)
-            (format " (%d)" (- total-lines 1))))
-  "total-lines が追加する mode-line-front-space の要素。")
-
-(ert-deftest my-test-tty-live-total-lines-mode-line-entry ()
+;; 総行数は doom-modeline の buffer-position セグメントが「行/総行数」で表示する。
+;; (旧 total-lines の mode-line-front-space 追記は main レイアウトが参照せず表示されなかった)
+(ert-deftest my-test-tty-live-total-line-number-in-mode-line ()
   :tags '(:tty-live)
-  (should (member my-test-tty-live--total-lines-mode-line-entry
-                  mode-line-front-space)))
+  (should (default-value 'doom-modeline-total-line-number))
+  (with-current-buffer (window-buffer (selected-window))
+    (should (string-match-p (regexp-quote (format "/%d" (line-number-at-pos (point-max))))
+                            (format-mode-line mode-line-format)))))
 
 (ert-deftest my-test-tty-live-format-mode-line-sanity ()
   :tags '(:tty-live)

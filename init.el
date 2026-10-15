@@ -25,7 +25,8 @@
 (use-package init-loader
   :straight t
   :custom
-  (init-loader-show-log-after-init nil)
+  ;; ロードエラーがあったときだけ *init log* を表示する (nil だと黙って握り潰される)
+  (init-loader-show-log-after-init 'error-only)
   :config
   (init-loader-load (my-set-loads "inits/"))
   )

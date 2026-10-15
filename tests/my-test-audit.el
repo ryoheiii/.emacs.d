@@ -271,5 +271,79 @@
                    (expand-file-name "loads/inits/01-ui.el" user-emacs-directory))))
       (delete-directory root t))))
 
+(ert-deftest my-test-audit-auto-save-visited-keeps-trailing-whitespace ()
+  :tags '(:audit)
+  ;; idle 自動保存（auto-save-visited-mode のタイマー経路）は入力途中の末尾空白を消さない。
+  ;; 明示保存は従来どおり削除する。
+  (let* ((dir (make-temp-file "my-test-autosave-" t))
+         (file (expand-file-name "sample.txt" dir))
+         buffer)
+    (when (timerp my/mode-line-flash-timer)
+      (cancel-timer my/mode-line-flash-timer))
+    (setq my/mode-line-flash-timer nil)
+    (unwind-protect
+        (with-current-buffer (setq buffer (find-file-noselect file))
+          (setq-local require-final-newline nil)
+          (insert "int x = ")
+          (my/auto-save-visited-save-some-buffers :no-prompt (lambda () t))
+          (should-not (buffer-modified-p))
+          (should (equal (buffer-string) "int x = "))
+          (should (= (point) (point-max)))
+          ;; タイマー経由の保存ではモードラインを光らせない（復元タイマーが立たない）
+          (should-not my/mode-line-flash-timer)
+          (insert "\nint y = ")
+          (save-buffer)
+          (should (equal (buffer-string) "int x =\nint y ="))
+          ;; 明示保存では従来どおり光らせる
+          (should (timerp my/mode-line-flash-timer)))
+      (when (timerp my/mode-line-flash-timer)
+        ;; 復元タイマーを取り消し、その関数を直接呼んで mode-line の色を戻す
+        (let ((timer my/mode-line-flash-timer))
+          (cancel-timer timer)
+          (funcall (timer--function timer))))
+      (when (buffer-live-p buffer)
+        (set-buffer-modified-p nil)
+        (kill-buffer buffer))
+      (delete-directory dir t))))
+
+(ert-deftest my-test-audit-auto-save-visited-timer-wrapped ()
+  :tags '(:audit)
+  ;; auto-save-visited-mode を有効化するとタイマーの関数がラッパーへ差し替わり、引数は維持される。
+  (let ((was auto-save-visited-mode))
+    (unwind-protect
+        (progn
+          (auto-save-visited-mode 1)
+          (should (timerp auto-save--timer))
+          (should (eq (timer--function auto-save--timer)
+                      #'my/auto-save-visited-save-some-buffers))
+          (should (eq (car (timer--args auto-save--timer)) :no-prompt))
+          (should (functionp (cadr (timer--args auto-save--timer)))))
+      (auto-save-visited-mode (if was 1 -1)))))
+
+(ert-deftest my-test-audit-dashboard-setup-draws-immediately ()
+  :tags '(:audit)
+  ;; after-init の実行中にフックを足しても走らないため、描画はその場で行い、
+  ;; 表示とリサイズのフック登録だけを後続へ残す。ファイル引数付き起動では何もしない。
+  (require 'dashboard)
+  (when (get-buffer dashboard-buffer-name) (kill-buffer dashboard-buffer-name))
+  (let ((command-line-args '("emacs")))
+    (unwind-protect
+        (progn
+          (my/dashboard-setup)
+          (should (memq #'dashboard-initialize emacs-startup-hook))
+          (should (memq #'dashboard-resize-on-hook window-setup-hook))
+          (should (memq #'dashboard-resize-on-hook window-size-change-functions))
+          (with-current-buffer (get-buffer dashboard-buffer-name)
+            (should (derived-mode-p 'dashboard-mode))
+            (should (> (buffer-size) 0))))
+      (remove-hook 'emacs-startup-hook #'dashboard-initialize)
+      (remove-hook 'window-setup-hook #'dashboard-resize-on-hook)
+      (remove-hook 'window-size-change-functions #'dashboard-resize-on-hook)
+      (when (get-buffer dashboard-buffer-name) (kill-buffer dashboard-buffer-name))))
+  (let ((command-line-args '("emacs" "file.txt")))
+    (my/dashboard-setup)
+    (should-not (get-buffer dashboard-buffer-name))
+    (should-not (memq #'dashboard-initialize emacs-startup-hook))))
+
 (provide 'my-test-audit)
 ;;; my-test-audit.el ends here
