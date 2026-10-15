@@ -2,7 +2,9 @@
 # キーバインド一覧
 
 この設定で追加・変更したキーバインドをまとめる。Emacs 標準のままのものは載せない。
-すべて端末（`emacs -nw`）で送出できるキーで構成している。
+端末（`emacs -nw`）での利用を前提にする。ただし `C-.` `C-,` `C-c C-/` は、端末が
+Ctrl と記号の組み合わせを区別して送れること（xterm の modifyOtherKeys や CSI u 相当）を
+前提にする。`<henkan>` などの日本語キーは GUI 限定で、端末では端末側の IME を使う。
 
 忘れたときは `C-c j` のようにプレフィックスまで押せば、which-key が候補を表示する。
 未使用のキーを探すときは `M-x free-keys`。
@@ -24,7 +26,7 @@
 |---|---|---|
 | `C-h` | `DEL` | バックスペースへ変換（`key-translation-map`。ヘルプは `M-?`） |
 | `M-?` | `help-for-help` | ヘルプ |
-| `C-m` | `smart-newline` | 改行（インデントと位置を自動調整） |
+| `C-m` | `smart-newline` | 改行（インデントと位置を自動調整）。`smart-newline-mode` が有効な C/C++・Emacs Lisp・Lisp のバッファのみ |
 | `C-c a` | `align` | 文字列の揃え |
 | `C-c M-a` | `align-regexp` | 正規表現での整列 |
 | `C-c d` | `delete-indentation` | 行連結（インデント削除） |
@@ -131,6 +133,7 @@ GTAGS は初回だけ作成が必要である。`update-gtags` は `global -uv`�
 | `l` / `C-l` | `mc/insert-letters` |
 | `o` / `C-o` | `mc/sort-regions` |
 | `O` | `mc/reverse-regions` |
+| `C-q` | `quoted-insert`（標準の `C-q`。このキーで `repeat-mode` は終了する） |
 
 ## 選択・シンボル操作
 
@@ -171,14 +174,18 @@ GTAGS は初回だけ作成が必要である。`update-gtags` は `global -uv`�
 | `<henkan>` | `my/input-method-on` | IME を ON |
 | `<muhenkan>` | `my/input-method-off` | IME を OFF |
 
+これらのキーイベントは GUI（X11 / pgtk）だけが Emacs へ届ける。端末（`emacs -nw`）では
+端末側の IME で入力する。`C-\` は `hs-toggle-hiding` に割り当て済みのため、Emacs 側の
+IME 切り替えは `M-x toggle-input-method` を使う。
+
 ## スペルチェック
 
 | キー | コマンド | 説明 |
 |---|---|---|
 | `C-c C-/` | `flyspell-correct-wrapper` | 修正候補を表示 |
 
-flyspell は prog-mode ではコメント・文字列のみ（`flyspell-prog-mode`）、
-text 系モードでは無効、3000 文字を超えるバッファでは自動的に無効になる。
+flyspell は prog-mode（emacs-lisp-mode を除く）ではコメント・文字列のみ（`flyspell-prog-mode`）、
+text 系モードでは markdown-mode を除いて無効、3000 文字を超えるバッファでは自動的に無効になる。
 
 ## GitHub Copilot
 

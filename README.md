@@ -242,6 +242,8 @@ undo 履歴は Emacs を終了しても保持される（undo-fu-session）。
 
 Linux では Mozc、Windows では TR-IME を使う。
 `変換` キーで ON、`無変換` キーで OFF、`半角/全角` でトグルする。
+これらは GUI のキーイベントで、端末（`emacs -nw`）では Emacs へ届かないため、
+端末側の IME で入力する。
 
 straight が導入するのは `mozc.el`（Emacs 側）だけで、変換エンジンと helper は
 別に要る。`--setup` で導入されるが、個別に入れる場合は次を実行する。
