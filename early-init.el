@@ -126,6 +126,9 @@
 ;; キャッシュはセッション中に無効化されないため、既存のビルドディレクトリへ後から
 ;; 増えたファイル (straight-rebuild-package などで追加されたもの) は再起動するまで読めない。
 ;; 再起動せずに解除するには (setq load-path-filter--cache nil) を評価する。
+;; フィルタ自身が regexp-opt を呼ぶが、regexp-opt を preload するのは X 対応ビルドだけ。
+;; 端末専用ビルドでは autoload の load がフィルタを再び呼んで無限再帰になるため、先に読み込む。
+(require 'regexp-opt)
 (setq load-path-filter-function #'load-path-filter-cache-directory-files)
 
 ;;; 'straight.el' の設定
