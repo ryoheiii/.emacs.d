@@ -35,11 +35,11 @@
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :straight t
-  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
-  ;; (cc-mode は実行されるフックを持たないメジャーモード共通ライブラリなので列挙しない)
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する。
+  ;; C-m は smart-newline-mode-map が束縛するためグローバルには束縛しない
+  ;; （グローバル束縛はフックで限定したモード以外の RET まで置き換えていた）。
   :hook ((c++-mode c-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
          . smart-newline-mode)
-  :bind (("C-m" . smart-newline))
   )
 
 ;;; move-text - テキスト行の移動機能
@@ -303,6 +303,9 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
     "o"  'mc/sort-regions
     "C-o" 'mc/sort-regions
     "O"  'mc/reverse-regions)
+  ;; C-q をプレフィックスにしたため、標準の quoted-insert は C-q C-q で呼ぶ。
+  ;; defvar-keymap の後に足すので :repeat の対象にならず、repeat-mode は継続しない。
+  (define-key my/mc-repeat-map (kbd "C-q") #'quoted-insert)
   (global-set-key (kbd "C-q") my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
   )
 
