@@ -1182,5 +1182,570 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
           (should (equal (my/gtags--candidates "-P") '("sample.c"))))
       (delete-directory root t))))
 
+;;;;; [Group] C++ Config - LSP 階層ナビゲーション ;;;;;
+;; my-lsp-nav.el は eglot を require しない。ここでは eglot の実物
+;; (eglot--xref-make-match / eglot-uri-to-path / eglot--temp-location-buffers) を使い、
+;; サーバーとの通信だけをスタブする。テストは別プロセスなので、起動経路で eglot を
+;; 遅延ロードのままにする不変条件には触れない。
+(require 'my-lsp-nav)
+(require 'eglot)
+
+(defmacro my-test-cpp-config--with-lsp-stubs (lsp-p responses &rest body)
+  "LSP-P を管理状態、RESPONSES を (method . 応答) の alist として BODY を実行する.
+応答が関数なら呼び出した結果を返す (エラーを signal させる用途)。RESPONSES は
+BODY と同じ環境で評価されるため root / file / uri を参照できる。
+BODY では requests (要求の (method params timeout) を新しい順に並べたリスト)、
+shown (表示された xref)、ref-calls (`my/gtags-find-references' への委譲引数) も
+参照できる。スタブするのは jsonrpc の要求層 (`jsonrpc-request') で、
+my-lsp-nav.el が eglot の内部要求ラッパーを経由しないことも固定する。"
+  (declare (indent 2) (debug t))
+  `(let* ((root (make-temp-file "my-test-lsp-nav-" t))
+          (file (expand-file-name "a.cpp" root))
+          (uri (concat "file://" file))
+          requests shown ref-calls)
+     (ignore root file uri)
+     (unwind-protect
+         (progn
+           (with-temp-file file
+             (insert "int callee() { return 1; }\nint caller() { return callee(); }\n"))
+           (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () ,lsp-p))
+                     ((symbol-function 'eglot-server-capable) (lambda (&rest _) t))
+                     ((symbol-function 'eglot--current-server-or-lose) (lambda () 'server))
+                     ((symbol-function 'eglot--TextDocumentPositionParams)
+                      (lambda () (list :textDocument (list :uri uri)
+                                       :position '(:line 1 :character 4))))
+                     ((symbol-function 'eglot--TextDocumentIdentifier)
+                      (lambda () (list :uri uri)))
+                     ((symbol-function 'eglot--signal-textDocument/didChange) #'ignore)
+                     ((symbol-function 'jsonrpc-request)
+                      (lambda (_connection method params &rest rest)
+                        (push (list method params (plist-get rest :timeout)) requests)
+                        (let ((response (cdr (assq method ,responses))))
+                          (if (functionp response) (funcall response) response))))
+                     ((symbol-function 'xref-show-xrefs)
+                      (lambda (fetcher _action) (setq shown (funcall fetcher))))
+                     ((symbol-function 'my/gtags-find-references)
+                      (lambda (&optional prefix) (push prefix ref-calls))))
+             ,@body))
+       ;; eglot--xref-make-match はダミーのサーバーを xref 先の表へ登録する
+       (clrhash eglot--servers-by-xrefed-file)
+       (delete-directory root t))))
+
+(defun my-test-cpp-config--lsp-item (name line end)
+  "LINE 行目の 0〜END 桁を占め、4〜10 桁が名前 NAME の階層アイテム (plist) を返す."
+  (list :name name :kind 12
+        :range (list :start (list :line line :character 0)
+                     :end (list :line line :character end))
+        :selectionRange (list :start (list :line line :character 4)
+                              :end (list :line line :character 10))))
+
+(defun my-test-cpp-config--lsp-error (code message)
+  "`jsonrpc-request' が失敗したときと同じ形で `jsonrpc-error' を signal する関数を返す.
+CODE が nil ならタイムアウトと同じく code 無しにする。"
+  (lambda ()
+    (signal 'jsonrpc-error
+            (append (list "request id=1 failed:")
+                    (and code (list (cons 'jsonrpc-error-code code)))
+                    (list (cons 'jsonrpc-error-message message))))))
+
+(ert-deftest my-test-cpp-config-lsp-callers ()
+  "呼び出し元は incomingCalls の fromRanges を呼び出し箇所ごとに 1 件ずつ表示する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "callee" 0 26) (list :uri uri))])
+        (:callHierarchy/incomingCalls
+         . [(:from ,(append (my-test-cpp-config--lsp-item "caller" 1 33) (list :uri uri))
+            :fromRanges [(:start (:line 1 :character 22) :end (:line 1 :character 28))])]))
+    (my/lsp-find-callers)
+    (should (equal (mapcar #'car requests)
+                   '(:callHierarchy/incomingCalls :textDocument/prepareCallHierarchy)))
+    (should (= (length shown) 1))
+    (let* ((item (car shown))
+           (summary (substring-no-properties (xref-item-summary item)))
+           (location (xref-item-location item)))
+      (should (string-prefix-p "caller: " summary))
+      (should (string-match-p "return callee();" summary))
+      (should (= (xref-location-line location) 2))
+      (should (file-equal-p (xref-location-group location) file)))
+    ;; 一時バッファは表示後に片付ける
+    (should (zerop (hash-table-count eglot--temp-location-buffers)))
+    (should-not ref-calls)))
+
+(ert-deftest my-test-cpp-config-lsp-callers-fallback ()
+  "非 LSP 環境と C-u 付きは参照検索 (GNU Global 経路) へ委譲し、LSP へ要求しない."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs nil nil
+    (my/lsp-find-callers)
+    (should (equal ref-calls '(nil)))
+    (should-not requests))
+  (my-test-cpp-config--with-lsp-stubs t nil
+    (my/lsp-find-callers '(4))
+    (should (equal ref-calls '((4))))
+    (should-not requests)))
+
+(ert-deftest my-test-cpp-config-lsp-callees ()
+  "呼び出し先は outgoingCalls の to を定義名の位置で表示する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "caller" 1 33) (list :uri uri))])
+        (:callHierarchy/outgoingCalls
+         . [(:to ,(append (my-test-cpp-config--lsp-item "callee" 0 26) (list :uri uri))
+            :fromRanges [(:start (:line 1 :character 22) :end (:line 1 :character 28))])]))
+    (my/lsp-find-callees)
+    (should (= (length shown) 1))
+    (let ((item (car shown)))
+      (should (string-prefix-p "callee: " (substring-no-properties (xref-item-summary item))))
+      (should (= (xref-location-line (xref-item-location item)) 1)))
+    (should (zerop (hash-table-count eglot--temp-location-buffers)))))
+
+(ert-deftest my-test-cpp-config-lsp-callees-requires-lsp ()
+  "呼び出し先は非 LSP 環境で明示的に失敗し、Global へは倒さない."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs nil nil
+    (should-error (my/lsp-find-callees) :type 'user-error)
+    (should-not requests)
+    (should-not ref-calls)))
+
+(ert-deftest my-test-cpp-config-lsp-method-not-found ()
+  "サーバー未対応 (-32601。clangd 18 の outgoingCalls) は版の要件を含むエラーにする."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "caller" 1 33) (list :uri uri))])
+        (:callHierarchy/outgoingCalls
+         . ,(my-test-cpp-config--lsp-error -32601 "method not found")))
+    (let ((err (should-error (my/lsp-find-callees) :type 'user-error)))
+      (should (string-match-p "clangd 20" (cadr err))))))
+
+(ert-deftest my-test-cpp-config-lsp-timeout ()
+  "タイムアウト (code 無し) は原因が分かるエラーにする."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . ,(my-test-cpp-config--lsp-error nil "Timed out")))
+    (let ((err (should-error (my/lsp-find-callers) :type 'user-error)))
+      (should (string-match-p "タイムアウト" (cadr err))))))
+
+(ert-deftest my-test-cpp-config-lsp-request-timeout-explicit ()
+  "すべての要求に有限のタイムアウトを明示する.
+eglot の内部ラッパーは :timeout nil を jsonrpc-request へ転送し、既定の 10 秒を
+無効化して応答しないサーバーを待ち続ける (Emacs 30.2 / 31.1 で確認)。"
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "callee" 0 26) (list :uri uri))])
+        (:callHierarchy/incomingCalls . nil)
+        (:textDocument/switchSourceHeader . nil))
+    (my/lsp-find-callers)
+    (cl-letf (((symbol-function 'ff-find-other-file) #'ignore)
+              ((symbol-function 'xref-push-marker-stack) #'ignore))
+      (my/lsp-find-other-file))
+    (my/lsp-find-workspace-symbol "callee")
+    (should (equal (mapcar #'car requests)
+                   '(:workspace/symbol :textDocument/switchSourceHeader
+                     :callHierarchy/incomingCalls :textDocument/prepareCallHierarchy)))
+    (dolist (request requests)
+      (should (numberp (nth 2 request)))
+      (should (> (nth 2 request) 0))
+      (should (eql (nth 2 request) jsonrpc-default-request-timeout)))))
+
+(ert-deftest my-test-cpp-config-lsp-timeout-real-jsonrpc ()
+  "応答しないサーバーに対して jsonrpc の実タイムアウトが user-error になる.
+jsonrpc-process-connection を実際に作り、要求層をスタブせずに通す。"
+  :tags '(:cpp-config)
+  (require 'jsonrpc)
+  (let* ((process (make-process :name "my-test-lsp-stub" :command '("sleep" "30")
+                                :connection-type 'pipe :noquery t))
+         (connection (make-instance 'jsonrpc-process-connection
+                                    :name "my-test-lsp-stub" :process process)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () t))
+                  ((symbol-function 'eglot-server-capable) (lambda (&rest _) t))
+                  ((symbol-function 'eglot--current-server-or-lose) (lambda () connection))
+                  ((symbol-function 'eglot--signal-textDocument/didChange) #'ignore)
+                  ((symbol-function 'eglot--TextDocumentPositionParams)
+                   (lambda () '(:textDocument (:uri "file:///tmp/none.cpp")
+                                :position (:line 0 :character 0)))))
+          (let ((jsonrpc-default-request-timeout 0.3)
+                (start (float-time)))
+            (dolist (command (list #'my/lsp-find-callers
+                                   (lambda () (my/lsp-find-workspace-symbol "callee"))))
+              (let ((err (should-error (funcall command) :type 'user-error)))
+                (should (string-match-p "タイムアウト" (cadr err)))))
+            ;; 既定の 10 秒ではなく明示した短いタイムアウトで戻ること (2 要求分)
+            (should (< (- (float-time) start) 5))))
+      (ignore-errors (jsonrpc-shutdown connection))
+      (when (process-live-p process)
+        (delete-process process)))))
+
+(ert-deftest my-test-cpp-config-lsp-prepare-empty ()
+  "prepare が空 (nil / 空ベクタ) なら対象が無い旨のエラーにし、次の要求を送らない."
+  :tags '(:cpp-config)
+  (dolist (empty (list nil []))
+    (my-test-cpp-config--with-lsp-stubs t
+        `((:textDocument/prepareCallHierarchy . ,empty))
+      (let ((err (should-error (my/lsp-find-callers) :type 'user-error)))
+        (should (string-match-p "対象がありません" (cadr err))))
+      (should (= (length requests) 1)))))
+
+(ert-deftest my-test-cpp-config-lsp-capability-missing ()
+  "サーバーに capability が無ければ要求せずにエラーにする."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t nil
+    (cl-letf (((symbol-function 'eglot-server-capable) (lambda (&rest _) nil)))
+      (should-error (my/lsp-find-type-hierarchy) :type 'user-error)
+      (should-error (my/lsp-find-callers) :type 'user-error)
+      (should-not requests))))
+
+(ert-deftest my-test-cpp-config-lsp-type-hierarchy ()
+  "型階層は基底と派生を両方取得し、[基底] [派生] の順でラベルを付けて並べる."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareTypeHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "Derived" 1 33) (list :uri uri))])
+        (:typeHierarchy/supertypes
+         . [,(append (my-test-cpp-config--lsp-item "Base" 0 26) (list :uri uri))])
+        (:typeHierarchy/subtypes
+         . [,(append (my-test-cpp-config--lsp-item "MoreDerived" 1 33) (list :uri uri))]))
+    (my/lsp-find-type-hierarchy)
+    (should (equal (mapcar #'car requests)
+                   '(:typeHierarchy/subtypes :typeHierarchy/supertypes
+                     :textDocument/prepareTypeHierarchy)))
+    (should (equal (mapcar (lambda (item)
+                             (cons (substring-no-properties (xref-item-summary item) 0 4)
+                                   (xref-location-line (xref-item-location item))))
+                           shown)
+                   '(("[基底]" . 1) ("[派生]" . 2)))))
+  ;; 片方が空でも他方は表示する
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareTypeHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "Base" 0 26) (list :uri uri))])
+        (:typeHierarchy/supertypes . nil)
+        (:typeHierarchy/subtypes
+         . [,(append (my-test-cpp-config--lsp-item "Derived" 1 33) (list :uri uri))]))
+    (my/lsp-find-type-hierarchy)
+    (should (= (length shown) 1))
+    (should (string-prefix-p "[派生]" (substring-no-properties (xref-item-summary (car shown)))))))
+
+(ert-deftest my-test-cpp-config-lsp-other-file ()
+  "ヘッダ/ソース切替は LSP の応答があればそのファイルへ、無ければ ff へ倒す."
+  :tags '(:cpp-config)
+  (let (visited ff-calls)
+    (cl-letf (((symbol-function 'find-file)
+               (lambda (filename &rest _) (push filename visited)))
+              ((symbol-function 'ff-find-other-file)
+               (lambda (&rest _) (push (symbol-value 'ff-always-try-to-create) ff-calls)))
+              ((symbol-function 'xref-push-marker-stack) #'ignore))
+      ;; LSP が対を返す
+      (my-test-cpp-config--with-lsp-stubs t
+          `((:textDocument/switchSourceHeader . ,(concat "file://" root "/a.h")))
+        (my/lsp-find-other-file)
+        (should (equal (mapcar #'car requests) '(:textDocument/switchSourceHeader)))
+        (should (equal visited (list (expand-file-name "a.h" root))))
+        (should-not ff-calls))
+      (setq visited nil)
+      ;; 対が無い (null)、要求失敗、非 LSP、C-u はいずれも ff (新規作成なし)
+      (my-test-cpp-config--with-lsp-stubs t
+          '((:textDocument/switchSourceHeader . nil))
+        (my/lsp-find-other-file)
+        (should (= (length requests) 1)))
+      (my-test-cpp-config--with-lsp-stubs t
+          `((:textDocument/switchSourceHeader
+             . ,(my-test-cpp-config--lsp-error -32601 "method not found")))
+        (my/lsp-find-other-file)
+        (should (= (length requests) 1)))
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (my/lsp-find-other-file)
+        (should-not requests))
+      (my-test-cpp-config--with-lsp-stubs t nil
+        (my/lsp-find-other-file '(4))
+        (should-not requests))
+      (should-not visited)
+      (should (equal ff-calls '(nil nil nil nil))))))
+
+(ert-deftest my-test-cpp-config-lsp-workspace-symbol ()
+  "横断シンボル検索は LSP なら workspace/symbol を自前で送り、無ければ GTAGS、それも無ければエラー."
+  :tags '(:cpp-config)
+  (let (apropos-calls)
+    (cl-letf (((symbol-function 'xref-backend-apropos)
+               (lambda (backend pattern) (push (list backend pattern) apropos-calls) nil))
+              ((symbol-function 'ggtags-find-project) (lambda () t)))
+      ;; LSP: eglot の xref バックエンド (タイムアウト無期限) ではなく有限タイムアウトの要求
+      (my-test-cpp-config--with-lsp-stubs t
+          `((:workspace/symbol
+             . [(:name "callee" :kind 12
+                 :location (:uri ,uri :range (:start (:line 0 :character 4)
+                                              :end (:line 0 :character 10))))
+                ;; range の無い要素 (WorkspaceSymbol の簡略形) は読み飛ばす
+                (:name "nowhere" :kind 12 :location (:uri ,uri))]))
+        (my/lsp-find-workspace-symbol "callee")
+        (should-not apropos-calls)
+        (should (equal requests `((:workspace/symbol (:query "callee")
+                                                     ,jsonrpc-default-request-timeout))))
+        (should (= (length shown) 1))
+        (should (string-match-p "int callee" (xref-item-summary (car shown))))
+        (should (= (xref-location-line (xref-item-location (car shown))) 1))
+        (should (zerop (hash-table-count eglot--temp-location-buffers))))
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (my/lsp-find-workspace-symbol "alloc")
+        (should (equal apropos-calls '((ggtags "alloc"))))
+        (should-not requests))
+      (setq apropos-calls nil)
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (should-error (my/lsp-find-workspace-symbol " ") :type 'user-error)
+        (should-not apropos-calls)))
+    (cl-letf (((symbol-function 'xref-backend-apropos)
+               (lambda (backend pattern) (push (list backend pattern) apropos-calls) nil))
+              ((symbol-function 'ggtags-find-project) (lambda () nil)))
+      (my-test-cpp-config--with-lsp-stubs nil nil
+        (should-error (my/lsp-find-workspace-symbol "alloc") :type 'user-error)
+        (should-not apropos-calls)))))
+
+;;;;; [Group] C++ Config - 実 clangd との結合 ;;;;;
+;; clangd がある環境でだけ、要求層をスタブせずに実 JSON-RPC で LSP 経路を通す
+;; (CI の runner には clangd が無いため skip。tests/my-test-cpp-lane.el が許容する)。
+(defun my-test-cpp-config--wait (pred secs)
+  "PRED が真になるまで最大 SECS 秒待ち、最後の評価値を返す."
+  (let ((deadline (+ (float-time) secs)))
+    (while (and (not (funcall pred)) (< (float-time) deadline))
+      (accept-process-output nil 0.2))
+    (funcall pred)))
+
+(defun my-test-cpp-config--inlay-overlay-p ()
+  "現在のバッファに eglot の inlay hint の overlay があれば non-nil."
+  (seq-some (lambda (overlay) (overlay-get overlay 'eglot--inlay-hint))
+            (overlays-in (point-min) (point-max))))
+
+(ert-deftest my-test-cpp-config-lsp-live-clangd ()
+  "実 clangd で呼び出し元・型階層・ヘッダ切替・横断検索・inlay hints・breadcrumb を通す."
+  :tags '(:cpp-config)
+  (skip-unless (executable-find "clangd"))
+  (require 'eglot)
+  (require 'json)
+  (let* ((root (make-temp-file "my-test-clangd-" t))
+         (cpp (expand-file-name "main.cpp" root))
+         (hdr (expand-file-name "main.h" root))
+         shown visited buffer server)
+    (unwind-protect
+        (progn
+          (with-temp-file hdr (insert "int callee(int x);\n"))
+          (with-temp-file cpp
+            (insert "#include \"main.h\"\n"
+                    "struct Base { virtual int value() const { return 1; } };\n"
+                    "struct Derived : Base { int value() const override { return 2; } };\n"
+                    "int callee(int x) { return x + 1; }\n"
+                    "int caller(int y) { return callee(y) + callee(y); }\n"
+                    "int main() { Derived d; return caller(d.value()); }\n"))
+          (with-temp-file (expand-file-name "compile_commands.json" root)
+            (insert (json-encode
+                     `[((directory . ,root)
+                        (command . ,(format "clang++ -std=c++17 -c %s" cpp))
+                        (file . ,cpp))])))
+          (setq buffer (find-file-noselect cpp))
+          (with-current-buffer buffer
+            (apply #'eglot (eglot--guess-contact))
+            (should (my-test-cpp-config--wait #'eglot-managed-p 30))
+            (setq server (eglot-current-server))
+            (cl-letf (((symbol-function 'xref-show-xrefs)
+                       (lambda (fetcher _action) (setq shown (funcall fetcher))))
+                      ((symbol-function 'find-file)
+                       (lambda (file &rest _) (push file visited))))
+              ;; 呼び出し元: index が揃うまで再試行し、呼び出し箇所ごとに 1 件
+              (goto-char (point-min))
+              (search-forward "int callee(int x) {")
+              (search-backward "callee")
+              (should (my-test-cpp-config--wait
+                       (lambda () (setq shown nil) (my/lsp-find-callers) shown) 20))
+              (should (= (length shown) 2))
+              (dolist (item shown)
+                (should (string-prefix-p "caller:" (substring-no-properties (xref-item-summary item))))
+                (should (= (xref-location-line (xref-item-location item)) 5)))
+              ;; 呼び出し先: clangd 20 以降なら結果、それより前は版を示すエラー
+              (goto-char (point-min))
+              (search-forward "int caller(int y)")
+              (search-backward "caller")
+              (setq shown nil)
+              (condition-case err
+                  (progn (my/lsp-find-callees) (should shown))
+                (user-error (should (string-match-p "clangd 20" (cadr err)))))
+              ;; 型階層
+              (goto-char (point-min))
+              (search-forward "struct Derived")
+              (search-backward "Derived")
+              (setq shown nil)
+              (my/lsp-find-type-hierarchy)
+              (should (equal (mapcar (lambda (item)
+                                       (substring-no-properties (xref-item-summary item) 0 4))
+                                     shown)
+                             '("[基底]")))
+              ;; ヘッダ/ソース切替
+              (setq visited nil)
+              (my/lsp-find-other-file)
+              (should (equal visited (list hdr)))
+              ;; 横断シンボル検索
+              (setq shown nil)
+              (my/lsp-find-workspace-symbol "callee")
+              (should (seq-some (lambda (item)
+                                  (string-match-p "int callee" (xref-item-summary item)))
+                                shown))
+              ;; inlay hints: ON で overlay が付き、OFF で消える
+              (my/eglot-inlay-hints-toggle)
+              (should eglot-inlay-hints-mode)
+              (jit-lock-fontify-now (point-min) (point-max))
+              (should (my-test-cpp-config--wait #'my-test-cpp-config--inlay-overlay-p 10))
+              (my/eglot-inlay-hints-toggle)
+              (should-not eglot-inlay-hints-mode)
+              (should-not (my-test-cpp-config--inlay-overlay-p))
+              ;; breadcrumb: eglot-imenu の範囲付き index で関数名が出る
+              (goto-char (point-min))
+              (search-forward "return callee(y)")
+              (require 'breadcrumb)
+              (let ((imenu-auto-rescan t))
+                (imenu--make-index-alist t))
+              (should (string-match-p "caller"
+                                      (substring-no-properties (breadcrumb-imenu-crumbs)))))))
+      (when server
+        (ignore-errors (eglot-shutdown server nil nil t)))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer (set-buffer-modified-p nil))
+        (kill-buffer buffer))
+      (delete-directory root t))))
+
+(ert-deftest my-test-cpp-config-clangd-args ()
+  "clangd の起動引数と xref 追従の設定を固定する."
+  :tags '(:cpp-config)
+  (let ((entry (assoc '(c-mode c-ts-mode c++-mode c++-ts-mode) eglot-server-programs)))
+    (should entry)
+    (should (equal (cadr entry) "clangd"))
+    (should (member "--header-insertion=never" (cdr entry)))
+    (should (member "--limit-references=0" (cdr entry)))
+    ;; --limit-results は補完候補数の上限も兼ねるため触らない
+    (should-not (seq-some (lambda (arg) (string-prefix-p "--limit-results" arg))
+                          (cdr entry))))
+  (should eglot-extend-to-xref))
+
+;;;;; [Group] C++ Config - 読解補助 (outline) ;;;;;
+;; outline-minor-mode は treesit 連動の見出しが取れる ts モードだけで有効化する。
+;; cc-mode の既定 (全行が見出し) では実用にならないため、4 モード parity の意図的な例外。
+(ert-deftest my-test-cpp-config-outline-hook-ts-only ()
+  :tags '(:cpp-config)
+  (dolist (hook '(c-ts-mode-hook c++-ts-mode-hook))
+    (should (memq 'outline-minor-mode (default-value hook))))
+  (dolist (hook '(c-mode-hook c++-mode-hook))
+    (should-not (and (boundp hook) (memq 'outline-minor-mode (default-value hook))))))
+
+;; breadcrumb (header-line のパス表示) は cc-mode でも imenu で動くため 4 モードすべて
+(ert-deftest my-test-cpp-config-breadcrumb-hook-parity ()
+  :tags '(:cpp-config)
+  (dolist (hook '(c-mode-hook c++-mode-hook c-ts-mode-hook c++-ts-mode-hook))
+    (should (memq 'breadcrumb-local-mode (default-value hook)))))
+
+(ert-deftest my-test-cpp-config-outline-dwim-fallback ()
+  "outline が無効なバッファでは <f9> が従来どおり hs-toggle-hiding を呼ぶ."
+  :tags '(:cpp-config)
+  (let (called)
+    (cl-letf (((symbol-function 'hs-toggle-hiding)
+               (lambda (&rest _) (interactive) (setq called t))))
+      (with-temp-buffer
+        (fundamental-mode)
+        (should-not (bound-and-true-p outline-minor-mode))
+        (call-interactively #'my/outline-cycle-dwim)
+        (should called)))))
+
+(ert-deftest my-test-cpp-config-outline-dwim-ts ()
+  "ts モードでは関数定義が見出しになり、<f9> が本体の中からでも関数を折りたたむ."
+  :tags '(:cpp-config)
+  (skip-unless (my/treesit-cc-grammar-ready-p 'c))
+  (let ((file (make-temp-file "my-test-outline-" nil ".c"))
+        buffer)
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert "#include <stdio.h>\n\nint one(void) {\n    return 1;\n}\n\n"
+                    "int two(void) {\n    return 2;\n}\n"))
+          (setq buffer (find-file-noselect file))
+          (with-current-buffer buffer
+            (should (eq major-mode 'c-ts-mode))
+            (should outline-minor-mode)
+            (should (eq outline-search-function #'treesit-outline-search))
+            ;; 既定の述語 (function_declarator) では定義行が見出しと認識されない
+            ;; (Emacs 30.2)。関数定義ノード全体に一致する述語で looking-at 判定が通ること
+            (should (eq treesit-outline-predicate #'my/c-ts-outline-predicate))
+            (goto-char (point-min))
+            (forward-line 2)
+            (should (outline-on-heading-p))
+            (goto-char (point-min))
+            (should-not (outline-on-heading-p))
+            (let ((body-1 (progn (goto-char (point-min))
+                                 (search-forward "return 1") (match-beginning 0)))
+                  (body-2 (progn (goto-char (point-min))
+                                 (search-forward "return 2") (match-beginning 0))))
+              ;; 本体の中から: 見出し (定義行) へ移動して折りたたむ
+              (goto-char body-1)
+              (call-interactively #'my/outline-cycle-dwim)
+              (should (= (line-number-at-pos) 3))
+              (should (invisible-p body-1))
+              (should-not (invisible-p body-2))
+              ;; もう一度で展開
+              (call-interactively #'my/outline-cycle-dwim)
+              (should-not (invisible-p body-1))
+              ;; C-u でバッファ全体
+              (let ((current-prefix-arg '(4)))
+                (call-interactively #'my/outline-cycle-dwim))
+              (should (invisible-p body-1))
+              (should (invisible-p body-2))
+              ;; 見出しより前 (#include 行) では失敗する
+              (goto-char (point-min))
+              (should-error (call-interactively #'my/outline-cycle-dwim)
+                            :type 'user-error))))
+      (when (buffer-live-p buffer)
+        (set-buffer-modified-p nil)
+        (kill-buffer buffer))
+      (delete-file file))))
+
+;;;;; [Group] C++ Config - 読解補助 (inlay hints) ;;;;;
+;; 既定 OFF のまま、C-t l でバッファ単位に ON/OFF できること。eglot 本体の
+;; eglot-inlay-hints-mode を通し、サーバーの capability 判定だけをスタブする。
+(ert-deftest my-test-cpp-config-inlay-hints-default-off ()
+  :tags '(:cpp-config)
+  (should (memq :inlayHintProvider (default-value 'eglot-ignored-server-capabilities))))
+
+(ert-deftest my-test-cpp-config-inlay-hints-toggle-requires-eglot ()
+  :tags '(:cpp-config)
+  (with-temp-buffer
+    (should-error (my/eglot-inlay-hints-toggle) :type 'user-error)
+    (should-not (local-variable-p 'eglot-ignored-server-capabilities))))
+
+(ert-deftest my-test-cpp-config-inlay-hints-toggle-roundtrip ()
+  "ON でローカルに :inlayHintProvider を外し、OFF でローカル値を捨てて既定へ戻す."
+  :tags '(:cpp-config)
+  (let ((default (default-value 'eglot-ignored-server-capabilities)))
+    (cl-letf (((symbol-function 'eglot-managed-p) (lambda () t))
+              ;; eglot-server-capable の実装と同じく ignored を memq で見る
+              ((symbol-function 'eglot-server-capable)
+               (lambda (&rest feats)
+                 (not (seq-some (lambda (feat) (memq feat eglot-ignored-server-capabilities))
+                                feats)))))
+      (with-temp-buffer
+        (my/eglot-inlay-hints-toggle)
+        (should eglot-inlay-hints-mode)
+        (should (local-variable-p 'eglot-ignored-server-capabilities))
+        (should-not (memq :inlayHintProvider eglot-ignored-server-capabilities))
+        (should (memq :documentHighlightProvider eglot-ignored-server-capabilities))
+        (should (equal (default-value 'eglot-ignored-server-capabilities) default))
+        (my/eglot-inlay-hints-toggle)
+        (should-not eglot-inlay-hints-mode)
+        (should-not (local-variable-p 'eglot-ignored-server-capabilities))))
+    ;; 非対応サーバーではモードが自分を切るため、エラーにしてローカル値も残さない
+    (cl-letf (((symbol-function 'eglot-managed-p) (lambda () t))
+              ((symbol-function 'eglot-server-capable) (lambda (&rest _) nil)))
+      (with-temp-buffer
+        (should-error (my/eglot-inlay-hints-toggle) :type 'user-error)
+        (should-not eglot-inlay-hints-mode)
+        (should-not (local-variable-p 'eglot-ignored-server-capabilities))))
+    (should (equal (default-value 'eglot-ignored-server-capabilities) default))))
+
 (provide 'my-test-cpp-config)
 ;;; my-test-cpp-config.el ends here

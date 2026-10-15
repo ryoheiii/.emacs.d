@@ -6,7 +6,11 @@
 
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function c-toggle-auto-hungry-state "cc-cmds")
+(declare-function outline-cycle "outline")
+(declare-function outline-cycle-buffer "outline")
+(declare-function outline-back-to-heading "outline")
 (defvar c-ts-mode-indent-offset)
+(defvar treesit-outline-predicate)
 
 ;;;;;; [Group] Code Folding - コード折りたたみ ;;;;;;
 (use-package hideshow
@@ -21,6 +25,43 @@
          (c++-ts-mode     . hs-minor-mode)
          (emacs-lisp-mode . hs-minor-mode)
          (lisp-mode       . hs-minor-mode))
+  )
+
+;;; Outline - 関数単位の折りたたみと一覧 (hideshow と併用)
+;; treesit 連動の見出し (関数定義。述語は my/c-ts-outline-predicate) が取れる ts モード
+;; だけで有効にする。cc-mode の既定は outline-regexp "[^#\n\^M]" と c-outline-level
+;; (インデント桁) で「# 以外の全行が見出し」になり、consult-outline が全行を列挙し
+;; outline-cycle は桁 0 の行でしか意味を持たないため、cc-mode では現状 (hideshow のみ)
+;; を維持する。ts モードのフック parity 規約の意図的な例外で、
+;; tests/my-test-cpp-config.el の my-test-cpp-config-outline-hook-ts-only が固定する。
+;; 既定の見た目・入力は変えない: outline-minor-mode-cycle (TAB の乗っ取り) と
+;; outline-minor-mode-highlight は既定の nil のまま。
+;; hideshow (<f5>: 内側のブロック、invisible 'hs) と outline (<f9>: 関数、
+;; invisible 'outline) は独立した overlay 層で、両方で隠した領域は片方の show では開かない。
+(use-package outline
+  :straight nil
+  :hook ((c-ts-mode   . outline-minor-mode)
+         (c++-ts-mode . outline-minor-mode))
+  :bind (("<f9>" . my/outline-cycle-dwim))
+  ;; :bind から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
+  :preface
+  (defun my/outline-cycle-dwim (&optional arg)
+    "カーソル位置の関数の折りたたみを切り替える.
+本体の中からでも見出し (関数定義行) へ point を移してから `outline-cycle' を呼ぶ
+(`outline-cycle' 単体は point を不可視領域に残す)。ARG (C-u) 付きは
+`outline-cycle-buffer' でバッファ全体を切り替える。`outline-minor-mode' が無効な
+バッファ (cc-mode など) では従来どおり `hs-toggle-hiding' を呼ぶ。"
+    (interactive "P")
+    (cond
+     ((not (bound-and-true-p outline-minor-mode))
+      (call-interactively #'hs-toggle-hiding))
+     (arg (outline-cycle-buffer))
+     (t
+      (condition-case nil
+          (outline-back-to-heading t)
+        (outline-before-first-heading
+         (user-error "この位置より前に関数定義がありません")))
+      (outline-cycle))))
   )
 
 ;;;;;; [Group] Programming Modes - プログラミングモード ;;;;;;
@@ -271,8 +312,21 @@ point の後ろに空白以外が残る行では何もしない。cc-mode の cl
       (?\: . my/c-ts-layout-colon))
     "ts モードの自動改行規則。cc-mode + google-c-style の実挙動に対応させる。")
 
+  (defun my/c-ts-outline-predicate (node)
+    "NODE が関数定義なら non-nil (outline の見出し判定).
+c-ts-mode 既定の `c-ts-mode--outline-predicate' は function_declarator (名前と
+引数) に一致するが、このノードは定義行の行頭 (戻り値型) と行末 (`{') を囲まない。
+Emacs 30 の `treesit-outline-search' は looking-at 判定で行頭・行末を囲むノードを
+探すため、`outline-on-heading-p' が定義行で偽になり `outline-cycle' や
+`outline-hide-subtree' が働かない。定義ノード全体に一致させて解決する
+(見出しの検索と `treesit-outline-level' は定義ノードでも同じ結果になる)。
+Emacs 31 は既定の述語でも動くが、結果が同じなので版で分けない。"
+    (equal (treesit-node-type node) "function_definition"))
+
   (defun my/c-ts-mode-setup ()
     "C/C++ ts モード共通の設定（cc-mode 側の `my/cc-mode-setup' と対応）."
+    ;; outline の見出しを関数定義ノード全体にする (理由は my/c-ts-outline-predicate)
+    (setq-local treesit-outline-predicate #'my/c-ts-outline-predicate)
     ;; 標準スタイルの初期化後、公開された規則へ差分だけを前置する。
     ;; 他バッファの規則を変更しないよう言語ごとのリストを新しく作る。
     (setq-local treesit-simple-indent-rules

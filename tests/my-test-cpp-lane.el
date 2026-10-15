@@ -9,7 +9,8 @@
     my-test-cpp-config-c-ts-error-indent
     my-test-cpp-config-c-ts-error-indent-scope
     my-test-cpp-config-c-ts-error-context-preserves-point
-    my-test-cpp-config-c-ts-electric-typing))
+    my-test-cpp-config-c-ts-electric-typing
+    my-test-cpp-config-outline-dwim-ts))
 (defconst my-test-cpp-lane--cc-tests
   '(my-test-cpp-config-google-style my-test-cpp-config-treesit-fallback))
 (defun my-test-cpp-lane-run ()
@@ -22,7 +23,9 @@
                           (unless (and (fboundp 'treesit-available-p) (treesit-available-p))
                             '(my-test-cpp-config-treesit-grammar-dir-isolated))
                           (unless (and (executable-find "global") (executable-find "gtags"))
-                            '(my-test-cpp-config-gtags-real-candidates)))))
+                            '(my-test-cpp-config-gtags-real-candidates))
+                          (unless (executable-find "clangd")
+                            '(my-test-cpp-config-lsp-live-clangd)))))
     (unless (member lane '("auto" "with" "without")) (error "不正な文法レーン"))
     (when (equal lane "with")
       (unless (and ready (my/treesit-cc-grammar-ready-p 'c))

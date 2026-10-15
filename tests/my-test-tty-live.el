@@ -14,6 +14,7 @@
 (require 'my-test-deferred)
 (require 'my-test-startup)
 (require 'my-gtags)
+(require 'my-lsp-nav)
 
 (when noninteractive
   (error "my-test-tty-live は実 pty 専用"))
@@ -117,12 +118,16 @@
     (should (string-prefix-p "terminal-init-xterm"
                              (symbol-name terminal-initted))))
   (should (equal (lookup-key input-decode-map "\e[1;5A")
-                 [C-up])))
+                 [C-up]))
+  ;; <f9> (折りたたみ) は端末が送る CSI 20~ から復号できること
+  (should (equal (lookup-key input-decode-map "\e[20~")
+                 [f9])))
 
 ;;;;; [Group] TTY Live - 宣言とモード活性化 ;;;;;
 (ert-deftest my-test-tty-live-ct-bindings ()
   :tags '(:tty-live)
-  (dolist (binding my-test-keybindings--bindings)
+  (dolist (binding (append my-test-keybindings--bindings
+                           my-test-keybindings--ct-extra-bindings))
     (should (eq (lookup-key ggtags-mode-map (kbd (car binding)))
                 (cdr binding)))))
 
@@ -286,6 +291,99 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
       (should (equal requests '(("-s" "alpha_symbol"))))
       (should (eq (current-buffer) source-buffer))
       (should (= (point) source-point)))))
+
+;;;;; [Group] TTY Live - LSP 階層ナビゲーションのフォールバック ;;;;;
+;; LSP 管理下でない実 tty では、呼び出し元検索が C-t u と同じ Global 経路へ倒れ、
+;; 呼び出し先検索は何もせずに失敗する。
+(ert-deftest my-test-tty-live-lsp-callers-fallback ()
+  :tags '(:tty-live)
+  (my-test-tty-live--with-gtags '(1 2)
+    (execute-kbd-macro (kbd "C-t C-c RET C-n C-p second TAB RET"))
+    (my-test-tty-live--assert-gtags-stages stages 2)
+    (should (equal requests '(("-r" "alpha_symbol"))))
+    (should (eq (current-buffer) target-buffer))
+    (should (= (line-number-at-pos) 2))
+    (xref-go-back)
+    (should (eq (current-buffer) source-buffer))
+    (should (= (point) source-point))))
+
+(ert-deftest my-test-tty-live-lsp-callees-requires-lsp ()
+  :tags '(:tty-live)
+  (my-test-tty-live--with-gtags nil
+    (should-error (execute-kbd-macro (kbd "C-t C-e")) :type 'user-error)
+    (should-not stages)
+    (should-not requests)
+    (should (eq (current-buffer) source-buffer))
+    (should (= (point) source-point))))
+
+;; ヘッダ/ソース切替は非 LSP では ff-find-other-file へ倒れ、同じディレクトリの対を開く。
+;; C バッファを実際に開くため、C モードのフック群 (ggtags, hideshow など) も実 tty で走る。
+(ert-deftest my-test-tty-live-lsp-other-file-fallback ()
+  :tags '(:tty-live)
+  (let* ((directory (make-temp-file "my-test-tty-other-file-" t))
+         (source-file (expand-file-name "pair.c" directory))
+         (header-file (expand-file-name "pair.h" directory))
+         (xref--history (cons nil nil))
+         (xref-history-storage #'xref-global-history)
+         source-buffer header-buffer)
+    (unwind-protect
+        (save-window-excursion
+          (write-region "#include \"pair.h\"\nint pair(void) { return 1; }\n"
+                        nil source-file nil 'silent)
+          (write-region "int pair(void);\n" nil header-file nil 'silent)
+          (setq source-buffer (find-file-noselect source-file))
+          (switch-to-buffer source-buffer)
+          (goto-char (point-max))
+          (should (eq (key-binding (kbd "C-t C-o")) 'my/lsp-find-other-file))
+          (execute-kbd-macro (kbd "C-t C-o"))
+          (setq header-buffer (current-buffer))
+          (should (equal (buffer-file-name header-buffer) header-file))
+          (xref-go-back)
+          (should (eq (current-buffer) source-buffer))
+          (should (= (point) (point-max))))
+      (dolist (buffer (list source-buffer header-buffer))
+        (when (buffer-live-p buffer)
+          (with-current-buffer buffer (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
+      (delete-directory directory t))))
+
+;;;;; [Group] TTY Live - 読解補助 (breadcrumb / outline / inlay hints) ;;;;;
+;; C バッファを実 tty で開き、header-line のパス表示と読解補助キーが有効なことを検査する。
+;; 文法は一時ルートへ複製されないため通常は cc-mode になる (ts なら outline も有効)。
+(ert-deftest my-test-tty-live-cc-reading-aids ()
+  :tags '(:tty-live)
+  (let* ((directory (make-temp-file "my-test-tty-reading-" t))
+         (file (expand-file-name "sample.c" directory))
+         buffer)
+    (unwind-protect
+        (save-window-excursion
+          (write-region "int sample(void) {\n    return 1;\n}\n" nil file nil 'silent)
+          (setq buffer (find-file-noselect file))
+          (switch-to-buffer buffer)
+          (should (derived-mode-p 'c-mode))
+          ;; breadcrumb: header-line にファイル名を含むパスが出る
+          (should breadcrumb-local-mode)
+          (should (member '(:eval (breadcrumb--header-line)) header-line-format))
+          (let ((line (format-mode-line header-line-format)))
+            (should (stringp line))
+            (should (string-match-p "sample\\.c" line))
+            (let ((case-fold-search t))
+              (should-not (string-match-p "error" line))))
+          ;; outline は treesit 連動の見出しが取れる ts モードだけ
+          (if (my/treesit-cc-ready-p 'c)
+              (should outline-minor-mode)
+            (should-not (bound-and-true-p outline-minor-mode)))
+          (should (eq (key-binding [f9]) 'my/outline-cycle-dwim))
+          (should (eq (key-binding (kbd "C-t l")) 'my/eglot-inlay-hints-toggle))
+          ;; eglot 未管理 (CDB なし) では inlay hints のトグルは失敗する
+          (should-error (my/eglot-inlay-hints-toggle) :type 'user-error))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (when (bound-and-true-p breadcrumb--idle-timer)
+            (cancel-timer breadcrumb--idle-timer))
+          (set-buffer-modified-p nil))
+        (kill-buffer buffer))
+      (delete-directory directory t))))
 
 (ert-deftest my-test-tty-live-corfu-terminal-enabled ()
   :tags '(:tty-live)

@@ -1,7 +1,8 @@
 ;;; 31-editing.el --- コード編集とタグナビゲーションの設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; コード編集、C/C++ スタイル、タグナビゲーション、スニペット関連パッケージの設定
-;; ggtags カスタム関数群は loads/site-elisp/my-gtags.el に定義
+;; ggtags カスタム関数群は loads/site-elisp/my-gtags.el、
+;; LSP 階層ナビゲーション (C-t c/e/t/o/s) は loads/site-elisp/my-lsp-nav.el に定義
 
 ;;; Code:
 
@@ -253,12 +254,26 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
               ("C-t p"   . xref-go-back)                 ; 前の履歴へ移動 (previous)
               ("C-t C-p" . xref-go-back)
               ("C-t n"   . xref-go-forward)              ; 次の履歴へ移動 (next)
-              ("C-t C-n" . xref-go-forward))
+              ("C-t C-n" . xref-go-forward)
+              ;; --- 読解補助の追加キー (上の固定表の対象外。LSP 優先 + フォールバック) ---
+              ("C-t c"   . my/lsp-find-callers)          ; 呼び出し元 (callers)。非 LSP と C-u は Global
+              ("C-t C-c" . my/lsp-find-callers)
+              ("C-t e"   . my/lsp-find-callees)          ; 呼び出し先 (callees)。LSP のみ (clangd 20 以降)
+              ("C-t C-e" . my/lsp-find-callees)
+              ("C-t t"   . my/lsp-find-type-hierarchy)   ; 基底・派生 (type)。LSP のみ
+              ("C-t C-t" . my/lsp-find-type-hierarchy)
+              ("C-t o"   . my/lsp-find-other-file)       ; ヘッダ/ソース切替 (other file)
+              ("C-t C-o" . my/lsp-find-other-file)
+              ("C-t s"   . my/lsp-find-workspace-symbol) ; 横断シンボル検索 (symbol)
+              ("C-t C-s" . my/lsp-find-workspace-symbol)
+              ("C-t l"   . my/eglot-inlay-hints-toggle)  ; inlay hints 切替 (eglot 管理下のみ、既定 OFF)
+              ("C-t C-l" . my/eglot-inlay-hints-toggle))
   :custom
   (ggtags-update-on-save t)           ; ファイル保存時にタグを更新
   (ggtags-highlight-tag nil)          ; パフォーマンス: カーソル位置のタグハイライト無効化
   :config
   (require 'my-gtags)
+  (require 'my-lsp-nav)
   )
 
 ;;;;; [Group] Multi-editing - 複数編集 ;;;;;

@@ -32,6 +32,7 @@
     multiple-cursors
     copilot
     copilot-chat
+    breadcrumb
     ;; c-ts-mode.el はロード時に treesit-ready-p を呼び、文法不在の環境で
     ;; 起動時警告を出す。起動経路では絶対にロードしない。
     c-ts-mode)
@@ -53,7 +54,11 @@
     my/irony-maybe-enable       ; 非 LSP 環境の補完フォールバック
     hs-minor-mode               ; コード折りたたみ
     smart-newline-mode          ; 改行時のインデント調整
-    my/c-ts-mode-setup)         ; C-c c = compile / indent-tabs-mode nil
+    my/c-ts-mode-setup          ; C-c c = compile / indent-tabs-mode nil
+    ;; outline は cc-mode 側に無い意図的な例外 (treesit 連動の見出しが取れる ts モード限定)。
+    ;; cc-mode 側に無いことは my-test-cpp-config-outline-hook-ts-only が固定する
+    outline-minor-mode          ; 関数単位の折りたたみ (<f9>) と consult-outline
+    breadcrumb-local-mode)      ; header-line のパス表示
   "c-ts-mode-hook / c++-ts-mode-hook に登録されていなければならない関数。")
 
 (ert-deftest my-test-packages-ts-mode-hook-parity ()
@@ -146,7 +151,7 @@
   "LIBRARY の解決先が straight のビルドディレクトリ配下なら non-nil を返す。
 ディレクトリ名は公開変数 `straight-build-dir' から取る。既定値 \"build\" を
 文字列で仮定すると、`straight-use-version-specific-build-dir' 有効時
-(例 \"build-30.2\") に判定が静かに外れる。"
+(例 \"build-31.1\") に判定が静かに外れる。"
   (let ((path (locate-library library)))
     (and path
          (file-in-directory-p path (my-set-straight straight-build-dir "/")))))
@@ -166,6 +171,16 @@
   (require 'package)
   (should (package-built-in-p 'which-key))
   (should-not (my-test-packages--straight-build-p "which-key")))
+
+;; breadcrumb の依存 project は組み込み版で足りる。32-navigation.el の
+;; straight-override-recipe が外れると emacs-straight/project がクローンされ、
+;; 組み込み版を覆い隠す (lockfile にも project が現れる)。
+(ert-deftest my-test-packages-project-built-in ()
+  :tags '(:invariant)
+  (should (locate-library "project"))
+  (require 'package)
+  (should (package-built-in-p 'project))
+  (should-not (my-test-packages--straight-build-p "project")))
 
 (provide 'my-test-packages)
 ;;; my-test-packages.el ends here

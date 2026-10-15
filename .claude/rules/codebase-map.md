@@ -50,6 +50,6 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 
 `my-set-straight` で straight のビルド成果物を指す場合、ディレクトリ名を `"build/"` と
 文字列で書かず、公開変数 `straight-build-dir` を経由する
-（`straight-use-version-specific-build-dir` を有効にすると `"build-30.2"` などへ変わる）。
+（`straight-use-version-specific-build-dir` を有効にすると `"build-31.1"` などへ変わる）。
 外部パッケージ同梱のデータファイルは、そもそもパッケージ自身が公開する変数
 （例: `yasnippet-snippets-dir`）で参照し、ビルドレイアウトを自前で再現しない。

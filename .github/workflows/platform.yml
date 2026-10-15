@@ -30,11 +30,11 @@ jobs:
       - uses: purcell/setup-emacs@v8.0
         if: runner.os == 'macOS'
         with:
-          version: '30.2'
+          version: '31.1'
       - uses: jcs090218/setup-emacs-windows@754079f286ddffd48dbdf261192e8e1568ff4e21 # v5
         if: runner.os == 'Windows'
         with:
-          version: '30.2'
+          version: '31.1'
       - name: 固定した依存で起動・OS分岐・パスを検証
         shell: bash
         run: |

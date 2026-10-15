@@ -73,6 +73,31 @@
   ;; (imenu-list-auto-resize t)            ; サイズを自動調整
   )
 
+;;; Breadcrumb - header-line に imenu のパスとプロジェクト内パスを表示
+;; C/C++ の読解用に 4 モードへ限定して有効化し、他モードの既定の見た目 (header-line
+;; なし) は変えない。which-function-mode (モードライン) は維持する。
+;; 表示は文字と face だけで tty でも動く。更新は編集後 breadcrumb-idle-time (1 秒) の
+;; idle timer で imenu を再走査する方式 (post-command-hook / jit-lock は使わない)。
+;; eglot 管理下は eglot-imenu が範囲付きの index を返すため正確なパス
+;; (namespace > Class > method) になる。ts モードだけの treesit-simple-imenu は
+;; 位置しか持たないため「point 以前の最後のリーフ」になり、カテゴリ名 (Function など)
+;; も先頭に出る。cc-mode は正規表現の imenu。
+;;
+;; 依存の project は Emacs 組み込み版が要件 (0.9.8) を満たす。gnu-elpa-mirror に
+;; レシピがあるため、固定しないと emacs-straight/project がクローンされて組み込み版を
+;; load-path 上で覆い隠す (35-copilot.el の org / jsonrpc と同じ対処。docs/packages.md
+;; の表を参照)。
+(straight-override-recipe '(project :type built-in))
+
+(use-package breadcrumb
+  :straight t
+  ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
+  :hook ((c-mode      . breadcrumb-local-mode)
+         (c++-mode    . breadcrumb-local-mode)
+         (c-ts-mode   . breadcrumb-local-mode)
+         (c++-ts-mode . breadcrumb-local-mode))
+  )
+
 ;;;;; [Group] Spell-check - スペルチェック関連 ;;;;;
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell

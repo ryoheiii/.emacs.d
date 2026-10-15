@@ -6,7 +6,10 @@
 
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function eglot-managed-p "eglot")
+(declare-function eglot-inlay-hints-mode "eglot")
 (declare-function my/eglot-cc-suppress-irony "18-built-in-package")
+(defvar eglot-inlay-hints-mode)
+(defvar eglot-ignored-server-capabilities)
 (defvar my/auto-save-visited-in-progress)
 
 ;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
@@ -125,19 +128,51 @@
                (executable-find "clangd")
                (my/eglot-cc-project-p))
       (eglot-ensure)))
+  (defun my/eglot-inlay-hints-toggle ()
+    "現在のバッファで eglot の inlay hints (引数名・推論型のヒント) を切り替える.
+既定は `eglot-ignored-server-capabilities' の :inlayHintProvider で常時 OFF。
+ON にするときはバッファローカルに :inlayHintProvider を外してから
+`eglot-inlay-hints-mode' を有効化する (`eglot-server-capable' は同変数を memq で
+見るためローカル値が効く)。OFF ではローカル値を捨てて既定へ戻す。
+ローカル値は ON の間だけ残るため、`eglot-reconnect' 後の自動有効化
+(`eglot--maybe-activate-editing-mode') でも ON が維持される。
+eglot 未管理のバッファでは `user-error'。"
+    (interactive)
+    (unless (and (fboundp 'eglot-managed-p) (eglot-managed-p))
+      (user-error "eglot (clangd) が管理していないバッファです"))
+    (if eglot-inlay-hints-mode
+        (progn
+          (eglot-inlay-hints-mode -1)
+          (kill-local-variable 'eglot-ignored-server-capabilities)
+          (message "inlay hints: off"))
+      (setq-local eglot-ignored-server-capabilities
+                  (remq :inlayHintProvider eglot-ignored-server-capabilities))
+      (eglot-inlay-hints-mode 1)
+      ;; 非対応サーバーではモードが自分を切る (eglot-inlay-hints-mode の定義を参照)
+      (if eglot-inlay-hints-mode
+          (message "inlay hints: on")
+        (kill-local-variable 'eglot-ignored-server-capabilities)
+        (user-error "サーバーが inlay hints に対応していません"))))
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-config '(:size 0 :format full))
+  ;; inlay hints は既定 OFF。C-t l (my/eglot-inlay-hints-toggle) でバッファ単位に ON にできる
   (eglot-ignored-server-capabilities '(:inlayHintProvider :documentHighlightProvider))
   (eglot-stay-out-of '(flymake))       ; 使用感維持。診断が欲しくなったらここから外す
+  ;; xref で飛んだプロジェクト外のファイル (/usr/include など) も同じサーバーの管理下に
+  ;; 入れ、移動先でも C-t の LSP 経路を使えるようにする。別プロジェクトのファイルへ
+  ;; 飛んだときは新しいサーバーを立てず元のサーバーを使う
+  (eglot-extend-to-xref t)
   (eldoc-echo-area-use-multiline-p nil)
   :config
   ;; clangd 起動引数 (Doom :lang cc 準拠)。--header-insertion=never は補完確定時の
-  ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用
+  ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用。
+  ;; --limit-references=0 は参照検索 (C-t u / C-t c の LSP 経路) の既定上限 1000 件を外す。
+  ;; --limit-results はコード補完の候補数上限 (100) も兼ねるため変えない
   (add-to-list 'eglot-server-programs
                '((c-mode c-ts-mode c++-mode c++-ts-mode)
                  . ("clangd" "--background-index" "--header-insertion=never"
-                    "--header-insertion-decorators=0")))
+                    "--header-insertion-decorators=0" "--limit-references=0")))
   ;; eglot 管理バッファでは irony を止める (CAPF 競合防止)。
   ;; eglot-ensure は post-command-hook で遅延接続するため、モードフックでの判定は不可
   (defun my/eglot-cc-suppress-irony ()
