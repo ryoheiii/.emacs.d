@@ -171,7 +171,9 @@ eglot 管理下では clangd へ直接問い合わせ、結果は `C-t d/u` と�
   この版では `C-t e` が「clangd 20 以降が必要」のエラーになる。
 - `C-t s` は `xref-find-apropos` を経由しない。ggtags の xref バックエンドは
   カーソル位置の語が GTAGS に無いと etags へ落ちて TAGS テーブルを尋ねてくるため、
-  バックエンドを自前で選んで `xref-backend-apropos` を直接呼ぶ。
+  Global 経路はバックエンドを指定して `xref-backend-apropos` を直接呼ぶ。LSP 経路は
+  eglot の xref バックエンドも使わず（内部の要求ラッパーがタイムアウトを無期限にするため）、
+  `workspace/symbol` を有限タイムアウトの要求経路で自前で送る。
 - `C-t s` の入力は名前の補完なしの自由文字列。LSP 経路はファジー一致、Global 経路は
   正規表現で意味が違う。
 - 要求には `jsonrpc-default-request-timeout`（10 秒）を明示している。eglot 自身の要求

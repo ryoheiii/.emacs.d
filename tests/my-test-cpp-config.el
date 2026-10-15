@@ -1342,7 +1342,10 @@ eglot の内部ラッパーは :timeout nil を jsonrpc-request へ転送し、�
     (cl-letf (((symbol-function 'ff-find-other-file) #'ignore)
               ((symbol-function 'xref-push-marker-stack) #'ignore))
       (my/lsp-find-other-file))
-    (should (= (length requests) 3))
+    (my/lsp-find-workspace-symbol "callee")
+    (should (equal (mapcar #'car requests)
+                   '(:workspace/symbol :textDocument/switchSourceHeader
+                     :callHierarchy/incomingCalls :textDocument/prepareCallHierarchy)))
     (dolist (request requests)
       (should (numberp (nth 2 request)))
       (should (> (nth 2 request) 0))
@@ -1367,9 +1370,11 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
                                 :position (:line 0 :character 0)))))
           (let ((jsonrpc-default-request-timeout 0.3)
                 (start (float-time)))
-            (let ((err (should-error (my/lsp-find-callers) :type 'user-error)))
-              (should (string-match-p "タイムアウト" (cadr err))))
-            ;; 既定の 10 秒ではなく明示した短いタイムアウトで戻ること
+            (dolist (command (list #'my/lsp-find-callers
+                                   (lambda () (my/lsp-find-workspace-symbol "callee"))))
+              (let ((err (should-error (funcall command) :type 'user-error)))
+                (should (string-match-p "タイムアウト" (cadr err)))))
+            ;; 既定の 10 秒ではなく明示した短いタイムアウトで戻ること (2 要求分)
             (should (< (- (float-time) start) 5))))
       (ignore-errors (jsonrpc-shutdown connection))
       (when (process-live-p process)
@@ -1461,19 +1466,32 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
       (should (equal ff-calls '(nil nil nil nil))))))
 
 (ert-deftest my-test-cpp-config-lsp-workspace-symbol ()
-  "横断シンボル検索は eglot → GTAGS の順でバックエンドを選び、無ければエラーにする."
+  "横断シンボル検索は LSP なら workspace/symbol を自前で送り、無ければ GTAGS、それも無ければエラー."
   :tags '(:cpp-config)
   (let (apropos-calls)
     (cl-letf (((symbol-function 'xref-backend-apropos)
                (lambda (backend pattern) (push (list backend pattern) apropos-calls) nil))
               ((symbol-function 'ggtags-find-project) (lambda () t)))
-      (my-test-cpp-config--with-lsp-stubs t nil
-        (my/lsp-find-workspace-symbol "alloc")
-        (should (equal apropos-calls '((eglot "alloc")))))
-      (setq apropos-calls nil)
+      ;; LSP: eglot の xref バックエンド (タイムアウト無期限) ではなく有限タイムアウトの要求
+      (my-test-cpp-config--with-lsp-stubs t
+          `((:workspace/symbol
+             . [(:name "callee" :kind 12
+                 :location (:uri ,uri :range (:start (:line 0 :character 4)
+                                              :end (:line 0 :character 10))))
+                ;; range の無い要素 (WorkspaceSymbol の簡略形) は読み飛ばす
+                (:name "nowhere" :kind 12 :location (:uri ,uri))]))
+        (my/lsp-find-workspace-symbol "callee")
+        (should-not apropos-calls)
+        (should (equal requests `((:workspace/symbol (:query "callee")
+                                                     ,jsonrpc-default-request-timeout))))
+        (should (= (length shown) 1))
+        (should (string-match-p "int callee" (xref-item-summary (car shown))))
+        (should (= (xref-location-line (xref-item-location (car shown))) 1))
+        (should (zerop (hash-table-count eglot--temp-location-buffers))))
       (my-test-cpp-config--with-lsp-stubs nil nil
         (my/lsp-find-workspace-symbol "alloc")
-        (should (equal apropos-calls '((ggtags "alloc")))))
+        (should (equal apropos-calls '((ggtags "alloc"))))
+        (should-not requests))
       (setq apropos-calls nil)
       (my-test-cpp-config--with-lsp-stubs nil nil
         (should-error (my/lsp-find-workspace-symbol " ") :type 'user-error)

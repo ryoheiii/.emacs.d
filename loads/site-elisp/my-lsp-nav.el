@@ -199,6 +199,25 @@ LSP 管理下なら clangd の switchSourceHeader を使う (src/ と include/ �
 
 ;; ── 横断シンボル検索 ────────────────────────────────────
 
+(defun my/lsp-nav--workspace-symbols (pattern)
+  "workspace/symbol で PATTERN に一致するシンボルの xref を返す (LSP のみ).
+eglot の xref バックエンド (`xref-backend-apropos') は内部の要求ラッパーを使い
+タイムアウトが無期限になるため、同じ要求を `my/lsp-nav--request' で送る。
+応答は SymbolInformation の配列で、range を持たない要素は読み飛ばす。"
+  (unless (my/lsp-nav--protect "workspace/symbol"
+                               (lambda () (eglot-server-capable :workspaceSymbolProvider)))
+    (user-error "LSP サーバーが workspace/symbol に対応していません"))
+  (my/lsp-nav--collect
+   (lambda ()
+     (delq nil
+           (mapcar (lambda (symbol)
+                     (let* ((location (plist-get symbol :location))
+                            (range (plist-get location :range)))
+                       (and range
+                            (eglot--xref-make-match (plist-get symbol :name)
+                                                    (plist-get location :uri) range))))
+                   (my/lsp-nav--request :workspace/symbol (list :query pattern)))))))
+
 (defun my/lsp-find-workspace-symbol (pattern)
   "PATTERN でプロジェクト横断のシンボルを検索する.
 LSP 管理下は workspace/symbol (名前のファジー一致)、それ以外で GTAGS があれば
@@ -210,11 +229,11 @@ TAGS テーブルを尋ねてくるため。"
                       'my/gtags-history)))
   (when (string-blank-p pattern)
     (user-error "検索する名前を入力してください"))
-  (let* ((backend (cond ((my/gtags--lsp-p) 'eglot)
-                        ((and (fboundp 'ggtags-find-project) (ggtags-find-project)) 'ggtags)
-                        (t (user-error "シンボル検索には eglot (clangd) か GTAGS が必要です"))))
-         (xrefs (my/lsp-nav--protect "workspace/symbol"
-                                     (lambda () (xref-backend-apropos backend pattern)))))
+  (let ((xrefs (cond ((my/gtags--lsp-p)
+                      (my/lsp-nav--workspace-symbols pattern))
+                     ((and (fboundp 'ggtags-find-project) (ggtags-find-project))
+                      (xref-backend-apropos 'ggtags pattern))
+                     (t (user-error "シンボル検索には eglot (clangd) か GTAGS が必要です")))))
     (my/lsp-nav--show (format "シンボル %s" pattern) xrefs)))
 
 (provide 'my-lsp-nav)
