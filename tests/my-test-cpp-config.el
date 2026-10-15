@@ -1194,9 +1194,10 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
   "LSP-P を管理状態、RESPONSES を (method . 応答) の alist として BODY を実行する.
 応答が関数なら呼び出した結果を返す (エラーを signal させる用途)。RESPONSES は
 BODY と同じ環境で評価されるため root / file / uri を参照できる。
-BODY では requests (要求の (method params) を新しい順に並べたリスト)、
+BODY では requests (要求の (method params timeout) を新しい順に並べたリスト)、
 shown (表示された xref)、ref-calls (`my/gtags-find-references' への委譲引数) も
-参照できる。"
+参照できる。スタブするのは jsonrpc の要求層 (`jsonrpc-request') で、
+my-lsp-nav.el が eglot の内部要求ラッパーを経由しないことも固定する。"
   (declare (indent 2) (debug t))
   `(let* ((root (make-temp-file "my-test-lsp-nav-" t))
           (file (expand-file-name "a.cpp" root))
@@ -1215,9 +1216,10 @@ shown (表示された xref)、ref-calls (`my/gtags-find-references' への委�
                                        :position '(:line 1 :character 4))))
                      ((symbol-function 'eglot--TextDocumentIdentifier)
                       (lambda () (list :uri uri)))
-                     ((symbol-function 'eglot--request)
-                      (lambda (_server method params &rest _)
-                        (push (list method params) requests)
+                     ((symbol-function 'eglot--signal-textDocument/didChange) #'ignore)
+                     ((symbol-function 'jsonrpc-request)
+                      (lambda (_connection method params &rest rest)
+                        (push (list method params (plist-get rest :timeout)) requests)
                         (let ((response (cdr (assq method ,responses))))
                           (if (functionp response) (funcall response) response))))
                      ((symbol-function 'xref-show-xrefs)
@@ -1325,6 +1327,53 @@ CODE が nil ならタイムアウトと同じく code 無しにする。"
          . ,(my-test-cpp-config--lsp-error nil "Timed out")))
     (let ((err (should-error (my/lsp-find-callers) :type 'user-error)))
       (should (string-match-p "タイムアウト" (cadr err))))))
+
+(ert-deftest my-test-cpp-config-lsp-request-timeout-explicit ()
+  "すべての要求に有限のタイムアウトを明示する.
+eglot の内部ラッパーは :timeout nil を jsonrpc-request へ転送し、既定の 10 秒を
+無効化して応答しないサーバーを待ち続ける (Emacs 30.2 / 31.1 で確認)。"
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-lsp-stubs t
+      `((:textDocument/prepareCallHierarchy
+         . [,(append (my-test-cpp-config--lsp-item "callee" 0 26) (list :uri uri))])
+        (:callHierarchy/incomingCalls . nil)
+        (:textDocument/switchSourceHeader . nil))
+    (my/lsp-find-callers)
+    (cl-letf (((symbol-function 'ff-find-other-file) #'ignore)
+              ((symbol-function 'xref-push-marker-stack) #'ignore))
+      (my/lsp-find-other-file))
+    (should (= (length requests) 3))
+    (dolist (request requests)
+      (should (numberp (nth 2 request)))
+      (should (> (nth 2 request) 0))
+      (should (eql (nth 2 request) jsonrpc-default-request-timeout)))))
+
+(ert-deftest my-test-cpp-config-lsp-timeout-real-jsonrpc ()
+  "応答しないサーバーに対して jsonrpc の実タイムアウトが user-error になる.
+jsonrpc-process-connection を実際に作り、要求層をスタブせずに通す。"
+  :tags '(:cpp-config)
+  (require 'jsonrpc)
+  (let* ((process (make-process :name "my-test-lsp-stub" :command '("sleep" "30")
+                                :connection-type 'pipe :noquery t))
+         (connection (make-instance 'jsonrpc-process-connection
+                                    :name "my-test-lsp-stub" :process process)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () t))
+                  ((symbol-function 'eglot-server-capable) (lambda (&rest _) t))
+                  ((symbol-function 'eglot--current-server-or-lose) (lambda () connection))
+                  ((symbol-function 'eglot--signal-textDocument/didChange) #'ignore)
+                  ((symbol-function 'eglot--TextDocumentPositionParams)
+                   (lambda () '(:textDocument (:uri "file:///tmp/none.cpp")
+                                :position (:line 0 :character 0)))))
+          (let ((jsonrpc-default-request-timeout 0.3)
+                (start (float-time)))
+            (let ((err (should-error (my/lsp-find-callers) :type 'user-error)))
+              (should (string-match-p "タイムアウト" (cadr err))))
+            ;; 既定の 10 秒ではなく明示した短いタイムアウトで戻ること
+            (should (< (- (float-time) start) 5))))
+      (ignore-errors (jsonrpc-shutdown connection))
+      (when (process-live-p process)
+        (delete-process process)))))
 
 (ert-deftest my-test-cpp-config-lsp-prepare-empty ()
   "prepare が空 (nil / 空ベクタ) なら対象が無い旨のエラーにし、次の要求を送らない."
@@ -1435,6 +1484,116 @@ CODE が nil ならタイムアウトと同じく code 無しにする。"
       (my-test-cpp-config--with-lsp-stubs nil nil
         (should-error (my/lsp-find-workspace-symbol "alloc") :type 'user-error)
         (should-not apropos-calls)))))
+
+;;;;; [Group] C++ Config - 実 clangd との結合 ;;;;;
+;; clangd がある環境でだけ、要求層をスタブせずに実 JSON-RPC で LSP 経路を通す
+;; (CI の runner には clangd が無いため skip。tests/my-test-cpp-lane.el が許容する)。
+(defun my-test-cpp-config--wait (pred secs)
+  "PRED が真になるまで最大 SECS 秒待ち、最後の評価値を返す."
+  (let ((deadline (+ (float-time) secs)))
+    (while (and (not (funcall pred)) (< (float-time) deadline))
+      (accept-process-output nil 0.2))
+    (funcall pred)))
+
+(defun my-test-cpp-config--inlay-overlay-p ()
+  "現在のバッファに eglot の inlay hint の overlay があれば non-nil."
+  (seq-some (lambda (overlay) (overlay-get overlay 'eglot--inlay-hint))
+            (overlays-in (point-min) (point-max))))
+
+(ert-deftest my-test-cpp-config-lsp-live-clangd ()
+  "実 clangd で呼び出し元・型階層・ヘッダ切替・横断検索・inlay hints・breadcrumb を通す."
+  :tags '(:cpp-config)
+  (skip-unless (executable-find "clangd"))
+  (require 'eglot)
+  (require 'json)
+  (let* ((root (make-temp-file "my-test-clangd-" t))
+         (cpp (expand-file-name "main.cpp" root))
+         (hdr (expand-file-name "main.h" root))
+         shown visited buffer server)
+    (unwind-protect
+        (progn
+          (with-temp-file hdr (insert "int callee(int x);\n"))
+          (with-temp-file cpp
+            (insert "#include \"main.h\"\n"
+                    "struct Base { virtual int value() const { return 1; } };\n"
+                    "struct Derived : Base { int value() const override { return 2; } };\n"
+                    "int callee(int x) { return x + 1; }\n"
+                    "int caller(int y) { return callee(y) + callee(y); }\n"
+                    "int main() { Derived d; return caller(d.value()); }\n"))
+          (with-temp-file (expand-file-name "compile_commands.json" root)
+            (insert (json-encode
+                     `[((directory . ,root)
+                        (command . ,(format "clang++ -std=c++17 -c %s" cpp))
+                        (file . ,cpp))])))
+          (setq buffer (find-file-noselect cpp))
+          (with-current-buffer buffer
+            (apply #'eglot (eglot--guess-contact))
+            (should (my-test-cpp-config--wait #'eglot-managed-p 30))
+            (setq server (eglot-current-server))
+            (cl-letf (((symbol-function 'xref-show-xrefs)
+                       (lambda (fetcher _action) (setq shown (funcall fetcher))))
+                      ((symbol-function 'find-file)
+                       (lambda (file &rest _) (push file visited))))
+              ;; 呼び出し元: index が揃うまで再試行し、呼び出し箇所ごとに 1 件
+              (goto-char (point-min))
+              (search-forward "int callee(int x) {")
+              (search-backward "callee")
+              (should (my-test-cpp-config--wait
+                       (lambda () (setq shown nil) (my/lsp-find-callers) shown) 20))
+              (should (= (length shown) 2))
+              (dolist (item shown)
+                (should (string-prefix-p "caller:" (substring-no-properties (xref-item-summary item))))
+                (should (= (xref-location-line (xref-item-location item)) 5)))
+              ;; 呼び出し先: clangd 20 以降なら結果、それより前は版を示すエラー
+              (goto-char (point-min))
+              (search-forward "int caller(int y)")
+              (search-backward "caller")
+              (setq shown nil)
+              (condition-case err
+                  (progn (my/lsp-find-callees) (should shown))
+                (user-error (should (string-match-p "clangd 20" (cadr err)))))
+              ;; 型階層
+              (goto-char (point-min))
+              (search-forward "struct Derived")
+              (search-backward "Derived")
+              (setq shown nil)
+              (my/lsp-find-type-hierarchy)
+              (should (equal (mapcar (lambda (item)
+                                       (substring-no-properties (xref-item-summary item) 0 4))
+                                     shown)
+                             '("[基底]")))
+              ;; ヘッダ/ソース切替
+              (setq visited nil)
+              (my/lsp-find-other-file)
+              (should (equal visited (list hdr)))
+              ;; 横断シンボル検索
+              (setq shown nil)
+              (my/lsp-find-workspace-symbol "callee")
+              (should (seq-some (lambda (item)
+                                  (string-match-p "int callee" (xref-item-summary item)))
+                                shown))
+              ;; inlay hints: ON で overlay が付き、OFF で消える
+              (my/eglot-inlay-hints-toggle)
+              (should eglot-inlay-hints-mode)
+              (jit-lock-fontify-now (point-min) (point-max))
+              (should (my-test-cpp-config--wait #'my-test-cpp-config--inlay-overlay-p 10))
+              (my/eglot-inlay-hints-toggle)
+              (should-not eglot-inlay-hints-mode)
+              (should-not (my-test-cpp-config--inlay-overlay-p))
+              ;; breadcrumb: eglot-imenu の範囲付き index で関数名が出る
+              (goto-char (point-min))
+              (search-forward "return callee(y)")
+              (require 'breadcrumb)
+              (let ((imenu-auto-rescan t))
+                (imenu--make-index-alist t))
+              (should (string-match-p "caller"
+                                      (substring-no-properties (breadcrumb-imenu-crumbs)))))))
+      (when server
+        (ignore-errors (eglot-shutdown server nil nil t)))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer (set-buffer-modified-p nil))
+        (kill-buffer buffer))
+      (delete-directory root t))))
 
 (ert-deftest my-test-cpp-config-clangd-args ()
   "clangd の起動引数と xref 追従の設定を固定する."

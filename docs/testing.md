@@ -20,7 +20,7 @@ make test
 | `make test-unit` | `early-init.el` のパスヘルパー |
 | `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
 | `make test-keybinding` | `C-t` タグナビゲーションの固定キーバインドと追加キー（読解補助）、折りたたみ・見出し移動のキー |
-| `make test-cpp-config` | C/C++ スタイル・eglot 起動条件・検索経路・起動時性能設定・tree-sitter 段階移行・irony ゲート・LSP 階層ナビゲーション（スタブ応答）・outline / inlay hints / breadcrumb の読解補助 |
+| `make test-cpp-config` | C/C++ スタイル・eglot 起動条件・検索経路・起動時性能設定・tree-sitter 段階移行・irony ゲート・LSP 階層ナビゲーション（スタブ応答と実 jsonrpc のタイムアウト。clangd がある環境では実 clangd との結合）・outline / inlay hints / breadcrumb の読解補助 |
 | `make test-deferred` | `:defer N` 遅延パッケージの `:config` とグローバルモード有効化 |
 | `make test-invariants` | グローバルモードのフック登録・feature ロード状態・ts モードのフック parity・Copilot のロードゲート・組み込み `project` の上書き防止 |
 | `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |

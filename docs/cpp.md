@@ -174,8 +174,13 @@ eglot 管理下では clangd へ直接問い合わせ、結果は `C-t d/u` と�
   バックエンドを自前で選んで `xref-backend-apropos` を直接呼ぶ。
 - `C-t s` の入力は名前の補完なしの自由文字列。LSP 経路はファジー一致、Global 経路は
   正規表現で意味が違う。
-- 要求がタイムアウト（10 秒）したときや、サーバーがメソッドを持たないときは
-  原因を含む `user-error` になる。
+- 要求には `jsonrpc-default-request-timeout`（10 秒）を明示している。eglot 自身の要求
+  ラッパーはタイムアウトを無効化したまま転送するため、使わずに `jsonrpc-request` を
+  直接呼ぶ。タイムアウトしたときや、サーバーがメソッドを持たないときは原因を含む
+  `user-error` になる。
+- clangd がある環境では `make test-cpp-config` が実 clangd を起動し、要求層をスタブせずに
+  これらの経路と inlay hints、breadcrumb を通す（`my-test-cpp-config-lsp-live-clangd`。
+  clangd が無い CI では skip）。
 
 ## コードリーディング補助
 

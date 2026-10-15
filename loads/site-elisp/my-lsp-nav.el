@@ -20,13 +20,15 @@
 ;; 遅延ロード先をコンパイラへ伝える (make lint は警告をエラー扱い)。
 (declare-function eglot-server-capable "eglot" (&rest feats))
 (declare-function eglot--current-server-or-lose "eglot")
-(declare-function eglot--request "eglot" (server method params &rest args))
+(declare-function eglot--signal-textDocument/didChange "eglot")
+(declare-function jsonrpc-request "jsonrpc" (connection method params &rest args))
 (declare-function eglot--TextDocumentIdentifier "eglot")
 (declare-function eglot--TextDocumentPositionParams "eglot")
 (declare-function eglot--xref-make-match "eglot" (name uri range))
 (declare-function eglot-uri-to-path "eglot" (uri))
 (declare-function ggtags-find-project "ggtags")
 (defvar eglot--temp-location-buffers)
+(defvar jsonrpc-default-request-timeout)
 ;; let で動的束縛するには special 宣言が要る (無いと lexical 束縛になり ff に効かない)
 (defvar ff-always-try-to-create)
 
@@ -47,12 +49,23 @@
                          ((equal msg "Timed out") "応答がタイムアウト")
                          (t (or msg "不明なエラー"))))))))
 
+(defun my/lsp-nav--raw-request (method params)
+  "現在バッファの eglot サーバーへ METHOD を PARAMS で同期要求する (エラー変換なし).
+`eglot--request' と同じく要求前に didChange を送り、未保存の編集も反映させる。
+`eglot--request' 自体は使わない。`:timeout' を省略しても nil のまま `jsonrpc-request'
+へ転送され、既定の 10 秒が無効化されて応答しないサーバーを待ち続けるうえ、
+Emacs 31 ではタイムアウト (code 無し) を受けた側で型エラーになる。
+ここでは `jsonrpc-default-request-timeout' を明示して有限にする。"
+  (eglot--signal-textDocument/didChange)
+  (jsonrpc-request (eglot--current-server-or-lose) method params
+                   :timeout jsonrpc-default-request-timeout))
+
 (defun my/lsp-nav--request (method params)
   "現在バッファの eglot サーバーへ METHOD を PARAMS で同期要求する.
-`eglot--request' は要求前に didChange を送るため、未保存の編集も反映される。"
+`jsonrpc-error' は `user-error' へ変換する。"
   (my/lsp-nav--protect
    (substring (symbol-name method) 1)
-   (lambda () (eglot--request (eglot--current-server-or-lose) method params))))
+   (lambda () (my/lsp-nav--raw-request method params))))
 
 (defun my/lsp-nav--prepare (what capability method)
   "カーソル位置で prepare METHOD を実行し、階層アイテムのリストを返す.
@@ -160,9 +173,8 @@ clangd は 20 以降で callHierarchy/outgoingCalls に対応する。それよ�
   "clangd 拡張 switchSourceHeader で対になるファイルのパスを返す.
 対が無い (null) か要求に失敗したときは nil を返し、呼び出し側が ff へ倒す。"
   (let ((uri (condition-case err
-                 (eglot--request (eglot--current-server-or-lose)
-                                 :textDocument/switchSourceHeader
-                                 (eglot--TextDocumentIdentifier))
+                 (my/lsp-nav--raw-request :textDocument/switchSourceHeader
+                                          (eglot--TextDocumentIdentifier))
                (jsonrpc-error
                 (message "switchSourceHeader を利用できません (%s)。ff-find-other-file を使います"
                          (or (alist-get 'jsonrpc-error-message (cdr err)) "不明なエラー"))
