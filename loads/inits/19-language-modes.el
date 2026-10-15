@@ -9,7 +9,7 @@
 (declare-function outline-cycle "outline")
 (declare-function outline-cycle-buffer "outline")
 (declare-function outline-back-to-heading "outline")
-(defvar c-ts-mode-indent-offset)
+(defvar c-ts-indent-offset)
 (defvar treesit-outline-predicate)
 
 ;;;;;; [Group] Code Folding - コード折りたたみ ;;;;;;
@@ -181,7 +181,7 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
   :hook ((c-ts-mode   . my/c-ts-mode-setup)
          (c++-ts-mode . my/c-ts-mode-setup))
   :custom
-  (c-ts-mode-indent-offset 4)
+  (c-ts-indent-offset 4)
   (c-ts-mode-indent-style 'k&r)
   ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
   :preface
@@ -419,7 +419,7 @@ ERROR へ落とすため、既定の規則が桁 0 しか返せなくなる。�
 
   (defun my/c-ts-error-offset (_node _parent bol)
     "BOL の括弧の深さからインデント桁を算出する（行頭が閉じ括弧なら 1 段戻す）."
-    (let* ((offset (if (boundp 'c-ts-mode-indent-offset) c-ts-mode-indent-offset 4))
+    (let* ((offset (if (boundp 'c-ts-indent-offset) c-ts-indent-offset 4))
            (depth (seq-count (lambda (pos) (not (my/c-ts--non-indenting-open-p pos)))
                              (nth 9 (my/c-ts--ppss bol))))
            (closing (save-excursion (goto-char bol) (looking-at-p "[ \t]*[)}]"))))
@@ -427,7 +427,7 @@ ERROR へ落とすため、既定の規則が桁 0 しか返せなくなる。�
 
   (defun my/c-ts-indent-rules ()
     "標準の k&r へ前置する google-c-style 相当の差分規則を返す."
-    (let* ((offset c-ts-mode-indent-offset)
+    (let* ((offset c-ts-indent-offset)
            (half (/ offset 2)))
       `(;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く。
         ;; ERROR 状態でも access_specifier は照合できるため ERROR 規則より前へ置く

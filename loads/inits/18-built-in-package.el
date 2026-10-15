@@ -272,7 +272,7 @@ eglot 未管理のバッファでは `user-error'。"
   :custom
   (uniquify-buffer-name-style 'forward)
   (uniquify-separator "/")
-  (uniquify-after-kill-buffer-p t)
+  (uniquify-after-kill-buffer-flag t)
   (uniquify-ignore-buffers-re "^\\*")
   )
 
