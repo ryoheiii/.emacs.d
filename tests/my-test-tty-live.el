@@ -53,9 +53,11 @@
 ;; nerd-icons-dired / corfu-popupinfo は :hook トリガー型のため、ガードを外しても
 ;; 対象モードを開くまで feature はロードされず featurep では検出できない。
 ;; そこで「tty ではフック登録自体が行われない」ことを検査する。
+;; pixel-scroll は組み込みで featurep では判定できないため、同じく登録の有無で検査する。
 (defconst my-test-tty-live--gui-only-hook-guards
   '((nerd-icons-dired-mode . dired-mode-hook)
-    (corfu-popupinfo-mode . corfu-mode-hook))
+    (corfu-popupinfo-mode . corfu-mode-hook)
+    (pixel-scroll-precision-mode . after-init-hook))
   "tty ではフックへ登録されてはならない (関数 . フック変数) の組。")
 
 (ert-deftest my-test-tty-live-gui-only-features-not-loaded ()

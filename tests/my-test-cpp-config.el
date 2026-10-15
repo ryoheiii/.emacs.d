@@ -1162,7 +1162,8 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
 
 (ert-deftest my-test-cpp-config-gtags-real-candidates ()
   "実 GTAGS で定義・参照・未定義シンボル・ファイルの候補を区別する."
-  :tags '(:gtags-integration)
+  ;; :cpp-config を付けて make test-cpp-config から実行する (global/gtags が無ければ skip)
+  :tags '(:cpp-config :gtags-integration)
   (skip-unless (and (executable-find "global") (executable-find "gtags")))
   (let ((root (make-temp-file "my-test-real-gtags-" t))
         (process-environment (copy-sequence process-environment)))
