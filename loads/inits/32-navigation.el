@@ -10,7 +10,7 @@
 
 ;; project-root は autoload されないため、コンパイラ警告のみ declare で抑える
 ;; (実行時は project-current の autoload が project.el をロードする)
-(declare-function project-root "project" (project &optional maybe-prompt))
+(declare-function project-root "project" (project))
 
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理
@@ -42,7 +42,7 @@
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :straight t
-  :bind ([f8] . my/neotree-project-toggle)
+  :bind ("<f8>" . my/neotree-project-toggle)
   :custom
   (neo-theme 'ascii)              ;; アイコンを ASCII にする
   (neo-smart-open t)              ;; カレントディレクトリを自動的に開く

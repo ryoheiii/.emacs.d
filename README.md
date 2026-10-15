@@ -12,7 +12,7 @@ C/C++ 開発、Markdown/Org でのドキュメント作成、Mozc/Migemo によ�
 
 | | |
 |---|---|
-| 対象 Emacs | 30.x 以上 |
+| 対象 Emacs | 31.1 以上 |
 | 対象 OS | Linux (Debian/Ubuntu) / WSL2。macOS は設定のみ対応（`emacs-setup.sh` は Linux 前提） |
 | 詳細ドキュメント | [キーバインド一覧](docs/keybindings.md) ・ [アーキテクチャ](docs/architecture.md) ・ [C/C++ の段階構成](docs/cpp.md) ・ [パッケージ管理](docs/packages.md) ・ [テスト](docs/testing.md) |
 
@@ -39,7 +39,7 @@ emacs -nw                         # 初回起動（straight が全パッケー�
 `--install` は `~/.local` へ入れるだけで PATH を変更しない。追記しないと
 コマンドが見つからないか、既存の古い `/usr/bin/emacs` が起動する。
 
-すでに Emacs 31.x が入っているなら `--install` は不要（30.2 でも動作するが、CI で検証する安定版は 31.1）。
+すでに Emacs 31.1 以上が入っているなら `--install` は不要（30.x は対象外。CI で検証する安定版は 31.1）。
 
 ---
 
@@ -183,7 +183,9 @@ which-key が候補を出す。
   （スペース区切りで複数条件、Migemo によるローマ字検索対応）。
 - **バッファ内**は Corfu が 1 文字目から自動で出る（`corfu-auto-prefix` の既定値は 2 だが、
   Orderless 連携が Corfu バッファで 1 へ上書きする）。`TAB` で確定、`C-n` / `C-p` で候補移動。
-  端末では corfu-terminal がポップアップを描画する。
+  端末でも Emacs 31.1 の tty 子フレームで Corfu 本体が候補と説明（corfu-popupinfo）の
+  ポップアップを描画する。corfu-terminal は tty 子フレームの無い Emacs 向けの代替として
+  宣言だけを残しており、31.1 では有効にならない。
 - 補完候補の供給元は状況で切り替わる（C/C++ は eglot → irony → cape の順）。
   詳細は [C/C++ の段階構成](docs/cpp.md)。
 
@@ -391,7 +393,7 @@ make test-startup  # 起動だけを素早く確認
 |---|---|
 | 端末で色が正しく出ない | `TERM=xterm-256color` を設定する |
 | 起動時にエラーが出る | `make test-startup` でバッチ起動のエラーを確認する |
-| パッケージが壊れた | `M-x straight-rebuild-all`。直らなければ `./emacs-setup.sh --clean-all` で再構築する |
+| パッケージが壊れた | `M-x straight-rebuild-all` の後に Emacs を再起動する（load-path の走査結果をキャッシュしているため、再ビルドで増えたファイルは再起動まで読めない）。直らなければ `./emacs-setup.sh --clean-all` で再構築する |
 | Emacs 外でパッケージを書き換えた後、古いビルドのままになる | `M-x straight-check-all`（[docs/packages.md](docs/packages.md) の変更検出の方式を参照） |
 | Copilot がつながらない | `M-x copilot-diagnose`。`node` が PATH にあるか、`M-x copilot-login` 済みかを確認する |
 | C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd` の導入を確認する（`clangd` は `--setup` で入る。個別なら `sudo apt install clangd`） |

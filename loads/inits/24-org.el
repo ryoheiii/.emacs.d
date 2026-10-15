@@ -24,7 +24,7 @@
   (org-startup-indented t)               ; インデント表示をデフォルトで有効化
   (org-src-fontify-natively t)           ; ソースコードをシンタックスハイライト
   (org-src-tab-acts-natively t)          ; org-babelでタブキーを言語モードに連動
-  (org-edit-src-content-indentation 2)   ; org-babelのソースコードインデント
+  (org-src-content-indentation 2)        ; org-babelのソースコードインデント
   (org-startup-folded 'content)          ; 初期表示で折りたたむ
   (org-log-done 'time)                   ; タスク完了時に時間を記録
   (org-log-into-drawer t)                ; ログを :LOGBOOK: に格納

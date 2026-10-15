@@ -10,13 +10,21 @@
   (dolist (path paths)
     (let ((default-directory (my-set-loads path)))
       (add-to-list 'load-path default-directory)
-      (when (fboundp 'normal-top-level-add-subdirs-to-load-path)
-        (normal-top-level-add-subdirs-to-load-path)))))
+      (normal-top-level-add-subdirs-to-load-path))))
 (add-to-load-path "site-elisp/") ; my-loads-dir 内のディレクトリを指定
 
 ;;;;; [Group] Use-package 設定 ;;;;;
 (eval-when-compile
   (require 'straight))
+
+;; 多数のパッケージが共通で依存する compat / seq は組み込み版へ固定する。
+;; straight はレシピリポジトリにあればクローンし、組み込み版を load-path 上で
+;; 覆い隠す (詳細は docs/packages.md)。最初の依存元より前に置く必要がある。
+;;   compat  31.1 の組み込み stub (compat-call / compat-function を提供)
+;;           >= 30 (vertico / corfu / consult / magit / copilot など)
+;;   seq     2.24 (preload 済み) >= 2.24 (magit)、2.23 (ELPA 版 compat)
+(dolist (pkg '(compat seq))
+  (straight-override-recipe (list pkg :type 'built-in)))
 
 (straight-use-package 'use-package)
 (setq straight-use-package-by-default t) ; 'use-package' で ':straight t' を省略可能に

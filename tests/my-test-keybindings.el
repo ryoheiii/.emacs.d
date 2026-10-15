@@ -140,5 +140,69 @@
   (should-not (eq (lookup-key global-map (kbd "C-s"))
                   (lookup-key global-map (kbd "M-s l")))))
 
+;;;;; [Group] Keybinding - タブ操作 ;;;;;
+;; C-z はタブ操作のプレフィックス。C-z 1〜9 は引数なしの tab-bar-select-tab が
+;; 押した数字キー (last-command-event) からタブ番号を読む前提で同じコマンドを共有する。
+(defconst my-test-keybindings--tab-bar-bindings
+  `(("C-z n"   . tab-next)
+    ("C-z C-n" . tab-next)
+    ("C-z p"   . tab-previous)
+    ("C-z C-p" . tab-previous)
+    ("C-z f"   . tab-new)
+    ("C-z C-f" . tab-new)
+    ("C-z k"   . tab-close)
+    ("C-z C-k" . tab-close)
+    ,@(mapcar (lambda (n) (cons (format "C-z %d" n) 'tab-bar-select-tab))
+              '(1 2 3 4 5 6 7 8 9)))
+  "固定する C-z プレフィックスのタブ操作キーバインド。")
+
+(ert-deftest my-test-keybindings-tab-bar-bindings ()
+  :tags '(:keybinding)
+  (should (keymapp (lookup-key global-map (kbd "C-z"))))
+  (dolist (binding my-test-keybindings--tab-bar-bindings)
+    (should (eq (lookup-key global-map (kbd (car binding)))
+                (cdr binding)))))
+
+(ert-deftest my-test-keybindings-tab-bar-select-by-digit ()
+  "C-z N が N 番目のタブへ移動すること (数字キーからの番号解決)。"
+  :tags '(:keybinding)
+  (dotimes (_ 8) (tab-bar-new-tab))
+  (unwind-protect
+      (progn
+        (should (= (length (tab-bar-tabs)) 9))
+        (dolist (n '(3 1 9 5))
+          (let ((last-command-event (+ ?0 n))
+                (current-prefix-arg nil))
+            (call-interactively
+             (lookup-key global-map (kbd (format "C-z %d" n)))))
+          (should (= (1+ (tab-bar--current-tab-index)) n))))
+    (tab-bar-close-other-tabs)))
+
+;;;;; [Group] Keybinding - パッケージ固有キーマップ ;;;;;
+;; :bind :map で宣言したキーは、パッケージのロード後に eval-after-load 経由で入る。
+;; 宣言の移し替えで束縛が消えても起動検査では気づけないため、ロード後の状態を固定する。
+(defconst my-test-keybindings--package-map-bindings
+  '((vundo vundo-mode-map ("C-f" . vundo-forward) ("C-b" . vundo-backward)
+           ("C-n" . vundo-next) ("C-p" . vundo-previous))
+    (magit magit-status-mode-map ("q" . mu-magit-kill-buffers))
+    (markdown-mode markdown-mode-map ("C-c TAB" . my-markdown-insert-tab)))
+  "(FEATURE KEYMAP (KEY . COMMAND)...) の形で固定するパッケージ固有の束縛。")
+
+(ert-deftest my-test-keybindings-package-map-bindings ()
+  :tags '(:keybinding)
+  (dolist (entry my-test-keybindings--package-map-bindings)
+    (require (car entry))
+    (let ((map (symbol-value (nth 1 entry))))
+      (dolist (binding (nthcdr 2 entry))
+        (should (eq (keymap-lookup map (car binding)) (cdr binding)))))))
+
+;; gfm-mode は markdown-mode-map を親に持つため、C-c TAB の上書きが GFM 側でも効くこと
+(ert-deftest my-test-keybindings-markdown-tab-in-gfm ()
+  :tags '(:keybinding)
+  (require 'markdown-mode)
+  (with-temp-buffer
+    (gfm-mode)
+    (should (eq (keymap-lookup nil "C-c TAB") 'my-markdown-insert-tab))))
+
 (provide 'my-test-keybindings)
 ;;; my-test-keybindings.el ends here

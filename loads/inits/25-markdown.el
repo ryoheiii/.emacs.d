@@ -32,7 +32,8 @@
               ("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
               ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
               ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
-              ("C-c C-v d" . markdown-insert-details))        ; 折り畳み項目を挿入
+              ("C-c C-v d" . markdown-insert-details)         ; 折り畳み項目を挿入
+              ("C-c TAB"   . my-markdown-insert-tab))         ; 4 スペースを TAB で挿入
   :config
   (require 'my-markdown)
   ;; Pandoc コマンドと CSS を遅延設定（markdown-mode ロード時に初めて構築）

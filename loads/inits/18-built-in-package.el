@@ -7,7 +7,6 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function eglot-managed-p "eglot")
 (declare-function eglot-inlay-hints-mode "eglot")
-(declare-function my/eglot-cc-suppress-irony "18-built-in-package")
 (defvar eglot-inlay-hints-mode)
 (defvar eglot-ignored-server-capabilities)
 (defvar my/auto-save-visited-in-progress)
@@ -81,9 +80,10 @@
 ;; use-package と straight に依存しないライブラリにしてあり、emacs-setup.sh の
 ;; --setup-treesit が同じファイルを単体ロードして文法をビルドする。
 ;;
-;; 注意: c-ts-mode.el は末尾で treesit-ready-p を呼ぶため、文法不在の環境で require すると
-;; display-warning が発火して make test-startup が失敗する。起動経路で c-ts-mode を
-;; require してはならない。可用性判定には警告を出さない treesit-language-available-p を使う。
+;; 注意: 起動経路で c-ts-mode を require してはならない。ロードすると treesit.el まで
+;; 読み込まれ起動が重くなる (遅延は my-test-packages-deferred-features が固定する)。
+;; 可用性判定には treesit.el をロードせず警告も出さない treesit-language-available-p を
+;; 使う (treesit-ready-p は文法不在時に警告を出す)。
 (use-package treesit
   :straight nil
   ;; treesit.el のロードは grammar 導入時だけで足りる (起動経路では読まない)。
@@ -105,7 +105,8 @@
   :hook ((c-mode      . my/eglot-cc-maybe-ensure)
          (c++-mode    . my/eglot-cc-maybe-ensure)
          (c-ts-mode   . my/eglot-cc-maybe-ensure)
-         (c++-ts-mode . my/eglot-cc-maybe-ensure))
+         (c++-ts-mode . my/eglot-cc-maybe-ensure)
+         (eglot-managed-mode . my/eglot-cc-suppress-irony))
   ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
   :preface
   (defconst my/eglot-cc-file-regexp "\\.\\(c\\|cc\\|C\\|cpp\\|cxx\\|h\\|hh\\|hpp\\|hxx\\)\\'"
@@ -153,6 +154,11 @@ eglot 未管理のバッファでは `user-error'。"
           (message "inlay hints: on")
         (kill-local-variable 'eglot-ignored-server-capabilities)
         (user-error "サーバーが inlay hints に対応していません"))))
+  ;; eglot 管理バッファでは irony を止める (CAPF 競合防止)。
+  ;; eglot-ensure は post-command-hook で遅延接続するため、モードフックでの判定は不可
+  (defun my/eglot-cc-suppress-irony ()
+    (when (and (eglot-managed-p) (bound-and-true-p irony-mode))
+      (irony-mode -1)))
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-config '(:size 0 :format full))
@@ -173,12 +179,6 @@ eglot 未管理のバッファでは `user-error'。"
                '((c-mode c-ts-mode c++-mode c++-ts-mode)
                  . ("clangd" "--background-index" "--header-insertion=never"
                     "--header-insertion-decorators=0" "--limit-references=0")))
-  ;; eglot 管理バッファでは irony を止める (CAPF 競合防止)。
-  ;; eglot-ensure は post-command-hook で遅延接続するため、モードフックでの判定は不可
-  (defun my/eglot-cc-suppress-irony ()
-    (when (and (eglot-managed-p) (bound-and-true-p irony-mode))
-      (irony-mode -1)))
-  (add-hook 'eglot-managed-mode-hook #'my/eglot-cc-suppress-irony)
   )
 
 ;;;;;; [Group] Search - 検索 ;;;;;;
@@ -272,7 +272,7 @@ eglot 未管理のバッファでは `user-error'。"
   :custom
   (uniquify-buffer-name-style 'forward)
   (uniquify-separator "/")
-  (uniquify-after-kill-buffer-p t)
+  (uniquify-after-kill-buffer-flag t)
   (uniquify-ignore-buffers-re "^\\*")
   )
 
@@ -284,23 +284,27 @@ eglot 未管理のバッファでは `user-error'。"
   (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-new-tab-to 'rightmost)
   (tab-bar-tab-name-function 'tab-bar-tab-name-all)
-  :config
-  ;; C-z をプレフィックスキーとして定義
-  (define-prefix-command 'tab-bar-prefix-map)      ; 新しいプレフィックスコマンドを定義
-  (global-set-key (kbd "C-z") 'tab-bar-prefix-map) ; C-z をプレフィックスキーとして設定
-  ;; 各種キーバインド設定
-  (define-key tab-bar-prefix-map (kbd "n") 'tab-next)
-  (define-key tab-bar-prefix-map (kbd "C-n") 'tab-next)
-  (define-key tab-bar-prefix-map (kbd "p") 'tab-previous)
-  (define-key tab-bar-prefix-map (kbd "C-p") 'tab-previous)
-  (define-key tab-bar-prefix-map (kbd "f") 'tab-new)
-  (define-key tab-bar-prefix-map (kbd "C-f") 'tab-new)
-  (define-key tab-bar-prefix-map (kbd "k") 'tab-close)
-  (define-key tab-bar-prefix-map (kbd "C-k") 'tab-close)
-  ;; 特定のタブを選択するためのキーバインド設定
-  (dotimes (i 9)
-    (define-key tab-bar-prefix-map (kbd (number-to-string (1+ i)))
-                `(lambda () (interactive) (tab-bar-select-tab ,(1+ i)))))
+  ;; C-z をタブ操作のプレフィックスキーにする
+  :bind (:prefix-map tab-bar-prefix-map
+         :prefix "C-z"
+         ("n"   . tab-next)
+         ("C-n" . tab-next)
+         ("p"   . tab-previous)
+         ("C-p" . tab-previous)
+         ("f"   . tab-new)
+         ("C-f" . tab-new)
+         ("k"   . tab-close)
+         ("C-k" . tab-close)
+         ;; 番号のタブへ移動。引数なしの tab-bar-select-tab は押した数字キーを番号に使う
+         ("1" . tab-bar-select-tab)
+         ("2" . tab-bar-select-tab)
+         ("3" . tab-bar-select-tab)
+         ("4" . tab-bar-select-tab)
+         ("5" . tab-bar-select-tab)
+         ("6" . tab-bar-select-tab)
+         ("7" . tab-bar-select-tab)
+         ("8" . tab-bar-select-tab)
+         ("9" . tab-bar-select-tab))
   )
 
 ;;;;;; [Group] Performance Optimization - パフォーマンス最適化 ;;;;;;

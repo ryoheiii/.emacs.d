@@ -3,11 +3,10 @@
 ;; clangd (eglot) の呼び出し階層・型階層・ヘッダ/ソース切替・横断シンボル検索を
 ;; C-t 配下へ足す。結果は my-gtags.el と同じ Consult の選択 UI で表示し、
 ;; 非 LSP 環境では GNU Global / ff-find-other-file へ倒す。
-;; Emacs 30 の eglot 1.17 には eglot-show-call-hierarchy / eglot-show-type-hierarchy が
-;; 無く、Emacs 31 の eglot 1.24 にはあるが専用バッファのツリー表示になる。C-t の操作感
-;; (Consult の選択 UI、xref 履歴) と非 LSP 環境へのフォールバックを揃えるため、
-;; どちらの版でも clangd へ直接問い合わせる。eglot は LSP 管理下のバッファでしか
-;; 呼ばないので、ここでは require しない。
+;; Emacs 31 の eglot 1.24 には eglot-show-call-hierarchy / eglot-show-type-hierarchy が
+;; あるが専用バッファのツリー表示になる。C-t の操作感 (Consult の選択 UI、xref 履歴) と
+;; 非 LSP 環境へのフォールバックを揃えるため、clangd へ直接問い合わせる。
+;; eglot は LSP 管理下のバッファでしか呼ばないので、ここでは require しない。
 
 ;;; Code:
 
@@ -22,6 +21,7 @@
 (declare-function eglot--current-server-or-lose "eglot")
 (declare-function eglot--signal-textDocument/didChange "eglot")
 (declare-function jsonrpc-request "jsonrpc" (connection method params &rest args))
+(declare-function jsonrpc-notify "jsonrpc" (connection method params))
 (declare-function eglot--TextDocumentIdentifier "eglot")
 (declare-function eglot--TextDocumentPositionParams "eglot")
 (declare-function eglot--xref-make-match "eglot" (name uri range))
@@ -29,6 +29,7 @@
 (declare-function ggtags-find-project "ggtags")
 (defvar eglot--temp-location-buffers)
 (defvar jsonrpc-default-request-timeout)
+(defvar eglot-advertise-cancellation)
 ;; let で動的束縛するには special 宣言が要る (無いと lexical 束縛になり ff に効かない)
 (defvar ff-always-try-to-create)
 
@@ -55,10 +56,18 @@
 `eglot--request' 自体は使わない。`:timeout' を省略しても nil のまま `jsonrpc-request'
 へ転送され、既定の 10 秒が無効化されて応答しないサーバーを待ち続けるうえ、
 Emacs 31 ではタイムアウト (code 無し) を受けた側で型エラーになる。
-ここでは `jsonrpc-default-request-timeout' を明示して有限にする。"
+ここでは `jsonrpc-default-request-timeout' を明示して有限にする。
+C-g で中断したときは、Emacs 31 の `eglot--request' と同じく
+`eglot-advertise-cancellation' が非 nil なら `$/cancelRequest' を送り、
+clangd に計算を打ち切らせる (`:cancel-on-quit' はタイムアウトでは呼ばれない)。"
   (eglot--signal-textDocument/didChange)
-  (jsonrpc-request (eglot--current-server-or-lose) method params
-                   :timeout jsonrpc-default-request-timeout))
+  (let ((server (eglot--current-server-or-lose)))
+    (jsonrpc-request server method params
+                     :timeout jsonrpc-default-request-timeout
+                     :cancel-on-quit
+                     (and eglot-advertise-cancellation
+                          (lambda (id)
+                            (jsonrpc-notify server '$/cancelRequest `(:id ,id)))))))
 
 (defun my/lsp-nav--request (method params)
   "現在バッファの eglot サーバーへ METHOD を PARAMS で同期要求する.
@@ -222,8 +231,8 @@ eglot の xref バックエンド (`xref-backend-apropos') は内部の要求ラ
   "PATTERN でプロジェクト横断のシンボルを検索する.
 LSP 管理下は workspace/symbol (名前のファジー一致)、それ以外で GTAGS があれば
 GNU Global の grep 検索 (正規表現) を使う。`xref-find-apropos' を経由しないのは、
-ggtags バックエンドがカーソル位置の語が GTAGS に無いと etags へ落ちて
-TAGS テーブルを尋ねてくるため。"
+ggtags バックエンドがカーソル位置の語が GTAGS に無いと選ばれず、Global へ
+届かないため。"
   (interactive
    (list (read-string "Find symbol (pattern): " (thing-at-point 'symbol t)
                       'my/gtags-history)))

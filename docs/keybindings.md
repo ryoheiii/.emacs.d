@@ -75,6 +75,9 @@ Ctrl と記号の組み合わせを区別して送れること（xterm の modif
 | `C-c y` | `consult-yasnippet` | スニペットを一覧から挿入 |
 
 補完候補が出ている間（corfu）は `TAB` で確定、`C-n` / `C-p` で候補移動、`C-s` でスクロール。
+同じ間は corfu-popupinfo（GUI と Emacs 31 の tty）のキーマップが優先され、`M-t` がドキュメント表示の
+切り替え、`C-M-v` / `C-M-S-v` がドキュメントのスクロールになる（`transpose-words` や他ウィンドウの
+スクロールは、候補が閉じてから使う）。
 
 > **`C-S` を使わない理由**: Emacs では `C-S` は `C-s` と同一のキーイベントであり
 > （`(equal (kbd "C-s") (kbd "C-S"))` は `t`）、両方を `:bind` へ並べると後勝ちで

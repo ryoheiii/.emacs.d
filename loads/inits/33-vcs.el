@@ -5,7 +5,6 @@
 ;;; Code:
 
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
-(declare-function mu-magit-kill-buffers "33-vcs")
 (declare-function magit-restore-window-configuration "magit-mode")
 (declare-function magit-mode-get-buffers "magit-mode")
 
@@ -14,15 +13,17 @@
 (use-package magit
   :straight t
   :bind (("C-x G" . magit-status)
-         ("C-x M-g" . magit-dispatch))
-  :config
+         ("C-x M-g" . magit-dispatch)
+         :map magit-status-mode-map
+         ("q" . mu-magit-kill-buffers))
+  ;; :bind から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
+  :preface
   (defun mu-magit-kill-buffers ()
     "Restore window configuration and kill all Magit buffers."
     (interactive)
     (let ((buffers (magit-mode-get-buffers)))
       (magit-restore-window-configuration)
       (mapc #'kill-buffer buffers)))
-  (bind-key "q" #'mu-magit-kill-buffers magit-status-mode-map)
   )
 
 ;;; Diff-hl - 変更点を表示 (git-gutter の置き換え)
@@ -45,10 +46,10 @@
               ("D" . difftastic-magit-show)
               ("S" . difftastic-magit-show))
   :config
-  (eval-after-load 'magit-diff
-    '(transient-append-suffix 'magit-diff '(-1 -1)
-       [("D" "Difftastic diff (dwim)" difftastic-magit-diff)
-        ("S" "Difftastic show" difftastic-magit-show)]))
+  (with-eval-after-load 'magit-diff
+    (transient-append-suffix 'magit-diff '(-1 -1)
+      [("D" "Difftastic diff (dwim)" difftastic-magit-diff)
+       ("S" "Difftastic show" difftastic-magit-show)]))
   )
 
 ;;; Dsvn - SVN 管理ツール

@@ -9,7 +9,7 @@
 (declare-function outline-cycle "outline")
 (declare-function outline-cycle-buffer "outline")
 (declare-function outline-back-to-heading "outline")
-(defvar c-ts-mode-indent-offset)
+(defvar c-ts-indent-offset)
 (defvar treesit-outline-predicate)
 
 ;;;;;; [Group] Code Folding - コード折りたたみ ;;;;;;
@@ -18,7 +18,8 @@
   :bind (("C-\\" . hs-toggle-hiding)
          ("<f5>" . hs-toggle-hiding))
   ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
-  ;; (hs-special-modes-alist は c-ts-mode / c++-ts-mode のエントリを持つ)
+  ;; (ts モードの hideshow は treesit-major-mode-setup が list thing で設定する。
+  ;;  hs-special-modes-alist は 31.1 で obsolete)
   :hook ((c-mode          . hs-minor-mode)
          (c++-mode        . hs-minor-mode)
          (c-ts-mode       . hs-minor-mode)
@@ -93,7 +94,7 @@
   :config
   (defun my/cc-mode-setup ()
     "C/C++ モード共通の設定。"
-    (local-set-key (kbd "C-c c") 'compile) ; コンパイル
+    (keymap-local-set "C-c c" 'compile)    ; コンパイル
     (c-toggle-auto-hungry-state 1)         ; 自動改行 & 連続スペース一括削除
     (setq indent-tabs-mode nil
           c-basic-offset 4))
@@ -159,10 +160,12 @@ treesit-language-available-p は treesit.el をロードせず警告も出さな
 (defun my/treesit-cc-apply-remap ()
   "文法が使える言語だけ `major-mode-remap-alist' へ振り分け関数を登録する.
 C と C++ は独立に判定する（片方の文法だけある環境でも壊さない）。
-`my/use-treesit-for-cc' が nil でも登録する。c-ts-mode.el はロード時に
-`major-mode-remap-defaults' を書き換えるため、登録しておかないと off が
-迂回されるうえ、.log/.cfg のような流用ファイルまで ts へ回ってしまう。
-`major-mode-remap-alist' は defaults より優先されるため、ここでの指定が常に勝つ。"
+`my/use-treesit-for-cc' が nil でも登録する。振り分け関数が毎回判定するため、
+後から t/nil を切り替えても再起動なしで効き、.log/.cfg のような流用ファイルは
+cc-mode に留まる。c-ts-mode.el はロード時に `treesit-major-mode-remap-alist' へ
+追記するだけで、`treesit-enabled-modes' が nil (既定) なら
+`major-mode-remap-alist' へは何も入らない。`treesit-enabled-modes' へ C/C++ を
+含めると (c-mode . c-ts-mode) が先頭へ入りこの振り分けを覆うため、含めないこと。"
   (pcase-dolist (`(,mode ,lang ,dispatch) my/treesit-cc-remap-entries)
     (if (my/treesit-cc-grammar-ready-p lang)
         (setf (alist-get mode major-mode-remap-alist) dispatch)
@@ -173,15 +176,15 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
 
 (use-package c-ts-mode
   :straight nil
-  ;; 起動経路で require しない（文法不在時に treesit の警告が出るため）
+  ;; 起動経路で require しない（treesit.el まで読み込まれ起動が重くなるため）
   :defer t
-  ;; use-package はバイトコンパイル時にパッケージを先読みする。c-ts-mode.el は
-  ;; ロード時に treesit-ready-p を呼ぶため、先読みすると make lint が警告で汚れる。
+  ;; use-package はバイトコンパイル時にパッケージを先読みする。参照は先頭の defvar と
+  ;; declare-function で足りるため、treesit.el を含む先読みも止める。
   :no-require t
   :hook ((c-ts-mode   . my/c-ts-mode-setup)
          (c++-ts-mode . my/c-ts-mode-setup))
   :custom
-  (c-ts-mode-indent-offset 4)
+  (c-ts-indent-offset 4)
   (c-ts-mode-indent-style 'k&r)
   ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
   :preface
@@ -315,29 +318,23 @@ point の後ろに空白以外が残る行では何もしない。cc-mode の cl
   (defun my/c-ts-outline-predicate (node)
     "NODE が関数定義なら non-nil (outline の見出し判定).
 c-ts-mode 既定の `c-ts-mode--outline-predicate' は function_declarator (名前と
-引数) に一致するが、このノードは定義行の行頭 (戻り値型) と行末 (`{') を囲まない。
-Emacs 30 の `treesit-outline-search' は looking-at 判定で行頭・行末を囲むノードを
-探すため、`outline-on-heading-p' が定義行で偽になり `outline-cycle' や
-`outline-hide-subtree' が働かない。定義ノード全体に一致させて解決する
-(見出しの検索と `treesit-outline-level' は定義ノードでも同じ結果になる)。
-Emacs 31 は既定の述語でも動くが、結果が同じなので版で分けない。"
+引数) に加えて namespace_definition と class_specifier も見出しにする。
+<f9> と consult-outline の見出しを関数定義だけに保つため、定義ノード全体に
+一致させる (定義行で `outline-on-heading-p' が真になり、`treesit-outline-level'
+も同じ結果になる)。"
     (equal (treesit-node-type node) "function_definition"))
 
   (defun my/c-ts-mode-setup ()
     "C/C++ ts モード共通の設定（cc-mode 側の `my/cc-mode-setup' と対応）."
     ;; outline の見出しを関数定義ノード全体にする (理由は my/c-ts-outline-predicate)
     (setq-local treesit-outline-predicate #'my/c-ts-outline-predicate)
-    ;; 標準スタイルの初期化後、公開された規則へ差分だけを前置する。
-    ;; 他バッファの規則を変更しないよう言語ごとのリストを新しく作る。
-    (setq-local treesit-simple-indent-rules
-                (mapcar (lambda (entry)
-                          (if (memq (car entry) '(c cpp))
-                              (cons (car entry)
-                                    (append (my/c-ts-indent-rules) (cdr entry)))
-                            entry))
-                        treesit-simple-indent-rules))
-    (local-set-key (kbd "C-c c") 'compile)          ; コンパイル
-    (local-set-key (kbd "DEL") 'my/c-ts-hungry-delete-backward) ; hungry delete 相当
+    ;; google-c-style 相当の差分は 31.1 の上書き規則へ置く。標準規則より先に評価され、
+    ;; `c-ts-mode-set-style' で標準規則を作り直しても消えない。
+    (let ((rules (my/c-ts-indent-rules)))
+      (setq-local treesit-simple-indent-override-rules
+                  `((c ,@rules) (cpp ,@rules))))
+    (keymap-local-set "C-c c" 'compile)             ; コンパイル
+    (keymap-local-set "DEL" 'my/c-ts-hungry-delete-backward) ; hungry delete 相当
     (setq-local electric-layout-rules my/c-ts-electric-layout-rules)
     ;; cleanup は electric-layout (深さ 40) より先に走らせる
     (add-hook 'post-self-insert-hook #'my/c-ts-pre-layout-fixups -10 t)
@@ -419,15 +416,16 @@ ERROR へ落とすため、既定の規則が桁 0 しか返せなくなる。�
 
   (defun my/c-ts-error-offset (_node _parent bol)
     "BOL の括弧の深さからインデント桁を算出する（行頭が閉じ括弧なら 1 段戻す）."
-    (let* ((offset (if (boundp 'c-ts-mode-indent-offset) c-ts-mode-indent-offset 4))
+    (let* ((offset (if (boundp 'c-ts-indent-offset) c-ts-indent-offset 4))
            (depth (seq-count (lambda (pos) (not (my/c-ts--non-indenting-open-p pos)))
                              (nth 9 (my/c-ts--ppss bol))))
            (closing (save-excursion (goto-char bol) (looking-at-p "[ \t]*[)}]"))))
       (* offset (max 0 (if closing (1- depth) depth)))))
 
   (defun my/c-ts-indent-rules ()
-    "標準の k&r へ前置する google-c-style 相当の差分規則を返す."
-    (let* ((offset c-ts-mode-indent-offset)
+    "標準の k&r より先に評価する google-c-style 相当の差分規則を返す.
+モードフックで `treesit-simple-indent-override-rules' へ置く."
+    (let* ((offset c-ts-indent-offset)
            (half (/ offset 2)))
       `(;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く。
         ;; ERROR 状態でも access_specifier は照合できるため ERROR 規則より前へ置く

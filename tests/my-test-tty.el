@@ -31,9 +31,9 @@
     nerd-icons
     nerd-icons-completion
     nerd-icons-dired
-    nyan-mode
-    corfu-popupinfo)
-  "after-init 未発火の非 GUI 起動でロードされてはならない feature。")
+    nyan-mode)
+  "after-init 未発火の非 GUI 起動でロードされてはならない feature。
+corfu-popupinfo は tty 子フレームで有効にするため対象外とする。")
 
 (ert-deftest my-test-tty-gui-only-features-not-loaded ()
   :tags '(:tty)

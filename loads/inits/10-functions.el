@@ -16,10 +16,9 @@
    (list (intern (completing-read "Package name: " obarray))))
   (require 'package)
   (let* ((library (locate-library (symbol-name package)))
-         ;; data-directory は etc/ を指す。隣接する lisp/ がコアライブラリの配置先。
-         (core-directory (expand-file-name "../lisp/" data-directory))
+         ;; lisp-directory はコアライブラリの配置先を指す組み込み変数。
          (is-built-in (or (package-built-in-p package)
-                          (and library (file-in-directory-p library core-directory)))))
+                          (and library (file-in-directory-p library lisp-directory)))))
     (if is-built-in
         (progn
           (message "Package '%s' is built-in. `straight nil` is recommended." package)

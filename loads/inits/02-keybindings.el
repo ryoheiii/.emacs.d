@@ -6,7 +6,7 @@
 
 ;;;;;; [Group] Basic Keybindings - 基本キーバインド ;;;;;;
 ;; C-h をバックスペースへ変換(key-translation-map は全端末・全フレームで有効)
-(define-key key-translation-map (kbd "C-h") (kbd "DEL"))
+(keymap-set key-translation-map "C-h" "DEL")
 
 ;; 汎用的な操作
 (defun my/input-method-off ()
@@ -20,22 +20,22 @@
   (unless current-input-method
     (toggle-input-method)))
 
-(global-set-key (kbd "C-c a") 'align)                            ; 文字列の揃え
-(global-set-key (kbd "C-c M-a") 'align-regexp)                   ; 正規表現での整列
-(global-set-key (kbd "C-c d") 'delete-indentation)               ; インデント削除
-(global-set-key (kbd "M-?") 'help-for-help)                      ; ヘルプ
-(global-set-key (kbd "C-c C-i") 'hippie-expand)                  ; 補完
-(global-set-key (kbd "C-c ;") 'comment-or-uncomment-region)      ; コメントアウト
-(global-set-key (kbd "M-f") 'forward-symbol)                     ; シンボル単位の移動
-(global-set-key [f7] 'toggle-truncate-lines)                     ; 折り返しの有効無効切替
-(global-set-key (kbd "C-c 0") 'my/copy-file-name)                ; ファイル名コピー
-(global-set-key (kbd "<zenkaku-hankaku>") 'toggle-input-method)
-(global-set-key (kbd "<muhenkan>") #'my/input-method-off) ; IME を OFF
-(global-set-key (kbd "<henkan>") #'my/input-method-on)    ; IME を ON
+(keymap-global-set "C-c a" 'align)                               ; 文字列の揃え
+(keymap-global-set "C-c M-a" 'align-regexp)                      ; 正規表現での整列
+(keymap-global-set "C-c d" 'delete-indentation)                  ; インデント削除
+(keymap-global-set "M-?" 'help-for-help)                         ; ヘルプ
+(keymap-global-set "C-c C-i" 'hippie-expand)                     ; 補完
+(keymap-global-set "C-c ;" 'comment-or-uncomment-region)         ; コメントアウト
+(keymap-global-set "M-f" 'forward-symbol)                        ; シンボル単位の移動
+(keymap-global-set "<f7>" 'toggle-truncate-lines)                ; 折り返しの有効無効切替
+(keymap-global-set "C-c 0" 'my/copy-file-name)                   ; ファイル名コピー
+(keymap-global-set "<zenkaku-hankaku>" 'toggle-input-method)
+(keymap-global-set "<muhenkan>" #'my/input-method-off)    ; IME を OFF
+(keymap-global-set "<henkan>" #'my/input-method-on)       ; IME を ON
 
 ;;;;;; [Group] Window Management - ウィンドウ操作 ;;;;;;
-(global-set-key (kbd "C-c C-r") #'my/window-resizer)        ; ウィンドウサイズ調整
-(global-set-key (kbd "M-p") #'my/other-window-or-split)     ; 次のウィンドウへ移動
+(keymap-global-set "C-c C-r" #'my/window-resizer)           ; ウィンドウサイズ調整
+(keymap-global-set "M-p" #'my/other-window-or-split)        ; 次のウィンドウへ移動
 
 (provide '02-keybindings)
 ;;; 02-keybindings.el ends here

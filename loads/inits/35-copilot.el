@@ -166,12 +166,13 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
   ;; その結果 straight の build が組み込み版を load-path 上で覆い隠し、
   ;; 24-org.el の `:straight nil' や eglot が使う jsonrpc の前提が崩れる。
   ;; Emacs 31.1 の組み込み版が要件を満たすものだけ built-in へ固定する。
-  ;;   org      9.8.7  >= 9.4.6  (copilot-chat の要件)
-  ;;   jsonrpc  1.0.29 >= 1.0.14 (copilot の要件)
-  ;; track-changes (1.5 >= 1.4) と transient (0.13.3 >= 0.8.3) も 31.1 では要件を
-  ;; 満たすが、built-in 化 (magit が使う transient の差し替えを含む) は未検証のため
-  ;; 対象にしない。Emacs 30.2 では track-changes 1.2 / transient 0.7.2.2 で要件未満。
-  (dolist (pkg '(org jsonrpc))
+  ;;   org           9.8.7  >= 9.4.6  (copilot-chat の要件)
+  ;;   jsonrpc       1.0.29 >= 1.0.14 (copilot の要件)
+  ;;   track-changes 1.5    >= 1.4    (copilot の要件。straight 版 1.5 とコードも同一)
+  ;; transient (0.13.3 >= 0.8.3) も要件を満たすが、magit が使う transient の
+  ;; 差し替えを含めて未検証のため対象にしない。
+  ;; compat / seq は全パッケージ共通の依存のため init.el で固定している。
+  (dolist (pkg '(org jsonrpc track-changes))
     (straight-override-recipe (list pkg :type 'built-in)))
 
   ;;;;; [Group] Copilot - インライン補完 ;;;;;

@@ -11,7 +11,7 @@
 (defconst my-test-packages--banned-features
   '(paradox amx smooth-scroll affe
     diminish smart-mode-line volatile-highlights highlight-symbol
-    undo-fu flyspell-correct-popup)
+    undo-fu flyspell-correct-popup hide-mode-line)
   "起動直後にロードされていてはならない削除済み feature。")
 
 (ert-deftest my-test-packages-banned-features ()
@@ -33,8 +33,8 @@
     copilot
     copilot-chat
     breadcrumb
-    ;; c-ts-mode.el はロード時に treesit-ready-p を呼び、文法不在の環境で
-    ;; 起動時警告を出す。起動経路では絶対にロードしない。
+    ;; c-ts-mode.el をロードすると treesit.el まで読み込まれる。
+    ;; ts モードのバッファを開くまで不要なので、起動経路では絶対にロードしない。
     c-ts-mode)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 
@@ -181,6 +181,44 @@
   (require 'package)
   (should (package-built-in-p 'project))
   (should-not (my-test-packages--straight-build-p "project")))
+
+;; 31.1 の組み込み版で要件を満たす依存。init.el (compat / seq) と
+;; 35-copilot.el (track-changes) の straight-override-recipe が外れると
+;; straight のクローンが組み込み版を覆い隠す (lockfile にも現れる)。
+;; seq は preload 済みだが、locate-library は load-path を探すため覆い隠しを検出できる。
+(ert-deftest my-test-packages-common-deps-built-in ()
+  :tags '(:invariant)
+  (require 'package)
+  (dolist (pkg '(compat seq track-changes))
+    (let ((library (symbol-name pkg)))
+      (should (locate-library library))
+      (should (package-built-in-p pkg))
+      (should-not (my-test-packages--straight-build-p library)))))
+
+;; hide-mode-line は 31.1 組み込みの mode-line-invisible-mode へ置き換えた。
+;; 共有ビルドに残る旧パッケージが load-path へ戻っていないことと、
+;; 同じモードでモードラインを隠し続けていることを固定する。
+(ert-deftest my-test-packages-mode-line-invisible-built-in ()
+  :tags '(:invariant)
+  (should-not (locate-library "hide-mode-line"))
+  (should (fboundp 'mode-line-invisible-mode))
+  (dolist (hook '(neotree-mode-hook imenu-list-minor-mode-hook minimap-mode-hook))
+    (should (memq 'mode-line-invisible-mode (default-value hook)))))
+
+;; eglot 管理下の C/C++ バッファで irony の CAPF を外す関数は :hook で登録する。
+;; 登録が外れると eglot と irony の補完が競合するが、起動検査では気づけないため固定する
+(ert-deftest my-test-packages-eglot-suppress-irony-hook ()
+  :tags '(:invariant)
+  (should (fboundp 'my/eglot-cc-suppress-irony))
+  (should (memq 'my/eglot-cc-suppress-irony (default-value 'eglot-managed-mode-hook))))
+
+;; recentf の自動保存で "Wrote ..." を出さないため、31.1 の組み込み option を使う
+(ert-deftest my-test-packages-recentf-quiet-save ()
+  :tags '(:invariant)
+  ;; :custom の値はテーマ値として記録され、defcustom のロード時に適用される
+  (require 'recentf)
+  (should (boundp 'recentf-show-messages))
+  (should-not (default-value 'recentf-show-messages)))
 
 (provide 'my-test-packages)
 ;;; my-test-packages.el ends here
