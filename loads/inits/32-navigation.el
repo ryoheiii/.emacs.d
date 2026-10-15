@@ -10,7 +10,7 @@
 
 ;; project-root は autoload されないため、コンパイラ警告のみ declare で抑える
 ;; (実行時は project-current の autoload が project.el をロードする)
-(declare-function project-root "project" (project &optional maybe-prompt))
+(declare-function project-root "project" (project))
 
 ;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理

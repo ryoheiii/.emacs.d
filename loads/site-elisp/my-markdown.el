@@ -64,9 +64,7 @@
   (display-line-numbers-mode 1)        ; 行番号
   (outline-minor-mode 1)               ; 見出し折りたたみ
   (electric-pair-mode 1)               ; 括弧補完
-  (setq-local markdown-indent-on-enter t)
-  ;; 4 スペースを TAB で挿入
-  (local-set-key (kbd "C-c TAB") #'my-markdown-insert-tab))
+  (setq-local markdown-indent-on-enter t))
 
 ;; 折りたたみ `<details>` を挿入
 (defun markdown-insert-details ()

@@ -28,27 +28,24 @@
   :defer t
   :custom
   (undo-fu-session-directory (my-set-history "undo-fu-session/"))
-  :init
-  ;; undo 永続化はデータ保全に関わるため、アイドル遅延ではなく起動完了直後に有効化
-  (add-hook 'emacs-startup-hook (lambda () (undo-fu-session-global-mode 1)))
-  :config
-  (unless (file-exists-p undo-fu-session-directory)
-    (make-directory undo-fu-session-directory t))
+  ;; undo 永続化はデータ保全に関わるため、アイドル遅延ではなく起動完了直後に有効化。
+  ;; 保存先はパッケージ自身が所有者のみ読める権限 (0700) で作成する
+  :hook (emacs-startup . undo-fu-session-global-mode)
   )
 
 ;;; Vundo - アンドゥの操作をツリー表示で管理
 (use-package vundo
   :straight t
-  :bind ("C-x u" . vundo)
+  :bind (("C-x u" . vundo)
+         :map vundo-mode-map
+         ("C-f" . vundo-forward)    ; 次の状態へ (→)
+         ("C-b" . vundo-backward)   ; 前の状態へ (←)
+         ("C-n" . vundo-next)       ; 下の分岐へ (↓)
+         ("C-p" . vundo-previous))  ; 上の分岐へ (↑)
   :custom
   (vundo-compact-display nil)  ; 画面を広めに使う
   (vundo-window-max-height 8)  ; vundo ウィンドウの高さを大きくする
   (vundo-roll-back-on-quit t)  ; `q` で抜けた時に元の位置に戻る
-  :config
-  (define-key vundo-mode-map (kbd "C-f") 'vundo-forward)  ; 次の状態へ (→)
-  (define-key vundo-mode-map (kbd "C-b") 'vundo-backward) ; 前の状態へ (←)
-  (define-key vundo-mode-map (kbd "C-n") 'vundo-next)     ; 下の分岐へ (↓)
-  (define-key vundo-mode-map (kbd "C-p") 'vundo-previous) ; 上の分岐へ (↑)
   )
 
 ;;; Stopwatch - シンプルなストップウォッチ
