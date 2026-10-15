@@ -18,7 +18,8 @@
   :bind (("C-\\" . hs-toggle-hiding)
          ("<f5>" . hs-toggle-hiding))
   ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
-  ;; (hs-special-modes-alist は c-ts-mode / c++-ts-mode のエントリを持つ)
+  ;; (ts モードの hideshow は treesit-major-mode-setup が list thing で設定する。
+  ;;  hs-special-modes-alist は 31.1 で obsolete)
   :hook ((c-mode          . hs-minor-mode)
          (c++-mode        . hs-minor-mode)
          (c-ts-mode       . hs-minor-mode)
@@ -159,10 +160,12 @@ treesit-language-available-p は treesit.el をロードせず警告も出さな
 (defun my/treesit-cc-apply-remap ()
   "文法が使える言語だけ `major-mode-remap-alist' へ振り分け関数を登録する.
 C と C++ は独立に判定する（片方の文法だけある環境でも壊さない）。
-`my/use-treesit-for-cc' が nil でも登録する。c-ts-mode.el はロード時に
-`major-mode-remap-defaults' を書き換えるため、登録しておかないと off が
-迂回されるうえ、.log/.cfg のような流用ファイルまで ts へ回ってしまう。
-`major-mode-remap-alist' は defaults より優先されるため、ここでの指定が常に勝つ。"
+`my/use-treesit-for-cc' が nil でも登録する。振り分け関数が毎回判定するため、
+後から t/nil を切り替えても再起動なしで効き、.log/.cfg のような流用ファイルは
+cc-mode に留まる。c-ts-mode.el はロード時に `treesit-major-mode-remap-alist' へ
+追記するだけで、`treesit-enabled-modes' が nil (既定) なら
+`major-mode-remap-alist' へは何も入らない。`treesit-enabled-modes' へ C/C++ を
+含めると (c-mode . c-ts-mode) が先頭へ入りこの振り分けを覆うため、含めないこと。"
   (pcase-dolist (`(,mode ,lang ,dispatch) my/treesit-cc-remap-entries)
     (if (my/treesit-cc-grammar-ready-p lang)
         (setf (alist-get mode major-mode-remap-alist) dispatch)
@@ -173,10 +176,10 @@ C と C++ は独立に判定する（片方の文法だけある環境でも壊�
 
 (use-package c-ts-mode
   :straight nil
-  ;; 起動経路で require しない（文法不在時に treesit の警告が出るため）
+  ;; 起動経路で require しない（treesit.el まで読み込まれ起動が重くなるため）
   :defer t
-  ;; use-package はバイトコンパイル時にパッケージを先読みする。c-ts-mode.el は
-  ;; ロード時に treesit-ready-p を呼ぶため、先読みすると make lint が警告で汚れる。
+  ;; use-package はバイトコンパイル時にパッケージを先読みする。参照は先頭の defvar と
+  ;; declare-function で足りるため、treesit.el を含む先読みも止める。
   :no-require t
   :hook ((c-ts-mode   . my/c-ts-mode-setup)
          (c++-ts-mode . my/c-ts-mode-setup))
@@ -315,12 +318,10 @@ point の後ろに空白以外が残る行では何もしない。cc-mode の cl
   (defun my/c-ts-outline-predicate (node)
     "NODE が関数定義なら non-nil (outline の見出し判定).
 c-ts-mode 既定の `c-ts-mode--outline-predicate' は function_declarator (名前と
-引数) に一致するが、このノードは定義行の行頭 (戻り値型) と行末 (`{') を囲まない。
-Emacs 30 の `treesit-outline-search' は looking-at 判定で行頭・行末を囲むノードを
-探すため、`outline-on-heading-p' が定義行で偽になり `outline-cycle' や
-`outline-hide-subtree' が働かない。定義ノード全体に一致させて解決する
-(見出しの検索と `treesit-outline-level' は定義ノードでも同じ結果になる)。
-Emacs 31 は既定の述語でも動くが、結果が同じなので版で分けない。"
+引数) に加えて namespace_definition と class_specifier も見出しにする。
+<f9> と consult-outline の見出しを関数定義だけに保つため、定義ノード全体に
+一致させる (定義行で `outline-on-heading-p' が真になり、`treesit-outline-level'
+も同じ結果になる)。"
     (equal (treesit-node-type node) "function_definition"))
 
   (defun my/c-ts-mode-setup ()

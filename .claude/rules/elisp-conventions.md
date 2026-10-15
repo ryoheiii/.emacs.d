@@ -49,8 +49,9 @@ C/C++ は tree-sitter 文法が導入済みなら `c-ts-mode` / `c++-ts-mode`、
 - `derived-mode-p` で C 系を判定して cc-mode の関数（`c-beginning-of-defun` など）を
   呼ぶ分岐は、ts モードを先に振り分けて汎用関数へ倒す。ts バッファでは
   `derived-mode-p` が真になる一方、cc-mode の内部状態が無いためエラーになる。
-- `c-ts-mode` を起動経路で `require` しない。文法不在の環境で警告が出て
-  `make test-startup` が失敗する。可用性判定には `treesit-language-available-p` を使い、
+- `c-ts-mode` を起動経路で `require` しない。ロードすると `treesit.el` まで読み込まれ
+  起動が重くなる（遅延は `tests/my-test-packages.el` の `my-test-packages-deferred-features`
+  が固定する）。可用性判定には警告を出さない `treesit-language-available-p` を使い、
   `use-package c-ts-mode` には `:no-require t` を付けてバイトコンパイル時の先読みも止める。
 - 文法が無い環境で cc-mode へフォールバックする経路を壊さない。
 

@@ -1689,8 +1689,8 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
             (should (eq major-mode 'c-ts-mode))
             (should outline-minor-mode)
             (should (eq outline-search-function #'treesit-outline-search))
-            ;; 既定の述語 (function_declarator) では定義行が見出しと認識されない
-            ;; (Emacs 30.2)。関数定義ノード全体に一致する述語で looking-at 判定が通ること
+            ;; 既定の述語は namespace / class も見出しにするため、関数定義ノード全体に
+            ;; 一致する述語へ差し替え、定義行で looking-at 判定が通ること
             (should (eq treesit-outline-predicate #'my/c-ts-outline-predicate))
             (goto-char (point-min))
             (forward-line 2)

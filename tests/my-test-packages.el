@@ -33,8 +33,8 @@
     copilot
     copilot-chat
     breadcrumb
-    ;; c-ts-mode.el はロード時に treesit-ready-p を呼び、文法不在の環境で
-    ;; 起動時警告を出す。起動経路では絶対にロードしない。
+    ;; c-ts-mode.el をロードすると treesit.el まで読み込まれる。
+    ;; ts モードのバッファを開くまで不要なので、起動経路では絶対にロードしない。
     c-ts-mode)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 

@@ -30,7 +30,7 @@
 (defconst my/treesit-c-language-sources
   '((c   . ("https://github.com/tree-sitter/tree-sitter-c"   "v0.23.6" "src"))
     (cpp . ("https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.4" "src")))
-  "C/C++ 文法の取得元。Emacs 30 が読める ABI へ収まるタグへ固定する。")
+  "C/C++ 文法の取得元。Emacs がリンクする libtree-sitter が読める ABI へ収まるタグへ固定する。")
 
 (defun my/treesit-register-c-sources ()
   "C/C++ のレシピを `treesit-language-source-alist' へ登録する.

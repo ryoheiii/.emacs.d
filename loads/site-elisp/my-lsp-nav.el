@@ -3,11 +3,10 @@
 ;; clangd (eglot) の呼び出し階層・型階層・ヘッダ/ソース切替・横断シンボル検索を
 ;; C-t 配下へ足す。結果は my-gtags.el と同じ Consult の選択 UI で表示し、
 ;; 非 LSP 環境では GNU Global / ff-find-other-file へ倒す。
-;; Emacs 30 の eglot 1.17 には eglot-show-call-hierarchy / eglot-show-type-hierarchy が
-;; 無く、Emacs 31 の eglot 1.24 にはあるが専用バッファのツリー表示になる。C-t の操作感
-;; (Consult の選択 UI、xref 履歴) と非 LSP 環境へのフォールバックを揃えるため、
-;; どちらの版でも clangd へ直接問い合わせる。eglot は LSP 管理下のバッファでしか
-;; 呼ばないので、ここでは require しない。
+;; Emacs 31 の eglot 1.24 には eglot-show-call-hierarchy / eglot-show-type-hierarchy が
+;; あるが専用バッファのツリー表示になる。C-t の操作感 (Consult の選択 UI、xref 履歴) と
+;; 非 LSP 環境へのフォールバックを揃えるため、clangd へ直接問い合わせる。
+;; eglot は LSP 管理下のバッファでしか呼ばないので、ここでは require しない。
 
 ;;; Code:
 
@@ -232,8 +231,8 @@ eglot の xref バックエンド (`xref-backend-apropos') は内部の要求ラ
   "PATTERN でプロジェクト横断のシンボルを検索する.
 LSP 管理下は workspace/symbol (名前のファジー一致)、それ以外で GTAGS があれば
 GNU Global の grep 検索 (正規表現) を使う。`xref-find-apropos' を経由しないのは、
-ggtags バックエンドがカーソル位置の語が GTAGS に無いと etags へ落ちて
-TAGS テーブルを尋ねてくるため。"
+ggtags バックエンドがカーソル位置の語が GTAGS に無いと選ばれず、Global へ
+届かないため。"
   (interactive
    (list (read-string "Find symbol (pattern): " (thing-at-point 'symbol t)
                       'my/gtags-history)))

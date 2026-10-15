@@ -71,7 +71,7 @@ idle 自動保存では入力途中の末尾空白を消さないよう何もし
 
 ;;; 全フレームのフォーカスアウト時に全バッファを保存して GC
 ;; after-focus-change-function は短時間の状態揺れを伴い反復呼び出しされ得る上、
-;; read-event 内など任意のコンテキストから呼ばれる (Emacs 30.1 の説明どおり)。
+;; read-event 内など任意のコンテキストから呼ばれる (同変数の docstring のとおり)。
 ;; そのため idle timer でデバウンスし、安定後の状態で「全フレームがフォーカスを
 ;; 失った」遷移エッジのみ保存・GC を実行する
 (defvar my/all-frames-unfocused-p nil

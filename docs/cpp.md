@@ -171,7 +171,7 @@ eglot 管理下では clangd へ直接問い合わせ、結果は `C-t d/u` と�
 - clangd 18 は `callHierarchy/outgoingCalls` を実装していない（LLVM 20 で追加）。
   この版では `C-t e` が「clangd 20 以降が必要」のエラーになる。
 - `C-t s` は `xref-find-apropos` を経由しない。ggtags の xref バックエンドは
-  カーソル位置の語が GTAGS に無いと etags へ落ちて TAGS テーブルを尋ねてくるため、
+  カーソル位置の語が GTAGS に無いと選ばれず Global へ届かないため、
   Global 経路はバックエンドを指定して `xref-backend-apropos` を直接呼ぶ。LSP 経路は
   eglot の xref バックエンドも使わず（内部の要求ラッパーがタイムアウトを無期限にするため）、
   `workspace/symbol` を有限タイムアウトの要求経路で自前で送る。
@@ -198,9 +198,8 @@ eglot 管理下では clangd へ直接問い合わせ、結果は `C-t d/u` と�
   4 モードのフック parity 規約の意図的な例外で、`tests/my-test-cpp-config.el` の
   `my-test-cpp-config-outline-hook-ts-only` が固定する。
 - 見出し判定の述語は `my/c-ts-outline-predicate`（関数定義ノード全体）に差し替えている。
-  Emacs 30 の `c-ts-mode` 既定（`function_declarator`）は定義行の行頭・行末を囲まず
-  `outline-on-heading-p` が偽になり、`outline-cycle` が働かない。Emacs 31 は既定でも
-  動くが、同じ結果になるため共通にしている。
+  31.1 の既定述語は定義行でも動くが `namespace_definition` / `class_specifier` も
+  見出しにするため、`<f9>` と `consult-outline` の見出しを関数定義だけに保つ目的で使う。
 - `<f9>` は本体の中からでも見出しへ移動して折りたたみを切り替える。`C-u <f9>` は
   バッファ全体（`outline-cycle-buffer`）。見出しのレベルはすべて 1 なので、3 状態のうち
   「上位見出しのみ」と「全見出し」は同じ見え方になる。

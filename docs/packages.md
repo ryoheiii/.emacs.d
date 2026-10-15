@@ -117,7 +117,7 @@ built-in へ固定する。固定は宣言ごとに置く。ただし多数の�
 | `jsonrpc` | 1.0.14 (copilot) | 1.0.29 | built-in へ固定 |
 | `project` | 0.9.8 (breadcrumb) | 0.12.0 | built-in へ固定（`tests/my-test-packages.el` の `my-test-packages-project-built-in` が固定） |
 | `track-changes` | 1.4 (copilot) | 1.5 | built-in へ固定（straight 版 1.5 とコードも同一） |
-| `transient` | 0.8.3 (copilot-chat) | 0.13.3 | 31.1 では要件を満たすが、magit が使う transient の差し替えを含めて未検証のため引き続き straight から導入（Emacs 30.2 の 0.7.2.2 は要件未満） |
+| `transient` | 0.8.3 (copilot-chat) | 0.13.3 | 31.1 では要件を満たすが、magit が使う transient の差し替えを含めて未検証のため引き続き straight から導入 |
 
 `compat` / `seq` / `track-changes` の固定は `tests/my-test-packages.el` の
 `my-test-packages-common-deps-built-in` が検査する。

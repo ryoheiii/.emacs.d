@@ -80,9 +80,10 @@
 ;; use-package と straight に依存しないライブラリにしてあり、emacs-setup.sh の
 ;; --setup-treesit が同じファイルを単体ロードして文法をビルドする。
 ;;
-;; 注意: c-ts-mode.el は末尾で treesit-ready-p を呼ぶため、文法不在の環境で require すると
-;; display-warning が発火して make test-startup が失敗する。起動経路で c-ts-mode を
-;; require してはならない。可用性判定には警告を出さない treesit-language-available-p を使う。
+;; 注意: 起動経路で c-ts-mode を require してはならない。ロードすると treesit.el まで
+;; 読み込まれ起動が重くなる (遅延は my-test-packages-deferred-features が固定する)。
+;; 可用性判定には treesit.el をロードせず警告も出さない treesit-language-available-p を
+;; 使う (treesit-ready-p は文法不在時に警告を出す)。
 (use-package treesit
   :straight nil
   ;; treesit.el のロードは grammar 導入時だけで足りる (起動経路では読まない)。

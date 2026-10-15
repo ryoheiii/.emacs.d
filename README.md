@@ -12,7 +12,7 @@ C/C++ 開発、Markdown/Org でのドキュメント作成、Mozc/Migemo によ�
 
 | | |
 |---|---|
-| 対象 Emacs | 30.x 以上 |
+| 対象 Emacs | 31.1 以上 |
 | 対象 OS | Linux (Debian/Ubuntu) / WSL2。macOS は設定のみ対応（`emacs-setup.sh` は Linux 前提） |
 | 詳細ドキュメント | [キーバインド一覧](docs/keybindings.md) ・ [アーキテクチャ](docs/architecture.md) ・ [C/C++ の段階構成](docs/cpp.md) ・ [パッケージ管理](docs/packages.md) ・ [テスト](docs/testing.md) |
 
@@ -39,7 +39,7 @@ emacs -nw                         # 初回起動（straight が全パッケー�
 `--install` は `~/.local` へ入れるだけで PATH を変更しない。追記しないと
 コマンドが見つからないか、既存の古い `/usr/bin/emacs` が起動する。
 
-すでに Emacs 31.x が入っているなら `--install` は不要（30.2 でも動作するが、CI で検証する安定版は 31.1）。
+すでに Emacs 31.1 以上が入っているなら `--install` は不要（30.x は対象外。CI で検証する安定版は 31.1）。
 
 ---
 
