@@ -36,7 +36,8 @@
 (use-package smart-newline
   :straight t
   ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
-  :hook ((c++-mode c-mode cc-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
+  ;; (cc-mode は実行されるフックを持たないメジャーモード共通ライブラリなので列挙しない)
+  :hook ((c++-mode c-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
          . smart-newline-mode)
   :bind (("C-m" . smart-newline))
   )
