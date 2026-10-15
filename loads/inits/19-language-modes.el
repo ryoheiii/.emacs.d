@@ -327,15 +327,11 @@ Emacs 31 は既定の述語でも動くが、結果が同じなので版で分�
     "C/C++ ts モード共通の設定（cc-mode 側の `my/cc-mode-setup' と対応）."
     ;; outline の見出しを関数定義ノード全体にする (理由は my/c-ts-outline-predicate)
     (setq-local treesit-outline-predicate #'my/c-ts-outline-predicate)
-    ;; 標準スタイルの初期化後、公開された規則へ差分だけを前置する。
-    ;; 他バッファの規則を変更しないよう言語ごとのリストを新しく作る。
-    (setq-local treesit-simple-indent-rules
-                (mapcar (lambda (entry)
-                          (if (memq (car entry) '(c cpp))
-                              (cons (car entry)
-                                    (append (my/c-ts-indent-rules) (cdr entry)))
-                            entry))
-                        treesit-simple-indent-rules))
+    ;; google-c-style 相当の差分は 31.1 の上書き規則へ置く。標準規則より先に評価され、
+    ;; `c-ts-mode-set-style' で標準規則を作り直しても消えない。
+    (let ((rules (my/c-ts-indent-rules)))
+      (setq-local treesit-simple-indent-override-rules
+                  `((c ,@rules) (cpp ,@rules))))
     (local-set-key (kbd "C-c c") 'compile)          ; コンパイル
     (local-set-key (kbd "DEL") 'my/c-ts-hungry-delete-backward) ; hungry delete 相当
     (setq-local electric-layout-rules my/c-ts-electric-layout-rules)
@@ -426,7 +422,8 @@ ERROR へ落とすため、既定の規則が桁 0 しか返せなくなる。�
       (* offset (max 0 (if closing (1- depth) depth)))))
 
   (defun my/c-ts-indent-rules ()
-    "標準の k&r へ前置する google-c-style 相当の差分規則を返す."
+    "標準の k&r より先に評価する google-c-style 相当の差分規則を返す.
+モードフックで `treesit-simple-indent-override-rules' へ置く."
     (let* ((offset c-ts-indent-offset)
            (half (/ offset 2)))
       `(;; google-c-style の (access-label . /): public: 等をメンバより半段浅く置く。
