@@ -46,5 +46,36 @@
   :tags '(:unit)
   (should (file-directory-p my-backup-dir)))
 
+;;;;; [Group] Unit - load-path キャッシュ ;;;;;
+;; load-path-filter-cache-directory-files は regexp-opt を呼ぶ。regexp-opt を preload
+;; するのは X 対応ビルドだけで、端末専用ビルド (CI の Emacs など) では autoload の load が
+;; フィルタを再び呼び無限再帰になる。手元の GUI 対応ビルドでは再現しないため、
+;; regexp-opt を autoload へ戻した子プロセスで early-init.el の該当箇所までを評価する。
+(ert-deftest my-test-unit-load-path-filter-without-preloaded-regexp-opt ()
+  :tags '(:unit)
+  (let* ((early-init (expand-file-name "early-init.el" user-emacs-directory))
+         (driver
+          `(progn
+             (setq native-comp-jit-compilation nil
+                   user-emacs-directory ,user-emacs-directory)
+             (setq features (delq 'regexp-opt features))
+             (dolist (fn '(regexp-opt regexp-opt-depth regexp-opt-charset))
+               (fset fn (list 'autoload "regexp-opt")))
+             (with-temp-buffer
+               (insert-file-contents ,early-init)
+               (let (form done)
+                 (while (and (not done)
+                             (setq form (ignore-errors (read (current-buffer)))))
+                   (eval form t)
+                   (setq done (and (eq (car-safe form) 'setq)
+                                   (eq (nth 1 form) 'load-path-filter-function))))
+                 (unless done (kill-emacs 3))))
+             (require 'bytecomp)
+             (kill-emacs (if (and load-path-filter-function (featurep 'bytecomp)) 0 4))))
+         (status (call-process (expand-file-name invocation-name invocation-directory)
+                               nil nil nil "-Q" "--batch"
+                               "--eval" (prin1-to-string driver))))
+    (should (eql status 0))))
+
 (provide 'my-test-unit)
 ;;; my-test-unit.el ends here
