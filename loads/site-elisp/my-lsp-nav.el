@@ -3,8 +3,10 @@
 ;; clangd (eglot) の呼び出し階層・型階層・ヘッダ/ソース切替・横断シンボル検索を
 ;; C-t 配下へ足す。結果は my-gtags.el と同じ Consult の選択 UI で表示し、
 ;; 非 LSP 環境では GNU Global / ff-find-other-file へ倒す。
-;; Emacs 30.2 の eglot 1.17 には eglot-show-call-hierarchy / eglot-show-type-hierarchy
-;; が無いため、clangd へ直接問い合わせる。eglot は LSP 管理下のバッファでしか
+;; Emacs 30 の eglot 1.17 には eglot-show-call-hierarchy / eglot-show-type-hierarchy が
+;; 無く、Emacs 31 の eglot 1.24 にはあるが専用バッファのツリー表示になる。C-t の操作感
+;; (Consult の選択 UI、xref 履歴) と非 LSP 環境へのフォールバックを揃えるため、
+;; どちらの版でも clangd へ直接問い合わせる。eglot は LSP 管理下のバッファでしか
 ;; 呼ばないので、ここでは require しない。
 
 ;;; Code:

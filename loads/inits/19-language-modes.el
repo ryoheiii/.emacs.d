@@ -319,7 +319,8 @@ c-ts-mode 既定の `c-ts-mode--outline-predicate' は function_declarator (名�
 Emacs 30 の `treesit-outline-search' は looking-at 判定で行頭・行末を囲むノードを
 探すため、`outline-on-heading-p' が定義行で偽になり `outline-cycle' や
 `outline-hide-subtree' が働かない。定義ノード全体に一致させて解決する
-(見出しの検索と `treesit-outline-level' は定義ノードでも同じ結果になる)。"
+(見出しの検索と `treesit-outline-level' は定義ノードでも同じ結果になる)。
+Emacs 31 は既定の述語でも動くが、結果が同じなので版で分けない。"
     (equal (treesit-node-type node) "function_definition"))
 
   (defun my/c-ts-mode-setup ()

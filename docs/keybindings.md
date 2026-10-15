@@ -13,7 +13,7 @@ Ctrl と記号の組み合わせを区別して送れること（xterm の modif
 
 | プレフィックス | 用途 |
 |---|---|
-| `C-t` | C/C++ タグナビゲーション（**予約。変更しない**） |
+| `C-t` | C/C++ タグナビゲーション・読解補助（**予約。固定表 `d/u/v/f/p/n` は変更しない**） |
 | `C-q` | multiple-cursors（`repeat-mode` で連続実行できる） |
 | `C-z` | tab-bar 操作 |
 | `C-c j` | GitHub Copilot（インライン補完） |
@@ -34,7 +34,8 @@ Ctrl と記号の組み合わせを区別して送れること（xterm の modif
 | `C-c C-i` | `hippie-expand` | 単純補完 |
 | `C-c 0` | `my/copy-file-name` | ファイル名をクリップボードへ |
 | `M-f` | `forward-symbol` | シンボル単位で前進 |
-| `C-\` / `<f5>` | `hs-toggle-hiding` | コードの折りたたみ |
+| `C-\` / `<f5>` | `hs-toggle-hiding` | コードの折りたたみ（内側のブロック） |
+| `<f9>` / `C-u <f9>` | `my/outline-cycle-dwim` | 関数単位の折りたたみ切替 / バッファ全体（C/C++ ts モード。outline が無効なバッファでは `hs-toggle-hiding`） |
 | `<f7>` | `toggle-truncate-lines` | 行の折り返し切り替え |
 | `C-x u` | `vundo` | undo をツリー表示（`C-f`/`C-b` で前後、`C-n`/`C-p` で分岐） |
 
@@ -67,6 +68,7 @@ Ctrl と記号の組み合わせを区別して送れること（xterm の modif
 | `C-x C-r` | `consult-recent-file` | 最近使ったファイル |
 | `C-x C-y` | `consult-yank-pop` | kill-ring から貼り付け |
 | `C-x i` | `consult-imenu` | バッファ内シンボルへジャンプ |
+| `M-g o` | `consult-outline` | 見出し（C/C++ ts モードでは関数定義）へジャンプ。`M-s o` は標準の `occur` のまま |
 | `M-a` | `embark-act` | 補完候補・カーソル位置に対するアクション |
 | `C-M-i` | `completion-at-point` | 手動で補完を起動 |
 | `C-l` | `vertico-directory-delete-char` | ミニバッファでディレクトリを 1 階層戻る |
@@ -102,6 +104,24 @@ Migemo はミニバッファ補完の絞り込み（Orderless の matching style
 検索は毎回、名前の補完 → 移動先の選択の順で進む。結果が 1 件でも `RET` で選択する。
 `C-u C-t d` / `C-u C-t u` は GNU Global を指定する。
 補完中の操作と LSP への委譲条件は [タグナビゲーション](cpp.md#タグナビゲーション) を参照。
+
+### 読解補助（`C-t` 配下の追加キー）
+
+固定表の対象外だが、`tests/my-test-keybindings.el` で固定している。
+eglot（clangd）管理下では LSP を使い、それ以外では従来の機構へ倒す。
+詳細は [コードリーディング補助](cpp.md#コードリーディング補助) を参照。
+
+| キー | コマンド | 説明 |
+|---|---|---|
+| `C-t c` / `C-t C-c` | `my/lsp-find-callers` | 呼び出し元を検索（呼び出し箇所ごとに 1 件）。非 LSP と `C-u` は `C-t u` と同じ参照検索（`C-u` は GNU Global） |
+| `C-t e` / `C-t C-e` | `my/lsp-find-callees` | 呼び出し先を検索（LSP のみ。clangd 20 以降） |
+| `C-t t` / `C-t C-t` | `my/lsp-find-type-hierarchy` | 直接の基底 `[基底]` と派生 `[派生]` を一覧（LSP のみ） |
+| `C-t o` / `C-t C-o` | `my/lsp-find-other-file` | ヘッダ ⇄ ソース。LSP は clangd の対応表、無ければ `ff-find-other-file`（`C-u` で ff 強制） |
+| `C-t s` / `C-t C-s` | `my/lsp-find-workspace-symbol` | 文字列でプロジェクト横断のシンボル検索（LSP はあいまい一致、GTAGS は正規表現） |
+| `C-t l` / `C-t C-l` | `my/eglot-inlay-hints-toggle` | inlay hints（引数名・推論型）のバッファ単位の ON/OFF。既定 OFF、eglot 管理下のみ |
+
+階層は 1 段ずつ表示する。次の段は移動先で再実行する（呼び出し元は呼び出し箇所へ
+着地するため `C-M-a` で関数の先頭へ戻ってから `C-t c`）。
 
 C/C++ バッファでは `C-c c` が `compile` に割り当てられる。
 

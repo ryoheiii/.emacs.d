@@ -43,6 +43,9 @@ C/C++ は tree-sitter 文法が導入済みなら `c-ts-mode` / `c++-ts-mode`、
   **親モードのフックは実行されない**。C/C++ 用の `:hook` を追加・変更する場合は、
   cc-mode 系と ts 系の 4 モードすべてへ登録する。
 - 併せて `tests/my-test-packages.el` の `my-test-packages--ts-mode-hook-entries` を更新する。
+- 意図的な例外: `outline-minor-mode` は treesit 連動の見出しが取れる ts 2 モードだけに登録する
+  （cc-mode の既定 outline は全行が見出しで実用にならない）。cc-mode 側に無いことは
+  `tests/my-test-cpp-config.el` の `my-test-cpp-config-outline-hook-ts-only` が固定する。
 - `derived-mode-p` で C 系を判定して cc-mode の関数（`c-beginning-of-defun` など）を
   呼ぶ分岐は、ts モードを先に振り分けて汎用関数へ倒す。ts バッファでは
   `derived-mode-p` が真になる一方、cc-mode の内部状態が無いためエラーになる。
@@ -102,5 +105,9 @@ C/C++ は tree-sitter 文法が導入済みなら `c-ts-mode` / `c++-ts-mode`、
 注意事項:
 
 - バックエンドを変更する場合も、上記キーバインドを維持する。
-- `C-t` プレフィックスは C/C++ タグナビゲーション用に予約する。
+- `C-t` プレフィックスは C/C++ タグナビゲーション・読解補助用に予約する。
 - `update-gtags` 関数は手動タグ更新用として維持する。
+- 追加キー `C-t c/e/t/o/s/l`（`C-` 付きも同じ。`my/lsp-find-*`、`my/eglot-inlay-hints-toggle`）は
+  固定表の対象外だが、`tests/my-test-keybindings.el` の `my-test-keybindings--ct-extra-bindings`
+  で固定する。変更する場合はテストと `docs/keybindings.md` を同時に更新する。
+  `C-t C-h`（`C-h` は DEL へ変換）と `C-t C-i`（tty では TAB）は使えない。

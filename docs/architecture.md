@@ -45,20 +45,20 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | `01-ui.el` | UI・フォント・フレーム設定 |
 | `02-keybindings.el` | グローバルキーバインド |
 | `10-functions.el` | カスタム関数（ウィンドウ操作、ファイル名コピー） |
-| `18-built-in-package.el` | 組み込みパッケージ設定（eglot、treesit、tab-bar を含む。tree-sitter 文法の導入経路は `loads/site-elisp/my-treesit.el`） |
-| `19-language-modes.el` | 言語モード設定（cc-mode / c-ts-mode の振り分けを含む） |
+| `18-built-in-package.el` | 組み込みパッケージ設定（eglot と inlay hints のトグル、treesit、tab-bar を含む。tree-sitter 文法の導入経路は `loads/site-elisp/my-treesit.el`） |
+| `19-language-modes.el` | 言語モード設定（cc-mode / c-ts-mode の振り分け、ts モードの outline 折りたたみを含む） |
 | `21-ime.el` | 日本語入力（tr-ime, mozc） |
 | `22-theme.el` | テーマとモードライン（doom-themes, doom-modeline） |
 | `23-visual.el` | 視覚効果・アイコン・ハイライト（pulsar, nerd-icons, rainbow-delimiters 等） |
 | `24-org.el` | Org モード |
 | `25-markdown.el` | Markdown（markdown-mode, markdown-toc, pandoc-mode） |
 | `26-vertico.el` | ミニバッファ補完（vertico, marginalia） |
-| `27-consult.el` | 検索・絞り込み（consult, embark, orderless） |
+| `27-consult.el` | 検索・絞り込み（consult, embark, orderless。`M-g o` の consult-outline を含む） |
 | `28-corfu.el` | バッファ内補完（corfu, corfu-terminal, cape） |
 | `29-scoring.el` | スコアリング・履歴（prescient, flx） |
 | `30-buffer-file.el` | バッファ・ファイル管理（recentf, dashboard, anzu, xclip） |
 | `31-editing.el` | コード編集・タグナビゲーション（google-c-style, irony, ggtags, yasnippet 等） |
-| `32-navigation.el` | ナビゲーション・スペルチェック（migemo, neotree, flyspell） |
+| `32-navigation.el` | ナビゲーション・スペルチェック（migemo, neotree, breadcrumb, flyspell） |
 | `33-vcs.el` | バージョン管理（magit, diff-hl, difftastic） |
 | `34-misc.el` | ユーティリティ（which-key, vundo, undo-fu-session） |
 | `35-copilot.el` | AI 補完（GitHub Copilot, Copilot Chat） |
@@ -69,6 +69,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | ファイル | 説明 |
 |---|---|
 | `my-gtags.el` | タグ検索関数群（eglot/xref 優先、`global` フォールバック） |
+| `my-lsp-nav.el` | LSP 階層ナビゲーション（呼び出し階層・型階層・ヘッダ/ソース切替・横断シンボル検索。非 LSP では `global` / `ff-find-other-file` へフォールバック） |
 | `my-markdown.el` | Markdown カスタム関数群（pandoc コマンド構築、CSS 設定） |
 | `my-treesit.el` | tree-sitter 文法の取得元・導入先・導入コマンド（`emacs-setup.sh --setup-treesit` からも単体ロードする） |
 
@@ -80,7 +81,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | 補完 UI（バッファ内） | Corfu + Cape（tty では corfu-terminal） |
 | テーマ | doom-themes (doom-dracula) + doom-modeline |
 | Git | Magit + diff-hl + difftastic |
-| C/C++ | cc-mode + google-c-style / c-ts-mode、eglot + clangd、ggtags、irony |
+| C/C++ | cc-mode + google-c-style / c-ts-mode、eglot + clangd、ggtags、irony、outline（ts）+ breadcrumb |
 | AI 補完 | GitHub Copilot（copilot.el + copilot-chat.el） |
 | 日本語入力 | Mozc, Migemo, TR-ime (Windows) |
 | Undo | vundo + undo-fu-session |
