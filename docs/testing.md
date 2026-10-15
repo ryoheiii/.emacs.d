@@ -19,12 +19,12 @@ make test
 | `make lint-el` | 全管理対象 Elisp の構文と設定の byte compile（警告・エラーは失敗） |
 | `make test-unit` | `early-init.el` のパスヘルパー |
 | `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
-| `make test-keybinding` | `C-t` タグナビゲーションの固定キーバインドと追加キー（読解補助）、折りたたみ・見出し移動のキー |
+| `make test-keybinding` | `C-t` タグナビゲーションの固定キーバインドと追加キー（読解補助）、折りたたみ・見出し移動のキー、`C-z` のタブ操作、パッケージ固有キーマップ（vundo・magit・markdown）の `:bind :map` |
 | `make test-cpp-config` | C/C++ スタイル・eglot 起動条件・検索経路・起動時性能設定・tree-sitter 段階移行・irony ゲート・LSP 階層ナビゲーション（スタブ応答と実 jsonrpc のタイムアウト。clangd がある環境では実 clangd との結合）・outline / inlay hints / breadcrumb の読解補助 |
 | `make test-deferred` | `:defer N` 遅延パッケージの `:config` とグローバルモード有効化 |
-| `make test-invariants` | グローバルモードのフック登録・feature ロード状態・ts モードのフック parity・Copilot のロードゲート・組み込み `project` の上書き防止 |
+| `make test-invariants` | グローバルモードのフック登録・feature ロード状態・ts モードのフック parity・Copilot のロードゲート・組み込みパッケージ（`project`・`compat`・`seq`・`track-changes`）の上書き防止・`mode-line-invisible-mode` の登録・eglot 管理下の irony 抑止フック・recentf の保存メッセージ抑止 |
 | `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |
-| `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・`C-t` 表・非 LSP 環境での階層ナビゲーションのフォールバック・C バッファの header-line と読解補助キー） |
+| `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・`C-t` 表・非 LSP 環境での階層ナビゲーションのフォールバック・C バッファの header-line と読解補助キー・tty 子フレームでの corfu-popupinfo） |
 | `make test-setup` | 隔離した HOME で `test-emacs-setup.sh` を実行（引数パース、`--list` の抽出、ダウンロードの原子性、パッケージ復元のトランザクション、サンドボックスガード） |
 | `make test-guards` | テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査（`test-emacs-setup.sh` のガード、`lint-sh` の環境分離、`run_trial` の失敗検査） |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |

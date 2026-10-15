@@ -393,7 +393,7 @@ make test-startup  # 起動だけを素早く確認
 |---|---|
 | 端末で色が正しく出ない | `TERM=xterm-256color` を設定する |
 | 起動時にエラーが出る | `make test-startup` でバッチ起動のエラーを確認する |
-| パッケージが壊れた | `M-x straight-rebuild-all`。直らなければ `./emacs-setup.sh --clean-all` で再構築する |
+| パッケージが壊れた | `M-x straight-rebuild-all` の後に Emacs を再起動する（load-path の走査結果をキャッシュしているため、再ビルドで増えたファイルは再起動まで読めない）。直らなければ `./emacs-setup.sh --clean-all` で再構築する |
 | Emacs 外でパッケージを書き換えた後、古いビルドのままになる | `M-x straight-check-all`（[docs/packages.md](docs/packages.md) の変更検出の方式を参照） |
 | Copilot がつながらない | `M-x copilot-diagnose`。`node` が PATH にあるか、`M-x copilot-login` 済みかを確認する |
 | C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd` の導入を確認する（`clangd` は `--setup` で入る。個別なら `sudo apt install clangd`） |

@@ -82,7 +82,10 @@ emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
   -l early-init.el -l init.el -f straight-rebuild-all
 ```
 
-Emacs 内からは `M-x straight-rebuild-all`。
+Emacs 内からは `M-x straight-rebuild-all`。`early-init.el` が `load-path-filter-function`（Emacs 31.1）で
+load-path の走査結果をキャッシュしており、キャッシュはセッション中に無効化されない。
+再ビルドで既存のビルドディレクトリへ増えたファイルは、Emacs を再起動するか
+`(setq load-path-filter--cache nil)` を評価するまで読めない。
 
 ## 組み込みパッケージの上書きを避ける
 
