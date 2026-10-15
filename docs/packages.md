@@ -95,11 +95,15 @@ straight の依存解決は、**組み込みで足りるパッケージでもレ
 設定していた、という食い違いが起きる。
 
 そのため、依存のうち **組み込み版で要件を満たすものだけ** `straight-override-recipe` で
-built-in へ固定する。固定は宣言ごとに置く。
+built-in へ固定する。固定は宣言ごとに置く。ただし多数のパッケージが共通で依存する
+`compat` / `seq` は、最初の依存元より前に効かせるため `init.el` にまとめて置く。
 
 ```elisp
+;; init.el (全パッケージ共通の依存。straight-use-package 'use-package より前)
+(dolist (pkg '(compat seq))
+  (straight-override-recipe (list pkg :type 'built-in)))
 ;; 35-copilot.el (copilot / copilot-chat の依存)
-(dolist (pkg '(org jsonrpc))
+(dolist (pkg '(org jsonrpc track-changes))
   (straight-override-recipe (list pkg :type 'built-in)))
 ;; 32-navigation.el (breadcrumb の依存)
 (straight-override-recipe '(project :type built-in))
@@ -107,11 +111,16 @@ built-in へ固定する。固定は宣言ごとに置く。
 
 | パッケージ | 要求 | Emacs 31.1 組み込み | 扱い |
 |---|---|---|---|
+| `compat` | 30 (vertico / corfu / consult / magit / copilot など) | stub（版は Emacs に追随） | built-in へ固定。31.1 の stub が `compat-call` / `compat-function` を提供する |
+| `seq` | 2.24 (magit)、2.23 (ELPA 版 compat) | 2.24（preload 済み） | built-in へ固定 |
 | `org` | 9.4.6 (copilot-chat) | 9.8.7 | built-in へ固定 |
 | `jsonrpc` | 1.0.14 (copilot) | 1.0.29 | built-in へ固定 |
 | `project` | 0.9.8 (breadcrumb) | 0.12.0 | built-in へ固定（`tests/my-test-packages.el` の `my-test-packages-project-built-in` が固定） |
-| `track-changes` | 1.4 (copilot) | 1.5 | 31.1 では要件を満たすが、built-in 化は未検証のため引き続き straight から導入（Emacs 30.2 の 1.2 は要件未満） |
+| `track-changes` | 1.4 (copilot) | 1.5 | built-in へ固定（straight 版 1.5 とコードも同一） |
 | `transient` | 0.8.3 (copilot-chat) | 0.13.3 | 31.1 では要件を満たすが、magit が使う transient の差し替えを含めて未検証のため引き続き straight から導入（Emacs 30.2 の 0.7.2.2 は要件未満） |
+
+`compat` / `seq` / `track-changes` の固定は `tests/my-test-packages.el` の
+`my-test-packages-common-deps-built-in` が検査する。
 
 固定したパッケージは lockfile にも載らない。組み込み版の要件を満たさなくなる
 パッケージを追加した場合は、この表とオーバーライドを見直す。

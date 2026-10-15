@@ -62,10 +62,11 @@
   ;; (column-number-mode 0)
   )
 
-;;; hide-mode-line - 特定のモードでモードラインを非表示
-(use-package hide-mode-line
-  :straight t
-  :hook ((neotree-mode imenu-list-minor-mode minimap-mode) . hide-mode-line-mode)
+;;; mode-line-invisible-mode - 特定のモードでモードラインを非表示
+;; Emacs 31.1 組み込み (simple.el)。旧 hide-mode-line パッケージを置き換える
+(use-package simple
+  :straight nil
+  :hook ((neotree-mode imenu-list-minor-mode minimap-mode) . mode-line-invisible-mode)
   )
 
 ;;; mode-line-bell - モードラインを利用した通知システム

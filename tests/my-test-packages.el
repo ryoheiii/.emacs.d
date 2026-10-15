@@ -11,7 +11,7 @@
 (defconst my-test-packages--banned-features
   '(paradox amx smooth-scroll affe
     diminish smart-mode-line volatile-highlights highlight-symbol
-    undo-fu flyspell-correct-popup)
+    undo-fu flyspell-correct-popup hide-mode-line)
   "起動直後にロードされていてはならない削除済み feature。")
 
 (ert-deftest my-test-packages-banned-features ()
@@ -181,6 +181,29 @@
   (require 'package)
   (should (package-built-in-p 'project))
   (should-not (my-test-packages--straight-build-p "project")))
+
+;; 31.1 の組み込み版で要件を満たす依存。init.el (compat / seq) と
+;; 35-copilot.el (track-changes) の straight-override-recipe が外れると
+;; straight のクローンが組み込み版を覆い隠す (lockfile にも現れる)。
+;; seq は preload 済みだが、locate-library は load-path を探すため覆い隠しを検出できる。
+(ert-deftest my-test-packages-common-deps-built-in ()
+  :tags '(:invariant)
+  (require 'package)
+  (dolist (pkg '(compat seq track-changes))
+    (let ((library (symbol-name pkg)))
+      (should (locate-library library))
+      (should (package-built-in-p pkg))
+      (should-not (my-test-packages--straight-build-p library)))))
+
+;; hide-mode-line は 31.1 組み込みの mode-line-invisible-mode へ置き換えた。
+;; 共有ビルドに残る旧パッケージが load-path へ戻っていないことと、
+;; 同じモードでモードラインを隠し続けていることを固定する。
+(ert-deftest my-test-packages-mode-line-invisible-built-in ()
+  :tags '(:invariant)
+  (should-not (locate-library "hide-mode-line"))
+  (should (fboundp 'mode-line-invisible-mode))
+  (dolist (hook '(neotree-mode-hook imenu-list-minor-mode-hook minimap-mode-hook))
+    (should (memq 'mode-line-invisible-mode (default-value hook)))))
 
 (provide 'my-test-packages)
 ;;; my-test-packages.el ends here
