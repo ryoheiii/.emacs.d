@@ -36,7 +36,8 @@
     my/lsp-find-type-hierarchy
     my/lsp-find-other-file
     my/lsp-find-workspace-symbol
-    my/outline-cycle-dwim)
+    my/outline-cycle-dwim
+    my/eglot-inlay-hints-toggle)
   "定義済みでなければならないタグ操作コマンド。")
 
 ;; C-t 配下へ追加した読解補助のキー。固定表 (my-test-keybindings--bindings) の
@@ -51,7 +52,9 @@
     ("C-t o" . my/lsp-find-other-file)
     ("C-t C-o" . my/lsp-find-other-file)
     ("C-t s" . my/lsp-find-workspace-symbol)
-    ("C-t C-s" . my/lsp-find-workspace-symbol))
+    ("C-t C-s" . my/lsp-find-workspace-symbol)
+    ("C-t l" . my/eglot-inlay-hints-toggle)
+    ("C-t C-l" . my/eglot-inlay-hints-toggle))
   "ggtags キーマップへ追加した読解補助のキーバインド。")
 
 (ert-deftest my-test-keybindings-ct-bindings ()

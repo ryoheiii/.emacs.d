@@ -6,7 +6,10 @@
 
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function eglot-managed-p "eglot")
+(declare-function eglot-inlay-hints-mode "eglot")
 (declare-function my/eglot-cc-suppress-irony "18-built-in-package")
+(defvar eglot-inlay-hints-mode)
+(defvar eglot-ignored-server-capabilities)
 (defvar my/auto-save-visited-in-progress)
 
 ;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
@@ -125,9 +128,35 @@
                (executable-find "clangd")
                (my/eglot-cc-project-p))
       (eglot-ensure)))
+  (defun my/eglot-inlay-hints-toggle ()
+    "現在のバッファで eglot の inlay hints (引数名・推論型のヒント) を切り替える.
+既定は `eglot-ignored-server-capabilities' の :inlayHintProvider で常時 OFF。
+ON にするときはバッファローカルに :inlayHintProvider を外してから
+`eglot-inlay-hints-mode' を有効化する (`eglot-server-capable' は同変数を memq で
+見るためローカル値が効く)。OFF ではローカル値を捨てて既定へ戻す。
+ローカル値は ON の間だけ残るため、`eglot-reconnect' 後の自動有効化
+(`eglot--maybe-activate-editing-mode') でも ON が維持される。
+eglot 未管理のバッファでは `user-error'。"
+    (interactive)
+    (unless (and (fboundp 'eglot-managed-p) (eglot-managed-p))
+      (user-error "eglot (clangd) が管理していないバッファです"))
+    (if eglot-inlay-hints-mode
+        (progn
+          (eglot-inlay-hints-mode -1)
+          (kill-local-variable 'eglot-ignored-server-capabilities)
+          (message "inlay hints: off"))
+      (setq-local eglot-ignored-server-capabilities
+                  (remq :inlayHintProvider eglot-ignored-server-capabilities))
+      (eglot-inlay-hints-mode 1)
+      ;; 非対応サーバーではモードが自分を切る (eglot-inlay-hints-mode の定義を参照)
+      (if eglot-inlay-hints-mode
+          (message "inlay hints: on")
+        (kill-local-variable 'eglot-ignored-server-capabilities)
+        (user-error "サーバーが inlay hints に対応していません"))))
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-config '(:size 0 :format full))
+  ;; inlay hints は既定 OFF。C-t l (my/eglot-inlay-hints-toggle) でバッファ単位に ON にできる
   (eglot-ignored-server-capabilities '(:inlayHintProvider :documentHighlightProvider))
   (eglot-stay-out-of '(flymake))       ; 使用感維持。診断が欲しくなったらここから外す
   ;; xref で飛んだプロジェクト外のファイル (/usr/include など) も同じサーバーの管理下に

@@ -1522,5 +1522,47 @@ CODE が nil ならタイムアウトと同じく code 無しにする。"
         (kill-buffer buffer))
       (delete-file file))))
 
+;;;;; [Group] C++ Config - 読解補助 (inlay hints) ;;;;;
+;; 既定 OFF のまま、C-t l でバッファ単位に ON/OFF できること。eglot 本体の
+;; eglot-inlay-hints-mode を通し、サーバーの capability 判定だけをスタブする。
+(ert-deftest my-test-cpp-config-inlay-hints-default-off ()
+  :tags '(:cpp-config)
+  (should (memq :inlayHintProvider (default-value 'eglot-ignored-server-capabilities))))
+
+(ert-deftest my-test-cpp-config-inlay-hints-toggle-requires-eglot ()
+  :tags '(:cpp-config)
+  (with-temp-buffer
+    (should-error (my/eglot-inlay-hints-toggle) :type 'user-error)
+    (should-not (local-variable-p 'eglot-ignored-server-capabilities))))
+
+(ert-deftest my-test-cpp-config-inlay-hints-toggle-roundtrip ()
+  "ON でローカルに :inlayHintProvider を外し、OFF でローカル値を捨てて既定へ戻す."
+  :tags '(:cpp-config)
+  (let ((default (default-value 'eglot-ignored-server-capabilities)))
+    (cl-letf (((symbol-function 'eglot-managed-p) (lambda () t))
+              ;; eglot-server-capable の実装と同じく ignored を memq で見る
+              ((symbol-function 'eglot-server-capable)
+               (lambda (&rest feats)
+                 (not (seq-some (lambda (feat) (memq feat eglot-ignored-server-capabilities))
+                                feats)))))
+      (with-temp-buffer
+        (my/eglot-inlay-hints-toggle)
+        (should eglot-inlay-hints-mode)
+        (should (local-variable-p 'eglot-ignored-server-capabilities))
+        (should-not (memq :inlayHintProvider eglot-ignored-server-capabilities))
+        (should (memq :documentHighlightProvider eglot-ignored-server-capabilities))
+        (should (equal (default-value 'eglot-ignored-server-capabilities) default))
+        (my/eglot-inlay-hints-toggle)
+        (should-not eglot-inlay-hints-mode)
+        (should-not (local-variable-p 'eglot-ignored-server-capabilities))))
+    ;; 非対応サーバーではモードが自分を切るため、エラーにしてローカル値も残さない
+    (cl-letf (((symbol-function 'eglot-managed-p) (lambda () t))
+              ((symbol-function 'eglot-server-capable) (lambda (&rest _) nil)))
+      (with-temp-buffer
+        (should-error (my/eglot-inlay-hints-toggle) :type 'user-error)
+        (should-not eglot-inlay-hints-mode)
+        (should-not (local-variable-p 'eglot-ignored-server-capabilities))))
+    (should (equal (default-value 'eglot-ignored-server-capabilities) default))))
+
 (provide 'my-test-cpp-config)
 ;;; my-test-cpp-config.el ends here

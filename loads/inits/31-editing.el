@@ -265,7 +265,9 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
               ("C-t o"   . my/lsp-find-other-file)       ; ヘッダ/ソース切替 (other file)
               ("C-t C-o" . my/lsp-find-other-file)
               ("C-t s"   . my/lsp-find-workspace-symbol) ; 横断シンボル検索 (symbol)
-              ("C-t C-s" . my/lsp-find-workspace-symbol))
+              ("C-t C-s" . my/lsp-find-workspace-symbol)
+              ("C-t l"   . my/eglot-inlay-hints-toggle)  ; inlay hints 切替 (eglot 管理下のみ、既定 OFF)
+              ("C-t C-l" . my/eglot-inlay-hints-toggle))
   :custom
   (ggtags-update-on-save t)           ; ファイル保存時にタグを更新
   (ggtags-highlight-tag nil)          ; パフォーマンス: カーソル位置のタグハイライト無効化
