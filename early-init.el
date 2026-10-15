@@ -88,9 +88,11 @@
 ;;; Transient パッケージの一時ファイル保存先
 (setq transient-history-file (my-set-history "transient/history.el"))
 
-;;; eln-cache の保存先を変更（Emacs 29+ 公式 API）
-(when (and (fboundp 'startup-redirect-eln-cache)
-           (boundp 'native-comp-eln-load-path))
+;;; eln-cache の保存先を変更
+;; native-comp 無効ビルドでは `native-comp-eln-load-path' 自体が無く、
+;; `startup-redirect-eln-cache' が void-variable になるため変数の有無で判定する
+;; （`my-test-audit-non-native-early-init' が固定する）。
+(when (boundp 'native-comp-eln-load-path)
   (startup-redirect-eln-cache (my-set-package "eln-cache/")))
 
 ;;; yasnippet のデフォルト snippets/ ディレクトリ生成を防止

@@ -10,8 +10,7 @@
   (dolist (path paths)
     (let ((default-directory (my-set-loads path)))
       (add-to-list 'load-path default-directory)
-      (when (fboundp 'normal-top-level-add-subdirs-to-load-path)
-        (normal-top-level-add-subdirs-to-load-path)))))
+      (normal-top-level-add-subdirs-to-load-path))))
 (add-to-load-path "site-elisp/") ; my-loads-dir 内のディレクトリを指定
 
 ;;;;; [Group] Use-package 設定 ;;;;;
