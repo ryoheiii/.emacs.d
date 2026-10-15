@@ -451,6 +451,45 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
             (should (equal (buffer-string) "alpha")))
         (corfu-quit)))))
 
+;; 候補の説明を tty 子フレームへ描画できること。フック登録の検査だけでは、
+;; 説明の取得から popupinfo の子フレーム生成・表示までの経路の故障を検出できない
+(ert-deftest my-test-tty-live-corfu-popupinfo-frame ()
+  :tags '(:tty-live)
+  (skip-unless (featurep 'tty-child-frames))
+  (let ((doc-buffer (get-buffer-create " *my-test-tty-live-doc*")))
+    (save-window-excursion
+      (with-temp-buffer
+        (switch-to-buffer (current-buffer))
+        (corfu-mode 1)
+        (should (bound-and-true-p corfu-popupinfo-mode))
+        (setq-local completion-at-point-functions
+                    (list (lambda ()
+                            (list (point-min) (point-max) '("alpha" "alpine")
+                                  :company-doc-buffer
+                                  (lambda (candidate)
+                                    (with-current-buffer doc-buffer
+                                      (erase-buffer)
+                                      (insert "DOC " candidate)
+                                      doc-buffer))))))
+        (insert "al")
+        (unwind-protect
+            (progn
+              (completion-at-point)
+              (corfu--exhibit)
+              (corfu-next 1)
+              (corfu--exhibit)
+              (corfu-popupinfo--show (nth corfu--index corfu--candidates))
+              (redisplay t)
+              (should (frame-live-p corfu-popupinfo--frame))
+              (should (frame-visible-p corfu-popupinfo--frame))
+              (should (eq (frame-parent corfu-popupinfo--frame) (selected-frame)))
+              (should (string-prefix-p
+                       "DOC al"
+                       (with-current-buffer (window-buffer (frame-root-window corfu-popupinfo--frame))
+                         (buffer-string)))))
+          (corfu-quit)
+          (kill-buffer doc-buffer))))))
+
 (ert-deftest my-test-tty-live-persistent-undo ()
   :tags '(:tty-live)
   ;; fixture の HOME 自体が /tmp にあるため、この検査中だけ一時パス除外を外す。
