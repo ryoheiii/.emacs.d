@@ -62,10 +62,12 @@
   )
 
 ;;; corfu-popupinfo - 補完候補の横に説明用のポップアップを表示
+;; ポップアップは子フレームで描画する。Emacs 31.1 からは tty でも子フレームが使えるため
+;; (`tty-child-frames')、GUI に加えて端末でも有効にする。corfu-terminal 経路では描けない。
 (use-package corfu-popupinfo
   :straight nil
   :after corfu
-  :if (display-graphic-p)
+  :if (or (display-graphic-p) (featurep 'tty-child-frames))
   :hook (corfu-mode . corfu-popupinfo-mode)
   )
 

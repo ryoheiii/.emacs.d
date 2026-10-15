@@ -78,7 +78,7 @@ loads/inits/*.el       init-loader が番号・アルファベット順でロー
 | カテゴリ | パッケージ |
 |---|---|
 | 補完 UI（ミニバッファ） | Vertico + Consult + Marginalia + Orderless + Prescient |
-| 補完 UI（バッファ内） | Corfu + Cape（tty では corfu-terminal） |
+| 補完 UI（バッファ内） | Corfu + Cape（tty でも標準の tty 子フレームで描画。corfu-terminal は子フレームの無い Emacs 向けの代替） |
 | テーマ | doom-themes (doom-dracula) + doom-modeline |
 | Git | Magit + diff-hl + difftastic |
 | C/C++ | cc-mode + google-c-style / c-ts-mode、eglot + clangd、ggtags、irony、outline（ts）+ breadcrumb |

@@ -51,13 +51,12 @@
     nyan-mode)
   "全タイマー発火後の tty セッションでロードされてはならない feature。")
 
-;; nerd-icons-dired / corfu-popupinfo は :hook トリガー型のため、ガードを外しても
+;; nerd-icons-dired は :hook トリガー型のため、ガードを外しても
 ;; 対象モードを開くまで feature はロードされず featurep では検出できない。
 ;; そこで「tty ではフック登録自体が行われない」ことを検査する。
 ;; pixel-scroll は組み込みで featurep では判定できないため、同じく登録の有無で検査する。
 (defconst my-test-tty-live--gui-only-hook-guards
   '((nerd-icons-dired-mode . dired-mode-hook)
-    (corfu-popupinfo-mode . corfu-mode-hook)
     (pixel-scroll-precision-mode . after-init-hook))
   "tty ではフックへ登録されてはならない (関数 . フック変数) の組。")
 
@@ -69,6 +68,19 @@
     (let ((hook (cdr entry)))
       (should-not (and (boundp hook)
                        (memq (car entry) (symbol-value hook)))))))
+
+;; corfu-popupinfo は子フレームで描画するため、tty 子フレームがある Emacs では
+;; tty でも corfu-mode-hook へ登録する。無い Emacs では GUI 限定のままとする。
+(ert-deftest my-test-tty-live-corfu-popupinfo-hook ()
+  :tags '(:tty-live)
+  (should (eq (and (boundp 'corfu-mode-hook)
+                   (memq 'corfu-popupinfo-mode corfu-mode-hook)
+                   t)
+              (and (featurep 'tty-child-frames) t)))
+  (when (featurep 'tty-child-frames)
+    (with-temp-buffer
+      (corfu-mode 1)
+      (should (bound-and-true-p corfu-popupinfo-mode)))))
 
 ;;;;; [Group] TTY Live - モードライン ;;;;;
 ;; doom-modeline-icon の :custom (display-graphic-p) は doom-modeline ロード後に

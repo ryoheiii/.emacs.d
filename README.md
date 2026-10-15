@@ -183,7 +183,9 @@ which-key が候補を出す。
   （スペース区切りで複数条件、Migemo によるローマ字検索対応）。
 - **バッファ内**は Corfu が 1 文字目から自動で出る（`corfu-auto-prefix` の既定値は 2 だが、
   Orderless 連携が Corfu バッファで 1 へ上書きする）。`TAB` で確定、`C-n` / `C-p` で候補移動。
-  端末では corfu-terminal がポップアップを描画する。
+  端末でも Emacs 31.1 の tty 子フレームで Corfu 本体が候補と説明（corfu-popupinfo）の
+  ポップアップを描画する。corfu-terminal は tty 子フレームの無い Emacs 向けの代替として
+  宣言だけを残しており、31.1 では有効にならない。
 - 補完候補の供給元は状況で切り替わる（C/C++ は eglot → irony → cape の順）。
   詳細は [C/C++ の段階構成](docs/cpp.md)。
 
