@@ -1459,6 +1459,12 @@ CODE が nil ならタイムアウトと同じく code 無しにする。"
   (dolist (hook '(c-mode-hook c++-mode-hook))
     (should-not (and (boundp hook) (memq 'outline-minor-mode (default-value hook))))))
 
+;; breadcrumb (header-line のパス表示) は cc-mode でも imenu で動くため 4 モードすべて
+(ert-deftest my-test-cpp-config-breadcrumb-hook-parity ()
+  :tags '(:cpp-config)
+  (dolist (hook '(c-mode-hook c++-mode-hook c-ts-mode-hook c++-ts-mode-hook))
+    (should (memq 'breadcrumb-local-mode (default-value hook)))))
+
 (ert-deftest my-test-cpp-config-outline-dwim-fallback ()
   "outline が無効なバッファでは <f9> が従来どおり hs-toggle-hiding を呼ぶ."
   :tags '(:cpp-config)

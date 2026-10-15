@@ -118,7 +118,10 @@
     (should (string-prefix-p "terminal-init-xterm"
                              (symbol-name terminal-initted))))
   (should (equal (lookup-key input-decode-map "\e[1;5A")
-                 [C-up])))
+                 [C-up]))
+  ;; <f9> (折りたたみ) は端末が送る CSI 20~ から復号できること
+  (should (equal (lookup-key input-decode-map "\e[20~")
+                 [f9])))
 
 ;;;;; [Group] TTY Live - 宣言とモード活性化 ;;;;;
 (ert-deftest my-test-tty-live-ct-bindings ()
@@ -342,6 +345,44 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
         (when (buffer-live-p buffer)
           (with-current-buffer buffer (set-buffer-modified-p nil))
           (kill-buffer buffer)))
+      (delete-directory directory t))))
+
+;;;;; [Group] TTY Live - 読解補助 (breadcrumb / outline / inlay hints) ;;;;;
+;; C バッファを実 tty で開き、header-line のパス表示と読解補助キーが有効なことを検査する。
+;; 文法は一時ルートへ複製されないため通常は cc-mode になる (ts なら outline も有効)。
+(ert-deftest my-test-tty-live-cc-reading-aids ()
+  :tags '(:tty-live)
+  (let* ((directory (make-temp-file "my-test-tty-reading-" t))
+         (file (expand-file-name "sample.c" directory))
+         buffer)
+    (unwind-protect
+        (save-window-excursion
+          (write-region "int sample(void) {\n    return 1;\n}\n" nil file nil 'silent)
+          (setq buffer (find-file-noselect file))
+          (switch-to-buffer buffer)
+          (should (derived-mode-p 'c-mode))
+          ;; breadcrumb: header-line にファイル名を含むパスが出る
+          (should breadcrumb-local-mode)
+          (should (member '(:eval (breadcrumb--header-line)) header-line-format))
+          (let ((line (format-mode-line header-line-format)))
+            (should (stringp line))
+            (should (string-match-p "sample\\.c" line))
+            (let ((case-fold-search t))
+              (should-not (string-match-p "error" line))))
+          ;; outline は treesit 連動の見出しが取れる ts モードだけ
+          (if (my/treesit-cc-ready-p 'c)
+              (should outline-minor-mode)
+            (should-not (bound-and-true-p outline-minor-mode)))
+          (should (eq (key-binding [f9]) 'my/outline-cycle-dwim))
+          (should (eq (key-binding (kbd "C-t l")) 'my/eglot-inlay-hints-toggle))
+          ;; eglot 未管理 (CDB なし) では inlay hints のトグルは失敗する
+          (should-error (my/eglot-inlay-hints-toggle) :type 'user-error))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (when (bound-and-true-p breadcrumb--idle-timer)
+            (cancel-timer breadcrumb--idle-timer))
+          (set-buffer-modified-p nil))
+        (kill-buffer buffer))
       (delete-directory directory t))))
 
 (ert-deftest my-test-tty-live-corfu-terminal-enabled ()

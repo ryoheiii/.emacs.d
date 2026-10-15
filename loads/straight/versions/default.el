@@ -1,6 +1,7 @@
 (("aggressive-indent-mode" . "a437a45868f94b77362c6b913c5ee8e67b273c42")
  ("anzu" . "21cb5ab2295614372cb9f1a21429381e49a6255f")
  ("bind-key" . "e9ead409b17d8cf7c221f6c28e115a8c051be9e3")
+ ("breadcrumb" . "2a2b02e357509856e0fbf83e2da25aad90cf45a3")
  ("cape" . "2b2a5c5bef16eddcce507d9b5804e5a0cc9481ae")
  ("compat" . "6c11d1ce2c6cae75cd281d142ee7edd2781cf112")
  ("cond-let" . "8bf87d45e169ebc091103b2aae325aece3aa804d")
