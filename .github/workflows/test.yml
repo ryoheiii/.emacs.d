@@ -69,9 +69,9 @@ jobs:
             loads/straight/repos
             loads/straight/build
             loads/straight/build-cache.el
-          key: straight-v5-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
+          key: straight-v6-${{ matrix.emacs-version }}-${{ hashFiles('loads/straight/versions/default.el') }}
           restore-keys: |
-            straight-v5-${{ matrix.emacs-version }}-
+            straight-v6-${{ matrix.emacs-version }}-
 
       - name: 条件付きパッケージの CI 前提を確認
         run: |
