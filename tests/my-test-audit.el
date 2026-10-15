@@ -278,6 +278,9 @@
   (let* ((dir (make-temp-file "my-test-autosave-" t))
          (file (expand-file-name "sample.txt" dir))
          buffer)
+    (when (timerp my/mode-line-flash-timer)
+      (cancel-timer my/mode-line-flash-timer))
+    (setq my/mode-line-flash-timer nil)
     (unwind-protect
         (with-current-buffer (setq buffer (find-file-noselect file))
           (setq-local require-final-newline nil)
@@ -286,9 +289,18 @@
           (should-not (buffer-modified-p))
           (should (equal (buffer-string) "int x = "))
           (should (= (point) (point-max)))
+          ;; タイマー経由の保存ではモードラインを光らせない（復元タイマーが立たない）
+          (should-not my/mode-line-flash-timer)
           (insert "\nint y = ")
           (save-buffer)
-          (should (equal (buffer-string) "int x =\nint y =")))
+          (should (equal (buffer-string) "int x =\nint y ="))
+          ;; 明示保存では従来どおり光らせる
+          (should (timerp my/mode-line-flash-timer)))
+      (when (timerp my/mode-line-flash-timer)
+        ;; 復元タイマーを取り消し、その関数を直接呼んで mode-line の色を戻す
+        (let ((timer my/mode-line-flash-timer))
+          (cancel-timer timer)
+          (funcall (timer--function timer))))
       (when (buffer-live-p buffer)
         (set-buffer-modified-p nil)
         (kill-buffer buffer))
