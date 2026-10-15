@@ -7,6 +7,7 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function eglot-managed-p "eglot")
 (declare-function my/eglot-cc-suppress-irony "18-built-in-package")
+(defvar my/auto-save-visited-in-progress)
 
 ;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
 (use-package ediff
@@ -191,10 +192,30 @@
   )
 
 ;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存
+;; タイマーが呼ぶ保存関数を差し替え、00-core.el の保存フックがタイマー経由の保存を
+;; 識別できるようにする（入力途中の末尾空白を消さない・モードラインを光らせない）。
+;; auto-save-visited-mode は run-with-idle-timer に save-some-buffers と引数を直接渡すため、
+;; 関数だけを入れ替えて引数（:no-prompt と述語）は維持する。
 (use-package files
   :straight nil
+  ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
+  :preface
+  (defun my/auto-save-visited-save-some-buffers (&rest args)
+    "`my/auto-save-visited-in-progress' を束縛して `save-some-buffers' を呼ぶ。"
+    (let ((my/auto-save-visited-in-progress t))
+      (apply #'save-some-buffers args)))
+  (defun my/auto-save-visited-mark-timer ()
+    "`auto-save-visited-mode' のタイマーの関数を識別可能なラッパーへ差し替える。
+内部変数 `auto-save--timer' が無い Emacs では何もしない（従来どおりの保存になる）。"
+    (when (and auto-save-visited-mode
+               (bound-and-true-p auto-save--timer)
+               (timerp auto-save--timer))
+      (timer-set-function auto-save--timer
+                          #'my/auto-save-visited-save-some-buffers
+                          (timer--args auto-save--timer))))
   :custom (auto-save-visited-interval 30)
-  :hook (after-init . auto-save-visited-mode)
+  :hook ((after-init . auto-save-visited-mode)
+         (auto-save-visited-mode . my/auto-save-visited-mark-timer))
   )
 
 ;;; Delsel - 選択している状態で入力したときに、region を削除して挿入

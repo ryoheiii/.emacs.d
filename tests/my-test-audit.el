@@ -271,5 +271,42 @@
                    (expand-file-name "loads/inits/01-ui.el" user-emacs-directory))))
       (delete-directory root t))))
 
+(ert-deftest my-test-audit-auto-save-visited-keeps-trailing-whitespace ()
+  :tags '(:audit)
+  ;; idle 自動保存（auto-save-visited-mode のタイマー経路）は入力途中の末尾空白を消さない。
+  ;; 明示保存は従来どおり削除する。
+  (let* ((dir (make-temp-file "my-test-autosave-" t))
+         (file (expand-file-name "sample.txt" dir))
+         buffer)
+    (unwind-protect
+        (with-current-buffer (setq buffer (find-file-noselect file))
+          (setq-local require-final-newline nil)
+          (insert "int x = ")
+          (my/auto-save-visited-save-some-buffers :no-prompt (lambda () t))
+          (should-not (buffer-modified-p))
+          (should (equal (buffer-string) "int x = "))
+          (should (= (point) (point-max)))
+          (insert "\nint y = ")
+          (save-buffer)
+          (should (equal (buffer-string) "int x =\nint y =")))
+      (when (buffer-live-p buffer)
+        (set-buffer-modified-p nil)
+        (kill-buffer buffer))
+      (delete-directory dir t))))
+
+(ert-deftest my-test-audit-auto-save-visited-timer-wrapped ()
+  :tags '(:audit)
+  ;; auto-save-visited-mode を有効化するとタイマーの関数がラッパーへ差し替わり、引数は維持される。
+  (let ((was auto-save-visited-mode))
+    (unwind-protect
+        (progn
+          (auto-save-visited-mode 1)
+          (should (timerp auto-save--timer))
+          (should (eq (timer--function auto-save--timer)
+                      #'my/auto-save-visited-save-some-buffers))
+          (should (eq (car (timer--args auto-save--timer)) :no-prompt))
+          (should (functionp (cadr (timer--args auto-save--timer)))))
+      (auto-save-visited-mode (if was 1 -1)))))
+
 (provide 'my-test-audit)
 ;;; my-test-audit.el ends here
