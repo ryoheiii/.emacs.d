@@ -25,6 +25,9 @@
    ("M-s l"   . my/consult-line-multi)
    ("C-."     . consult-goto-line)
    ("C-x g"   . my/consult-ripgrep-or-grep)
+   ;; 見出し (C/C++ ts モードでは関数定義) へジャンプ。M-s o は Emacs 標準の occur
+   ;; なので奪わず、consult 上流の推奨 M-g o を使う
+   ("M-g o"   . consult-outline)
    )
   :init
   ;; consult は遅延ロードのため、起動直後から xref 検索へ反映されるよう

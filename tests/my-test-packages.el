@@ -53,7 +53,10 @@
     my/irony-maybe-enable       ; 非 LSP 環境の補完フォールバック
     hs-minor-mode               ; コード折りたたみ
     smart-newline-mode          ; 改行時のインデント調整
-    my/c-ts-mode-setup)         ; C-c c = compile / indent-tabs-mode nil
+    my/c-ts-mode-setup          ; C-c c = compile / indent-tabs-mode nil
+    ;; outline は cc-mode 側に無い意図的な例外 (treesit 連動の見出しが取れる ts モード限定)。
+    ;; cc-mode 側に無いことは my-test-cpp-config-outline-hook-ts-only が固定する
+    outline-minor-mode)         ; 関数単位の折りたたみ (<f9>) と consult-outline
   "c-ts-mode-hook / c++-ts-mode-hook に登録されていなければならない関数。")
 
 (ert-deftest my-test-packages-ts-mode-hook-parity ()

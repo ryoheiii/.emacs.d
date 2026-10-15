@@ -1449,5 +1449,78 @@ CODE が nil ならタイムアウトと同じく code 無しにする。"
                           (cdr entry))))
   (should eglot-extend-to-xref))
 
+;;;;; [Group] C++ Config - 読解補助 (outline) ;;;;;
+;; outline-minor-mode は treesit 連動の見出しが取れる ts モードだけで有効化する。
+;; cc-mode の既定 (全行が見出し) では実用にならないため、4 モード parity の意図的な例外。
+(ert-deftest my-test-cpp-config-outline-hook-ts-only ()
+  :tags '(:cpp-config)
+  (dolist (hook '(c-ts-mode-hook c++-ts-mode-hook))
+    (should (memq 'outline-minor-mode (default-value hook))))
+  (dolist (hook '(c-mode-hook c++-mode-hook))
+    (should-not (and (boundp hook) (memq 'outline-minor-mode (default-value hook))))))
+
+(ert-deftest my-test-cpp-config-outline-dwim-fallback ()
+  "outline が無効なバッファでは <f9> が従来どおり hs-toggle-hiding を呼ぶ."
+  :tags '(:cpp-config)
+  (let (called)
+    (cl-letf (((symbol-function 'hs-toggle-hiding)
+               (lambda (&rest _) (interactive) (setq called t))))
+      (with-temp-buffer
+        (fundamental-mode)
+        (should-not (bound-and-true-p outline-minor-mode))
+        (call-interactively #'my/outline-cycle-dwim)
+        (should called)))))
+
+(ert-deftest my-test-cpp-config-outline-dwim-ts ()
+  "ts モードでは関数定義が見出しになり、<f9> が本体の中からでも関数を折りたたむ."
+  :tags '(:cpp-config)
+  (skip-unless (my/treesit-cc-grammar-ready-p 'c))
+  (let ((file (make-temp-file "my-test-outline-" nil ".c"))
+        buffer)
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert "#include <stdio.h>\n\nint one(void) {\n    return 1;\n}\n\n"
+                    "int two(void) {\n    return 2;\n}\n"))
+          (setq buffer (find-file-noselect file))
+          (with-current-buffer buffer
+            (should (eq major-mode 'c-ts-mode))
+            (should outline-minor-mode)
+            (should (eq outline-search-function #'treesit-outline-search))
+            ;; 既定の述語 (function_declarator) では定義行が見出しと認識されない
+            ;; (Emacs 30.2)。関数定義ノード全体に一致する述語で looking-at 判定が通ること
+            (should (eq treesit-outline-predicate #'my/c-ts-outline-predicate))
+            (goto-char (point-min))
+            (forward-line 2)
+            (should (outline-on-heading-p))
+            (goto-char (point-min))
+            (should-not (outline-on-heading-p))
+            (let ((body-1 (progn (goto-char (point-min))
+                                 (search-forward "return 1") (match-beginning 0)))
+                  (body-2 (progn (goto-char (point-min))
+                                 (search-forward "return 2") (match-beginning 0))))
+              ;; 本体の中から: 見出し (定義行) へ移動して折りたたむ
+              (goto-char body-1)
+              (call-interactively #'my/outline-cycle-dwim)
+              (should (= (line-number-at-pos) 3))
+              (should (invisible-p body-1))
+              (should-not (invisible-p body-2))
+              ;; もう一度で展開
+              (call-interactively #'my/outline-cycle-dwim)
+              (should-not (invisible-p body-1))
+              ;; C-u でバッファ全体
+              (let ((current-prefix-arg '(4)))
+                (call-interactively #'my/outline-cycle-dwim))
+              (should (invisible-p body-1))
+              (should (invisible-p body-2))
+              ;; 見出しより前 (#include 行) では失敗する
+              (goto-char (point-min))
+              (should-error (call-interactively #'my/outline-cycle-dwim)
+                            :type 'user-error))))
+      (when (buffer-live-p buffer)
+        (set-buffer-modified-p nil)
+        (kill-buffer buffer))
+      (delete-file file))))
+
 (provide 'my-test-cpp-config)
 ;;; my-test-cpp-config.el ends here

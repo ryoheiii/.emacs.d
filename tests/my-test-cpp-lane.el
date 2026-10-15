@@ -9,7 +9,8 @@
     my-test-cpp-config-c-ts-error-indent
     my-test-cpp-config-c-ts-error-indent-scope
     my-test-cpp-config-c-ts-error-context-preserves-point
-    my-test-cpp-config-c-ts-electric-typing))
+    my-test-cpp-config-c-ts-electric-typing
+    my-test-cpp-config-outline-dwim-ts))
 (defconst my-test-cpp-lane--cc-tests
   '(my-test-cpp-config-google-style my-test-cpp-config-treesit-fallback))
 (defun my-test-cpp-lane-run ()

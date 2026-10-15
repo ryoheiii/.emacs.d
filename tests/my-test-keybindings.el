@@ -35,7 +35,8 @@
     my/lsp-find-callees
     my/lsp-find-type-hierarchy
     my/lsp-find-other-file
-    my/lsp-find-workspace-symbol)
+    my/lsp-find-workspace-symbol
+    my/outline-cycle-dwim)
   "定義済みでなければならないタグ操作コマンド。")
 
 ;; C-t 配下へ追加した読解補助のキー。固定表 (my-test-keybindings--bindings) の
@@ -69,6 +70,24 @@
   :tags '(:keybinding)
   (dolist (command my-test-keybindings--commands)
     (should (fboundp command))))
+
+;;;;; [Group] Keybinding - 折りたたみ・見出し ;;;;;
+;; <f9> は outline が有効な C/C++ ts モードでは関数単位の折りたたみ、それ以外では
+;; 従来の hs-toggle-hiding。既存の <f5> / C-\ は変更しない。
+(defconst my-test-keybindings--folding-bindings
+  '(([f9]    . my/outline-cycle-dwim)
+    ("M-g o" . consult-outline)
+    ([f5]    . hs-toggle-hiding)
+    ("C-\\"  . hs-toggle-hiding))
+  "固定する折りたたみ・見出し移動のグローバルキーバインド。")
+
+(ert-deftest my-test-keybindings-folding-bindings ()
+  :tags '(:keybinding)
+  (dolist (binding my-test-keybindings--folding-bindings)
+    (let ((key (if (stringp (car binding)) (kbd (car binding)) (car binding))))
+      (should (eq (lookup-key global-map key) (cdr binding)))))
+  ;; M-s o は Emacs 標準の occur のまま (consult-outline で奪わない)
+  (should (eq (lookup-key global-map (kbd "M-s o")) 'occur)))
 
 ;;;;; [Group] Keybinding - シンボル操作 ;;;;;
 ;; highlight-symbol 廃止後も symbol-overlay でハイライトと置換が揃っていること
