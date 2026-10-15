@@ -130,14 +130,20 @@
   (eglot-events-buffer-config '(:size 0 :format full))
   (eglot-ignored-server-capabilities '(:inlayHintProvider :documentHighlightProvider))
   (eglot-stay-out-of '(flymake))       ; 使用感維持。診断が欲しくなったらここから外す
+  ;; xref で飛んだプロジェクト外のファイル (/usr/include など) も同じサーバーの管理下に
+  ;; 入れ、移動先でも C-t の LSP 経路を使えるようにする。別プロジェクトのファイルへ
+  ;; 飛んだときは新しいサーバーを立てず元のサーバーを使う
+  (eglot-extend-to-xref t)
   (eldoc-echo-area-use-multiline-p nil)
   :config
   ;; clangd 起動引数 (Doom :lang cc 準拠)。--header-insertion=never は補完確定時の
-  ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用
+  ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用。
+  ;; --limit-references=0 は参照検索 (C-t u / C-t c の LSP 経路) の既定上限 1000 件を外す。
+  ;; --limit-results はコード補完の候補数上限 (100) も兼ねるため変えない
   (add-to-list 'eglot-server-programs
                '((c-mode c-ts-mode c++-mode c++-ts-mode)
                  . ("clangd" "--background-index" "--header-insertion=never"
-                    "--header-insertion-decorators=0")))
+                    "--header-insertion-decorators=0" "--limit-references=0")))
   ;; eglot 管理バッファでは irony を止める (CAPF 競合防止)。
   ;; eglot-ensure は post-command-hook で遅延接続するため、モードフックでの判定は不可
   (defun my/eglot-cc-suppress-irony ()

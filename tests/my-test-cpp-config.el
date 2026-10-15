@@ -1182,5 +1182,21 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
           (should (equal (my/gtags--candidates "-P") '("sample.c"))))
       (delete-directory root t))))
 
+;;;;; [Group] C++ Config - clangd 起動引数 ;;;;;
+(require 'eglot)
+
+(ert-deftest my-test-cpp-config-clangd-args ()
+  "clangd の起動引数と xref 追従の設定を固定する."
+  :tags '(:cpp-config)
+  (let ((entry (assoc '(c-mode c-ts-mode c++-mode c++-ts-mode) eglot-server-programs)))
+    (should entry)
+    (should (equal (cadr entry) "clangd"))
+    (should (member "--header-insertion=never" (cdr entry)))
+    (should (member "--limit-references=0" (cdr entry)))
+    ;; --limit-results は補完候補数の上限も兼ねるため触らない
+    (should-not (seq-some (lambda (arg) (string-prefix-p "--limit-results" arg))
+                          (cdr entry))))
+  (should eglot-extend-to-xref))
+
 (provide 'my-test-cpp-config)
 ;;; my-test-cpp-config.el ends here
