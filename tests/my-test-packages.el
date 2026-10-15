@@ -205,5 +205,20 @@
   (dolist (hook '(neotree-mode-hook imenu-list-minor-mode-hook minimap-mode-hook))
     (should (memq 'mode-line-invisible-mode (default-value hook)))))
 
+;; eglot 管理下の C/C++ バッファで irony の CAPF を外す関数は :hook で登録する。
+;; 登録が外れると eglot と irony の補完が競合するが、起動検査では気づけないため固定する
+(ert-deftest my-test-packages-eglot-suppress-irony-hook ()
+  :tags '(:invariant)
+  (should (fboundp 'my/eglot-cc-suppress-irony))
+  (should (memq 'my/eglot-cc-suppress-irony (default-value 'eglot-managed-mode-hook))))
+
+;; recentf の自動保存で "Wrote ..." を出さないため、31.1 の組み込み option を使う
+(ert-deftest my-test-packages-recentf-quiet-save ()
+  :tags '(:invariant)
+  ;; :custom の値はテーマ値として記録され、defcustom のロード時に適用される
+  (require 'recentf)
+  (should (boundp 'recentf-show-messages))
+  (should-not (default-value 'recentf-show-messages)))
+
 (provide 'my-test-packages)
 ;;; my-test-packages.el ends here

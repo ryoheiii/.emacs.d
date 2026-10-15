@@ -178,5 +178,31 @@
           (should (= (1+ (tab-bar--current-tab-index)) n))))
     (tab-bar-close-other-tabs)))
 
+;;;;; [Group] Keybinding - パッケージ固有キーマップ ;;;;;
+;; :bind :map で宣言したキーは、パッケージのロード後に eval-after-load 経由で入る。
+;; 宣言の移し替えで束縛が消えても起動検査では気づけないため、ロード後の状態を固定する。
+(defconst my-test-keybindings--package-map-bindings
+  '((vundo vundo-mode-map ("C-f" . vundo-forward) ("C-b" . vundo-backward)
+           ("C-n" . vundo-next) ("C-p" . vundo-previous))
+    (magit magit-status-mode-map ("q" . mu-magit-kill-buffers))
+    (markdown-mode markdown-mode-map ("C-c TAB" . my-markdown-insert-tab)))
+  "(FEATURE KEYMAP (KEY . COMMAND)...) の形で固定するパッケージ固有の束縛。")
+
+(ert-deftest my-test-keybindings-package-map-bindings ()
+  :tags '(:keybinding)
+  (dolist (entry my-test-keybindings--package-map-bindings)
+    (require (car entry))
+    (let ((map (symbol-value (nth 1 entry))))
+      (dolist (binding (nthcdr 2 entry))
+        (should (eq (keymap-lookup map (car binding)) (cdr binding)))))))
+
+;; gfm-mode は markdown-mode-map を親に持つため、C-c TAB の上書きが GFM 側でも効くこと
+(ert-deftest my-test-keybindings-markdown-tab-in-gfm ()
+  :tags '(:keybinding)
+  (require 'markdown-mode)
+  (with-temp-buffer
+    (gfm-mode)
+    (should (eq (keymap-lookup nil "C-c TAB") 'my-markdown-insert-tab))))
+
 (provide 'my-test-keybindings)
 ;;; my-test-keybindings.el ends here
