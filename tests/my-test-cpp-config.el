@@ -1195,6 +1195,7 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
 応答が関数なら呼び出した結果を返す (エラーを signal させる用途)。RESPONSES は
 BODY と同じ環境で評価されるため root / file / uri を参照できる。
 BODY では requests (要求の (method params timeout) を新しい順に並べたリスト)、
+cancels (各要求の :cancel-on-quit を requests と同じ順に並べたリスト)、
 shown (表示された xref)、ref-calls (`my/gtags-find-references' への委譲引数) も
 参照できる。スタブするのは jsonrpc の要求層 (`jsonrpc-request') で、
 my-lsp-nav.el が eglot の内部要求ラッパーを経由しないことも固定する。"
@@ -1202,7 +1203,7 @@ my-lsp-nav.el が eglot の内部要求ラッパーを経由しないことも�
   `(let* ((root (make-temp-file "my-test-lsp-nav-" t))
           (file (expand-file-name "a.cpp" root))
           (uri (concat "file://" file))
-          requests shown ref-calls)
+          requests cancels shown ref-calls)
      (ignore root file uri)
      (unwind-protect
          (progn
@@ -1220,6 +1221,7 @@ my-lsp-nav.el が eglot の内部要求ラッパーを経由しないことも�
                      ((symbol-function 'jsonrpc-request)
                       (lambda (_connection method params &rest rest)
                         (push (list method params (plist-get rest :timeout)) requests)
+                        (push (plist-get rest :cancel-on-quit) cancels)
                         (let ((response (cdr (assq method ,responses))))
                           (if (functionp response) (funcall response) response))))
                      ((symbol-function 'xref-show-xrefs)
@@ -1331,7 +1333,8 @@ CODE が nil ならタイムアウトと同じく code 無しにする。"
 (ert-deftest my-test-cpp-config-lsp-request-timeout-explicit ()
   "すべての要求に有限のタイムアウトを明示する.
 eglot の内部ラッパーは :timeout nil を jsonrpc-request へ転送し、既定の 10 秒を
-無効化して応答しないサーバーを待ち続ける (Emacs 30.2 / 31.1 で確認)。"
+無効化して応答しないサーバーを待ち続ける (Emacs 30.2 / 31.1 で確認)。
+併せて C-g 用の :cancel-on-quit が $/cancelRequest を送ることも固定する。"
   :tags '(:cpp-config)
   (my-test-cpp-config--with-lsp-stubs t
       `((:textDocument/prepareCallHierarchy
@@ -1349,7 +1352,23 @@ eglot の内部ラッパーは :timeout nil を jsonrpc-request へ転送し、�
     (dolist (request requests)
       (should (numberp (nth 2 request)))
       (should (> (nth 2 request) 0))
-      (should (eql (nth 2 request) jsonrpc-default-request-timeout)))))
+      (should (eql (nth 2 request) jsonrpc-default-request-timeout)))
+    ;; C-g の中断時は eglot--request (Emacs 31) と同じく $/cancelRequest を送る
+    (should (= (length cancels) (length requests)))
+    (let (notified)
+      (cl-letf (((symbol-function 'jsonrpc-notify)
+                 (lambda (connection method params)
+                   (push (list connection method params) notified))))
+        (dolist (cancel cancels)
+          (should (functionp cancel))
+          (funcall cancel 7)))
+      (should (equal notified (make-list (length cancels)
+                                         '(server $/cancelRequest (:id 7))))))
+    ;; eglot-advertise-cancellation が nil なら取消通知を渡さない
+    (setq cancels nil)
+    (let ((eglot-advertise-cancellation nil))
+      (my/lsp-find-workspace-symbol "callee"))
+    (should (equal cancels '(nil)))))
 
 (ert-deftest my-test-cpp-config-lsp-timeout-real-jsonrpc ()
   "応答しないサーバーに対して jsonrpc の実タイムアウトが user-error になる.
