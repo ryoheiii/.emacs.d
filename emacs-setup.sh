@@ -561,6 +561,8 @@ setup_clangd() (
     fi
     target="$CLANGD_INSTALL_BASE/clangd_$stable"
     # 本体・入口の確定前に失敗した場合は、元のリンク値と配置を復元する。
+    # EXIT trap から間接的に呼ぶため、直接呼び出しを探す警告だけを抑止する。
+    # shellcheck disable=SC2329
     rollback_clangd_setup() {
         local rc=$?
         trap - EXIT
