@@ -33,7 +33,7 @@
 | `M-f` | `forward-symbol` | シンボル単位で前進 |
 | `C-\` / `<f5>` | `hs-toggle-hiding` | ブロックの折りたたみ（C/C++・Emacs Lisp・Lisp） |
 | `<f9>` | `my/outline-cycle-dwim` | カーソル位置の見出しの折りたたみを切り替える。C/C++ の ts モード（`c-ts-mode` / `c++-ts-mode`）では関数単位、Markdown では見出し単位。outline が無効なバッファでは `hs-toggle-hiding` |
-| `C-u <f9>` | `my/outline-cycle-dwim` | バッファ全体の折りたたみを切り替える |
+| `C-u <f9>` | `my/outline-cycle-dwim` | outline が有効なバッファでは、バッファ全体の折りたたみを切り替える（無効なら `hs-toggle-hiding`） |
 | `<f7>` | `toggle-truncate-lines` | 行の折り返しの切り替え |
 | `C-x u` | `vundo` | undo をツリー表示（`C-f` / `C-b` で前後、`C-n` / `C-p` で分岐） |
 

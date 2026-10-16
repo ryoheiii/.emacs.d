@@ -62,11 +62,14 @@ emacs -nw                              # 初回は straight がパッケージ�
 | Nerd Font | `M-x nerd-icons-install-fonts` | GUI のアイコン表示だけに影響。端末では使わない |
 
 `--setup-node` は `~/.local/downloads/node/` に公式の `node-v<版>-linux-<x64|arm64|armv7l>.tar.xz` があればそれを使い
-（`python3` 3.9 以降が必要）、無ければ fnm 経由で取得する。戻すには `--uninstall-node`（このスクリプトが入れたものだけを消す）。
+（`python3` 3.9 以降が必要）、無ければ fnm 経由で取得する。`--uninstall-node` はオフライン導入分と、このスクリプトが導入した fnm を
+配下のバージョンごと削除する。既存の fnm で入れた Node.js は削除せず、手順を案内する。
 
 ### GitHub へ到達できない環境
 
 初回起動時のパッケージ取得は GitHub を必要とする。到達できない環境では、到達できる環境で作ったアーカイブから復元する。
+アーカイブに入るのは作成元で実際に読み込まれたパッケージだけなので、復元先と同じ条件（端末か GUI か、`DISPLAY` と `xclip` の有無、
+Node.js の有無）で一度起動してから作る。足りないパッケージがあると、復元時のリビルドが取得を試みて失敗する。
 clangd、tree-sitter 文法、Node.js、Copilot language server はアーカイブに含まれず、無ければ該当する機能が無効になるだけで設定は動く。
 
 ```sh
@@ -76,8 +79,8 @@ clangd、tree-sitter 文法、Node.js、Copilot language server はアーカイ�
 # 到達できない環境で
 #   1. package.tar.gz を ~/.emacs.d/ に置く
 #   2. Emacs 31.1 以上を PATH に用意する（--extract-package は emacs コマンドを使う）
-#   3. 作成元で Copilot を使っておらず復元先に Node.js があるなら、custom/custom.el に (setq my/copilot-enabled nil) を書く
-#      （復元時のリビルドが、アーカイブに無い Copilot のパッケージを取得しようとして失敗するため）
+#   3. Copilot のパッケージが入っていないアーカイブを Node.js のある環境へ展開するなら、
+#      custom/custom.el に (setq my/copilot-enabled nil) を書く（不足分の取得でリビルドが失敗するため）
 ./emacs-setup.sh --extract-package     # 展開して全パッケージをリビルドする
 emacs -nw
 ```
@@ -190,7 +193,7 @@ cc-mode に戻す方法は [C/C++ 開発環境](docs/cpp.md#文法の導入と-c
 ./emacs-setup.sh --clean             # var/ 配下と、このスクリプトが入れた clangd の旧版を削除（パッケージは残す）
 ./emacs-setup.sh --clean-all         # 上記に加えて loads/straight/（パッケージ）と、このスクリプトが入れた clangd を全版削除
 ./emacs-setup.sh --uninstall-clangd  # このスクリプトが入れた clangd だけを削除
-./emacs-setup.sh --uninstall-node    # このスクリプトが入れた Node.js だけを削除
+./emacs-setup.sh --uninstall-node    # オフライン導入分と、このスクリプトが入れた fnm を丸ごと削除（既存の fnm 経由の Node.js は残す）
 ```
 
 `--clean` は次の復元できないデータも消す。バックアップ世代と自動保存、ミニバッファ履歴、カーソル位置、最近使ったファイル、
