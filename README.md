@@ -59,6 +59,19 @@ Emacs のビルドに必要なライブラリに加えて、この設定が使�
 `hunspell` / `aspell` / `cmake` / `pandoc` / Ricty Diminished フォント）を
 まとめて導入する。
 
+clangd は [公式が案内する安定版 ZIP](https://clangd.llvm.org/installation#standalone-zip-releases)
+を使う。GitHub の最新正式リリースを実行時に取得し、clangd 20 以降の最新安定版を
+`~/.local/share/clangd/clangd_<版>/` へ標準ヘッダごと配置する。
+`~/.local/bin/clangd` の symlink を切り替え、PATH 上の `clangd` の版も検査する。
+前述の `export PATH="$HOME/.local/bin:$PATH"` をシェル設定へ追加しておく。
+OS 標準パッケージは古い場合があり、LLVM 公式 APT は安定系列でも nightly ビルドを
+配るため、正式な安定版を保証できる公式 ZIP を採用する。
+この配布物は Linux x86_64 向けで、ほかのアーキテクチャではエラーで停止する。
+取得・SHA-256 検査・展開・実行検証が済むまで既存の版とリンクを保持する。
+`--setup` の再実行で最新安定版を確認して更新でき、同じ版は再利用する。
+新規導入した版には `.installed-by-emacs-setup` を付け、削除時に所有を判定する。
+既存の手動配置を再利用した場合は所有印を付けず、クリーンアップでも保持する。
+
 tree-sitter 有効ビルドの Emacs がすでにある環境では、C/C++ の tree-sitter 文法も
 併せて導入する。無ければスキップして案内を出すので、`--install` の後に
 `./emacs-setup.sh --setup-treesit` を実行する。
@@ -117,8 +130,9 @@ TLS など GUI に依存しない依存は `--gui no` でも導入される。
 | Migemo 辞書 | `--setup` の `cmigemo` に同梱。パスは `/usr/share/cmigemo/utf-8/migemo-dict` | ローマ字での日本語検索が無効になる |
 
 `clangd`（C/C++ の LSP）、`ripgrep`（`C-x g`）、Mozc（日本語入力）は
-`--setup` に含まれる。個別に入れる場合は
-`sudo apt install clangd ripgrep mozc-server emacs-mozc-bin` を実行する。
+`--setup` に含まれる。clangd は上記の公式安定版 ZIP から導入する。
+ほかのツールを個別に入れる場合は
+`sudo apt install ripgrep mozc-server emacs-mozc-bin` を実行する。
 
 #### GitHub Copilot を使う場合
 
@@ -365,9 +379,16 @@ M-x straight-pull-all         ; 全パッケージを更新
 ```sh
 ./emacs-setup.sh --clean       # var/ 配下の生成物とユーザー操作履歴、および
                                # 直下へ迷い込んだ eln-cache/ を削除
-                               # （symlink の場合は残す）
-./emacs-setup.sh --clean-all   # 上記に加えてパッケージも削除
+                               # （symlink の場合は残す）。所有する clangd の旧版も整理
+                               # （~/.local/bin/clangd が参照する版は残す）
+./emacs-setup.sh --clean-all   # 上記に加えてパッケージと、所有する clangd の全版・入口リンクを削除
+./emacs-setup.sh --uninstall-clangd  # clangd だけを削除（Emacs の履歴やパッケージは保持）
 ```
+
+clangd は所有印のある通常ディレクトリだけを削除する。手動配置・通常ファイルの入口・
+外部を指す入口リンク・導入先や版ディレクトリの symlink・無関係なファイルは保持する。
+リンク先の本体が欠けていても、所有する版への入口リンクは `--uninstall-clangd` と
+`--clean-all` で削除できる。APT で入れた clangd や Node.js は削除対象に含まれない。
 
 > **警告: `--clean` は復元できないデータを消す。**
 >
@@ -396,7 +417,7 @@ make test-startup  # 起動だけを素早く確認
 | パッケージが壊れた | `M-x straight-rebuild-all` の後に Emacs を再起動する（load-path の走査結果をキャッシュしているため、再ビルドで増えたファイルは再起動まで読めない）。直らなければ `./emacs-setup.sh --clean-all` で再構築する |
 | Emacs 外でパッケージを書き換えた後、古いビルドのままになる | `M-x straight-check-all`（[docs/packages.md](docs/packages.md) の変更検出の方式を参照） |
 | Copilot がつながらない | `M-x copilot-diagnose`。`node` が PATH にあるか、`M-x copilot-login` 済みかを確認する |
-| C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd` の導入を確認する（`clangd` は `--setup` で入る。個別なら `sudo apt install clangd`） |
+| C/C++ で補完が効かない | `compile_commands.json` の有無と `clangd --version` を確認する。`./emacs-setup.sh --setup` で公式 ZIP の最新安定版を導入する |
 | 定義ジャンプが見つからない | GTAGS が未作成なら C/C++ バッファで `M-x ggtags-create-tags`。作成済みなら `M-x update-gtags` で更新する |
 | `make lint` が失敗する | shellcheck を導入する（`sudo apt install shellcheck`） |
 

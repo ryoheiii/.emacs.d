@@ -241,7 +241,7 @@ imenu のパスを表示する。他モードの既定の見た目（header-line
 | 段 | 必要なもの | 導入方法 |
 |---|---|---|
 | tree-sitter モード | `git`、C コンパイラ | `./emacs-setup.sh --setup-treesit`（`M-x my/treesit-install-c-grammars` でも可） |
-| eglot | `clangd`、CDB か `.clangd` | `./emacs-setup.sh --setup`（`clangd` パッケージ。`clang` とは別パッケージ）。CDB はビルド系で生成する |
+| eglot | `clangd`、CDB か `.clangd` | `./emacs-setup.sh --setup`（公式 Linux x86_64 ZIP の 20 以降の最新安定版を導入し、`~/.local/bin/clangd` にリンク）。CDB はビルド系で生成する |
 | irony | `cmake`、libclang | `./emacs-setup.sh --setup` の後、`M-x irony-install-server` |
 | ggtags | GNU Global | `./emacs-setup.sh --setup`（`global` パッケージ） |
 

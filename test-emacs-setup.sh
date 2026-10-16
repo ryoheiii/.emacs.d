@@ -760,6 +760,72 @@ echo "=== --setup の依存パッケージ ==="
 make_setup_stubs() {
     local dir="$1" gccjit_available="$2"
     make_stub_bin "$dir" sudo apt-get
+    # ZIP の取得だけをスタブ化し、展開・ハッシュ・配置は実処理を通す。
+    if ! python3 - "$dir" <<'CLANGDFIXTURE'
+import hashlib
+import json
+import pathlib
+import sys
+import zipfile
+root = pathlib.Path(sys.argv[1])
+for version in ("23.1.0", "24.2.5"):
+    archive = root / f"clangd-linux-{version}.zip"
+    with zipfile.ZipFile(archive, "w") as z:
+        info = zipfile.ZipInfo(f"clangd_{version}/bin/clangd")
+        info.external_attr = 0o100755 << 16
+        z.writestr(info, '#!/bin/bash\n'
+                   '[ "${STUB_CLANGD_CASE:-}" != binary-failure ] || exit 1\n'
+                   f'printf "clangd version %s\\n" "${{STUB_CLANGD_VERSION:-{version}}}"\n')
+        z.writestr(f"clangd_{version}/lib/clang/include/stddef.h", "/* fixture */\n")
+    release = {"tag_name": version, "prerelease": False, "draft": False,
+               "assets": [{"browser_download_url":
+                           f"https://github.com/clangd/clangd/releases/download/{version}/{archive.name}",
+                           "digest": "sha256:" + hashlib.sha256(archive.read_bytes()).hexdigest()}]}
+    (root / f"release-{version}.json").write_text(json.dumps(release))
+CLANGDFIXTURE
+    then
+        harness_fatal "clangd の配布物 fixture を作成できません。"
+    fi
+    cat > "$dir/curl" <<'CURLSTUB'
+#!/bin/bash
+stub_dir=$(dirname "$0")
+url= outfile=
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        https://*) url="$1" ;;
+        -o) shift; outfile="$1" ;;
+    esac
+    shift
+done
+printf 'curl %s\n' "$url" >> "$stub_dir/calls.log"
+case "$url" in
+    https://api.github.com/repos/clangd/clangd/releases/latest)
+        [ "${STUB_CLANGD_CASE:-}" != api-failure ] || exit 22
+        if [ -n "${STUB_CLANGD_JSON:-}" ]; then
+            printf '%s\n' "$STUB_CLANGD_JSON"
+        else
+            cat "$stub_dir/release-${STUB_CLANGD_RELEASE:-23.1.0}.json"
+        fi
+        ;;
+    https://github.com/clangd/clangd/releases/download/*/clangd-linux-*.zip)
+        if [ "${STUB_CLANGD_CASE:-}" = download-failure ]; then
+            printf partial > "$outfile"
+            exit 22
+        fi
+        if [ "${STUB_CLANGD_CASE:-}" = corrupt-download ]; then
+            printf corrupt > "$outfile"
+            exit 0
+        fi
+        cp "$stub_dir/${url##*/}" "$outfile"
+        ;;
+    *) exit 99 ;;
+esac
+CURLSTUB
+    cat > "$dir/clangd" <<'CLANGDSTUB'
+#!/bin/bash
+printf 'clangd version %s\n' "${STUB_ACTIVE_CLANGD_VERSION:-23.1.0}"
+CLANGDSTUB
+    chmod +x "$dir/curl" "$dir/clangd"
     cat > "$dir/gcc" <<'GCCSTUB'
 #!/bin/bash
 printf '13\n'
@@ -796,7 +862,7 @@ APTCACHE
     # --setup の末尾は tree-sitter 文法の導入を試みる。スタブが無いと実 Emacs が
     # 起動して実際に文法をビルドしてしまうため、必ずスタブを置く。
     make_stub_bin "$dir" emacs
-    assert_stubs_executable "$dir" sudo apt-get gcc apt-cache emacs
+    assert_stubs_executable "$dir" sudo apt-get gcc apt-cache emacs curl clangd
 }
 
 # libgccjit あり: 正しい cairo パッケージが渡り、誤記のものは渡らない
@@ -817,7 +883,7 @@ else
 fi
 
 # この設定が前提としている外部コマンドが --setup で入る (issue #11)。
-# clangd は clang とは別パッケージ、mozc-server は straight が入れる mozc.el の
+# clangd は公式の安定版 ZIP、mozc-server は straight が入れる mozc.el の
 # helper、ripgrep は consult と xref の検索経路であり、いずれも欠けると縮退する。
 setup_problems=""
 for pkg in clangd mozc-server emacs-mozc-bin ripgrep; do
@@ -827,6 +893,201 @@ if [ -z "$setup_problems" ]; then
     record_pass "setup installs the external tools this config depends on"
 else
     record_fail "setup installs the external tools this config depends on —$setup_problems"
+fi
+
+# 最新安定版の公式配布物と同梱の標準ヘッダを配置し、実行入口も作る。
+if [ -L "$HOME/.local/bin/clangd" ] \
+    && [ "$("$HOME/.local/bin/clangd" --version)" = 'clangd version 23.1.0' ] \
+    && [ -f "$HOME/.local/share/clangd/clangd_23.1.0/lib/clang/include/stddef.h" ] \
+    && ! grep -Eq '^sudo apt-get install .* clangd( |$)' "$SETUP_OK_STUB/calls.log"; then
+    record_pass "setup installs the official stable clangd archive and resource headers"
+else
+    record_fail "setup installs the official stable clangd archive and resource headers"
+fi
+
+# 同版の再実行では ZIP を再取得せず、検証済みの配置を再利用する。
+if PATH="$SETUP_OK_STUB:$PATH" STUB_CLANGD_CASE=download-failure \
+    "$SCRIPT" --setup --gui no >/dev/null 2>&1; then
+    record_pass "setup reuses an installed stable clangd"
+else
+    record_fail "setup reuses an installed stable clangd"
+fi
+
+# リリース番号を固定せず、次のメジャー版とパッチ版にも追従する。
+SETUP_NEXT_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+make_setup_stubs "$SETUP_NEXT_STUB" yes
+if HOME="$SETUP_NEXT_STUB/home" PATH="$SETUP_NEXT_STUB:$PATH" \
+    STUB_CLANGD_RELEASE=24.2.5 STUB_ACTIVE_CLANGD_VERSION=24.2.5 \
+    "$SCRIPT" --setup --gui no >/dev/null 2>&1 \
+    && [ "$("$SETUP_NEXT_STUB/home/.local/bin/clangd" --version)" = 'clangd version 24.2.5' ]; then
+    record_pass "setup follows future stable clangd releases"
+else
+    record_fail "setup follows future stable clangd releases"
+fi
+
+# 失敗時に既存の clangd を保持し、成功表示や旧版へのフォールバックへ進まない。
+assert_clangd_setup_failure() {
+    local label="$1" expected="$2"; shift 2
+    local dir out rc leftovers
+    dir="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+    make_setup_stubs "$dir" yes
+    mkdir -p "$dir/home/.local/bin" || harness_fatal "一時領域を作成できません。"
+    ln -s /old/clangd "$dir/home/.local/bin/clangd" || harness_fatal "旧版リンクを作成できません。"
+    out=$(env HOME="$dir/home" PATH="$dir:$PATH" "$@" "$SCRIPT" --setup --gui no 2>&1)
+    rc=$?
+    if [ "$rc" -ne 0 ] && [[ "$out" = *"$expected"* ]] \
+        && [[ "$out" != *setup-env\ complete* ]]; then
+        record_pass "$label"
+    else
+        record_fail "$label (exit=$rc)"
+    fi
+    if [[ "$label" != *PATH* ]] && [ "$(readlink "$dir/home/.local/bin/clangd")" != /old/clangd ]; then
+        record_fail "$label replaced the previous clangd"
+    fi
+    if [ -d "$dir/home/.local/share/clangd" ]; then
+        leftovers=$(find "$dir/home/.local/share/clangd" -name '.install-*' -print) \
+            || harness_fatal "一時領域を走査できません。"
+        if [ -n "$leftovers" ]; then record_fail "$label left temporary installer files"; fi
+    fi
+}
+assert_clangd_setup_failure "clangd API failure" '安定版' STUB_CLANGD_CASE=api-failure
+for clangd_json in \
+    'not-json' \
+    '{"tag_name":"23.1.0","prerelease":true,"draft":false}' \
+    '{"tag_name":"23.1.0","prerelease":false,"draft":true}' \
+    '{"tag_name":"23.1.0-rc1","prerelease":false,"draft":false}' \
+    '{"tag_name":"19.1.7","prerelease":false,"draft":false}'; do
+    assert_clangd_setup_failure "clangd rejects invalid release: $clangd_json" \
+        '安定版' "STUB_CLANGD_JSON=$clangd_json"
+done
+assert_clangd_setup_failure "clangd download failure" '取得' STUB_CLANGD_CASE=download-failure
+assert_clangd_setup_failure "clangd checksum mismatch" 'SHA-256' STUB_CLANGD_CASE=corrupt-download
+assert_clangd_setup_failure "clangd binary failure" 'clangd' STUB_CLANGD_CASE=binary-failure
+assert_clangd_setup_failure "clangd rejects an older patch" 'clangd' STUB_CLANGD_VERSION=23.0.9
+assert_clangd_setup_failure "clangd rejects a prerelease binary" 'clangd' STUB_CLANGD_VERSION=23.1.0-rc1
+assert_clangd_setup_failure "clangd detects an old command shadowing PATH" 'PATH' STUB_ACTIVE_CLANGD_VERSION=18.1.3
+
+echo ""
+echo "=== clangd のクリーンアップ ==="
+
+# 本体とリンクの所有関係を、実ユーザーとは別の HOME で検査する。
+assert_clangd_cleanup() {
+    local action="$1" link_kind="$2" home base bin rc problems="" active
+    home="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+    base="$home/.local/share/clangd"
+    bin="$home/.local/bin/clangd"
+    if ! mkdir -p "$home/.local/bin" "$home/foreign" \
+        "$base/clangd_21.1.0/bin" "$base/clangd_23.1.0/bin" \
+        "$base/clangd_20.1.0" "$base/clangd_22.1.0"; then
+        harness_fatal "clangd の削除テスト用ディレクトリを作成できません。"
+    fi
+    if ! touch "$base/clangd_21.1.0/.installed-by-emacs-setup" \
+        "$base/clangd_23.1.0/.installed-by-emacs-setup" "$base/notes" "$home/foreign/keep" \
+        || ! ln -s "$home/foreign" "$base/clangd_24.1.0" \
+        || ! ln -s "$home/foreign/keep" "$base/clangd_22.1.0/.installed-by-emacs-setup"; then
+        harness_fatal "clangd の削除テスト用ファイルを作成できません。"
+    fi
+    active="$base/clangd_23.1.0/bin/clangd"
+    case "$link_kind" in
+        owned) touch "$active" || harness_fatal "clangd の本体を作成できません。" ;;
+        dangling) ;;
+        relative) active=../share/clangd/clangd_23.1.0/bin/clangd ;;
+        foreign) active="$home/foreign/clangd" ;;
+        regular) touch "$bin" || harness_fatal "clangd の入口を作成できません。" ;;
+    esac
+    if [ "$link_kind" != regular ]; then
+        ln -s "$active" "$bin" || harness_fatal "clangd のリンクを作成できません。"
+    fi
+    HOME="$home" "$SCRIPT" "$action" >/dev/null 2>&1
+    rc=$?
+    [ "$rc" -eq 0 ] || problems="$problems 終了=$rc"
+    [ ! -e "$base/clangd_21.1.0" ] || problems="$problems 旧版が残った"
+    if [ "$action" = --clean ] && [[ "$link_kind" = owned || "$link_kind" = dangling || "$link_kind" = relative ]]; then
+        [ -d "$base/clangd_23.1.0" ] || problems="$problems 使用中の版を削除した"
+        [ -L "$bin" ] || problems="$problems 使用中のリンクを削除した"
+    else
+        [ ! -e "$base/clangd_23.1.0" ] || problems="$problems 所有版が残った"
+        case "$link_kind" in
+            foreign) [ "$(readlink "$bin")" = "$active" ] || problems="$problems 外部リンクを変更した" ;;
+            regular) [ -f "$bin" ] && [ ! -L "$bin" ] || problems="$problems 手動の入口を削除した" ;;
+            *) [ ! -L "$bin" ] || problems="$problems 所有リンクが残った" ;;
+        esac
+    fi
+    [ -d "$base/clangd_20.1.0" ] || problems="$problems 手動配置の版を削除した"
+    [ -L "$base/clangd_24.1.0" ] || problems="$problems 外部への版リンクを削除した"
+    [ -f "$home/foreign/keep" ] || problems="$problems 外部データを削除した"
+    [ -L "$base/clangd_22.1.0/.installed-by-emacs-setup" ] || problems="$problems マーカーのリンクを所有扱いした"
+    [ -f "$base/notes" ] || problems="$problems 無関係なファイルを削除した"
+    if [ -z "$problems" ]; then
+        record_pass "clangd cleanup $action ($link_kind)"
+    else
+        record_fail "clangd cleanup $action ($link_kind) —$problems"
+    fi
+}
+for cleanup_action in --clean --clean-all --uninstall-clangd; do
+    for cleanup_link in owned dangling relative foreign regular; do
+        assert_clangd_cleanup "$cleanup_action" "$cleanup_link"
+    done
+done
+
+CLANGD_SYMLINK_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+mkdir -p "$CLANGD_SYMLINK_HOME/.local/share" "$CLANGD_SYMLINK_HOME/foreign/clangd_23.1.0"
+touch "$CLANGD_SYMLINK_HOME/foreign/clangd_23.1.0/.installed-by-emacs-setup"
+ln -s "$CLANGD_SYMLINK_HOME/foreign" "$CLANGD_SYMLINK_HOME/.local/share/clangd"
+if HOME="$CLANGD_SYMLINK_HOME" "$SCRIPT" --uninstall-clangd >/dev/null 2>&1 \
+    && [ -f "$CLANGD_SYMLINK_HOME/foreign/clangd_23.1.0/.installed-by-emacs-setup" ] \
+    && [ -L "$CLANGD_SYMLINK_HOME/.local/share/clangd" ]; then
+    record_pass "clangd uninstall preserves a symlinked install base"
+else
+    record_fail "clangd uninstall preserves a symlinked install base"
+fi
+
+# 実際の setup が付けたマーカーも、専用 uninstall で回収できる。
+CLANGD_REMOVE_HOME="$SETUP_NEXT_STUB/home"
+mkdir -p "$CLANGD_REMOVE_HOME/.emacs.d/var/hist" "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight"
+touch "$CLANGD_REMOVE_HOME/.emacs.d/var/hist/keep" "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight/keep"
+if [ -f "$CLANGD_REMOVE_HOME/.local/share/clangd/clangd_24.2.5/.installed-by-emacs-setup" ] \
+    && HOME="$CLANGD_REMOVE_HOME" "$SCRIPT" --uninstall-clangd >/dev/null 2>&1 \
+    && HOME="$CLANGD_REMOVE_HOME" "$SCRIPT" --uninstall-clangd >/dev/null 2>&1 \
+    && [ ! -e "$CLANGD_REMOVE_HOME/.local/share/clangd" ] \
+    && [ ! -L "$CLANGD_REMOVE_HOME/.local/bin/clangd" ] \
+    && [ -f "$CLANGD_REMOVE_HOME/.emacs.d/var/hist/keep" ] \
+    && [ -f "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight/keep" ]; then
+    record_pass "clangd setup and repeated uninstall remove all owned artifacts"
+else
+    record_fail "clangd setup and repeated uninstall remove all owned artifacts"
+fi
+
+# 削除に失敗したら非ゼロで止まり、まだ存在する本体を残す。
+CLANGD_FAIL_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+CLANGD_FAIL_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+make_stub_bin "$CLANGD_FAIL_STUB" rm
+mkdir -p "$CLANGD_FAIL_HOME/.local/share/clangd/clangd_23.1.0/bin" "$CLANGD_FAIL_HOME/.local/bin"
+touch "$CLANGD_FAIL_HOME/.local/share/clangd/clangd_23.1.0/.installed-by-emacs-setup"
+ln -s "$CLANGD_FAIL_HOME/.local/share/clangd/clangd_23.1.0/bin/clangd" "$CLANGD_FAIL_HOME/.local/bin/clangd"
+if HOME="$CLANGD_FAIL_HOME" PATH="$CLANGD_FAIL_STUB:$PATH" STUB_EXIT_RM=1 \
+    "$SCRIPT" --uninstall-clangd >/dev/null 2>&1; then
+    record_fail "clangd uninstall reports removal failure"
+elif [ -L "$CLANGD_FAIL_HOME/.local/bin/clangd" ] \
+    && [ -d "$CLANGD_FAIL_HOME/.local/share/clangd/clangd_23.1.0" ]; then
+    record_pass "clangd uninstall reports removal failure"
+else
+    record_fail "clangd uninstall reports removal failure and preserves the executable"
+fi
+
+# 同版の手動配置を setup が再利用しても、所有印を後付けして削除してはならない。
+CLANGD_MANUAL_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+mkdir -p "$CLANGD_MANUAL_HOME/.local/share/clangd"
+cp -a "$HOME/.local/share/clangd/clangd_23.1.0" "$CLANGD_MANUAL_HOME/.local/share/clangd/"
+rm -f "$CLANGD_MANUAL_HOME/.local/share/clangd/clangd_23.1.0/.installed-by-emacs-setup"
+if HOME="$CLANGD_MANUAL_HOME" PATH="$SETUP_OK_STUB:$PATH" \
+    "$SCRIPT" --setup --gui no >/dev/null 2>&1 \
+    && HOME="$CLANGD_MANUAL_HOME" "$SCRIPT" --uninstall-clangd >/dev/null 2>&1 \
+    && [ -x "$CLANGD_MANUAL_HOME/.local/bin/clangd" ] \
+    && [ ! -e "$CLANGD_MANUAL_HOME/.local/share/clangd/clangd_23.1.0/.installed-by-emacs-setup" ]; then
+    record_pass "clangd setup and uninstall preserve a reused manual installation"
+else
+    record_fail "clangd setup and uninstall preserve a reused manual installation"
 fi
 
 # libgccjit なし: apt-get install へ進まずに停止する
@@ -1223,6 +1484,7 @@ echo "$HELP_TEXT" | grep -qi 'undo' || help_problems="$help_problems clean説明
 echo "$HELP_TEXT" | grep -q 'EMACS_SETUP_MIRROR_URL' || help_problems="$help_problems 環境変数未記載"
 echo "$HELP_TEXT" | grep -q -- '--setup-node' || help_problems="$help_problems setup-node未記載"
 echo "$HELP_TEXT" | grep -q -- '--uninstall-node' || help_problems="$help_problems uninstall-node未記載"
+echo "$HELP_TEXT" | grep -q -- '--uninstall-clangd' || help_problems="$help_problems uninstall-clangd未記載"
 if [ -z "$help_problems" ]; then
     record_pass "help documents the actual interface"
 else
