@@ -1,133 +1,73 @@
 <!-- -*- gfm -*- -->
-# パッケージ管理（straight.el）
+# パッケージ管理
 
-[straight.el](https://github.com/radian-software/straight.el) による Git ベースの
-パッケージ管理を使う。`package.el` は `early-init.el` で無効化している。
+パッケージは [straight.el](https://github.com/radian-software/straight.el) で管理する（`package.el` は無効）。
+各パッケージの Git リポジトリ（以下 repo）は `loads/straight/repos/`、ビルド成果物は `loads/straight/build/` にあり、
+`loads/straight/` のうち Git で管理するのは lockfile（`loads/straight/versions/default.el`）だけ。
 
-`use-package` と `straight-use-package-by-default t` の組み合わせにより、
-外部パッケージの宣言で `:straight t` は省略できる。組み込みパッケージには
-必ず `:straight nil` を明示する。
+## 更新と lockfile
 
-## 変更検出の方式
-
-起動時間を優先し、`early-init.el` で `straight-check-for-modifications` を
-`(check-on-save find-when-checking only-once)` に設定している。既定の `find-at-startup` は
-毎起動で `loads/straight/repos` 配下を `find(1)` で全走査するため、これを外している。
-
-変更が自動記録されるのは次の場合で、通常の編集と更新はこれで足りる。
-
-- Emacs でパッケージのファイルを保存した（`before-save-hook`）
-- `M-x straight-pull-all` / `M-x straight-pull-package` で実際にマージが発生した
-
-一方、次の場合は**自動検出されない**。`M-x straight-check-all` を実行してから利用する。
-
-- `M-x straight-thaw-versions` でリビジョンを戻した
-  （`straight-vc-git-check-out-commit` はチェックアウト成功時に変更記録を通らない）
-- シェルから `loads/straight/repos/` 配下を直接 `git` 操作した
-
-CI の `make straight-thaw` は、この理由からターゲット内で `straight-check-all` まで実行する。
-
-`./emacs-setup.sh --extract-package` は展開後に `straight-rebuild-all` を実行するため、
-手動の `straight-check-all` は不要である。`straight-rebuild-all` は変更検出を経由せず
-全パッケージを無条件に再ビルドし、ビルドキャッシュの mtime も更新するため、
-以降のセッションで検出漏れが起きる経路が無い。
-
-**この判断は straight.el の実装読解に基づくもので、動的検証はしていない。**
-想定と違っていた場合は `M-x straight-check-all` を手動実行すれば回復できる。
-
-## パッケージの更新と lockfile
-
-パッケージ更新時は、次の順序で設定と lockfile を同時に検証する。
-
-1. Emacs で `M-x straight-pull-all` を実行する。
+1. `M-x straight-pull-all` で全パッケージを更新する。
 2. `make test` を実行する。
-3. Emacs で `M-x straight-freeze-versions` を実行する。
-4. `loads/straight/versions/default.el` を設定変更と同じコミットへ含める。
+3. `M-x straight-freeze-versions` で lockfile を更新する。
+4. 更新した lockfile をコミットする。更新に合わせて設定を直したときは、同じコミットに含める。
 
-lockfile は CI の `make straight-thaw` がリビジョンを固定するために使う。
-thaw 後は `make check-lockfile` で各 repo の HEAD・未コミット変更・過不足を検査する。
-未導入を許す条件付きパッケージは CI の `LOCK_ALLOW_MISSING` に名前を列挙し、件数も出力する。
-ローカルの現状確認と lockfile の再現確認は分け、日常利用中の共有キャッシュを thaw しない。
-新しいパッケージを追加したら必ず凍結する。
+- パッケージを追加・削除したときも手順 3〜4 で lockfile を更新する。依存に組み込みパッケージが含まれるときは
+  [組み込みパッケージの固定](#組み込みパッケージの固定) も確認する。
+- lockfile にはそのセッションで有効なパッケージだけが書かれる。Copilot を無効にした環境で更新すると Copilot 関連が
+  lockfile から消えるため、更新は Copilot が有効な環境（Node.js あり）で行う。
+- CI は lockfile のリビジョンを適用し、導入済みの repo と照合する。lockfile に無い repo と、repo が見つからない lockfile の
+  エントリは、どちらも失敗になる。OS 限定などで導入しないことがある repo は、`.github/workflows/test.yml` の
+  `LOCK_ALLOW_MISSING` と `.github/workflows/platform.yml` の `--allow-missing` へ追加する（名前は lockfile のキー）。
+- パッケージを削除したり組み込みへ固定したときは、`.github/workflows/test.yml` の straight キャッシュキー（`straight-v<N>-`）の
+  番号も上げる。旧キャッシュに残った repo が照合で失敗する。
+- 日常利用している `loads/straight/` では `M-x straight-thaw-versions` を実行しない（lockfile へ反映していない更新が巻き戻る）。
+  lockfile との照合は `make check-lockfile STRAIGHT_DIR=<隔離した straight>` で行う（[テスト](testing.md#ターゲット一覧)）。
 
 ## アーカイブと復元
 
-回線が細い環境やオフライン環境へ移すときに使う。
+GitHub へ到達できない環境へパッケージを持ち込むときに使う。手順は README の
+[GitHub へ到達できない環境](../README.md#github-へ到達できない環境)。ここでは `--extract-package` の挙動と失敗時の復旧を書く。
 
-```sh
-# パッケージのアーカイブ（repos と lockfile を package.tar.gz へ固める）
-./emacs-setup.sh --packing-package
+- `--extract-package` はアーカイブを展開して検証した後、既存の `loads/straight/` を `loads/straight.bak` へ退避して配置し、
+  `var/package/eln-cache/` を破棄する。続けて設定を読み込んで全パッケージをリビルドし、成功したら `loads/straight.bak` を削除する。
+- 設定の読み込みエラー（`custom/custom.el` や `loads/inits/99-private.el` のものを含む）があるとリビルドを始めずに中止する。
+- リビルドに失敗すると `loads/straight.bak` が残り、残っている間は `--extract-package` を再実行できない。
+  元の状態へ戻すには次を実行する。
 
-# パッケージの復元（展開後に straight-rebuild-all まで自動実行する）
-./emacs-setup.sh --extract-package
-```
+  ```sh
+  rm -rf ~/.emacs.d/loads/straight && mv ~/.emacs.d/loads/straight.bak ~/.emacs.d/loads/straight
+  ```
 
-アーカイブ作成は一時ファイルへ完了してから `package.tar.gz` を置換する。
-作成に失敗した場合、以前のアーカイブを保持する。
-
-`--extract-package` は一時ディレクトリへ展開・検証してから既存の
-`loads/straight/` を `.bak` へ退避し、新しいツリーを配置する。配置失敗時は
-旧ツリーを戻す。起動設定のエラー（init-loader が捕捉したものを含む）や
-その検査の失敗時はリビルドを開始せず、リビルド失敗時と同様に `.bak` を残して復旧方法を表示する。
-リビルド成功後にだけ `.bak` を削除する。残っている `.bak` を上書きしない。
-
-削除するのは通常ディレクトリの `var/package/eln-cache/` だけで、同名の symlink は保持する。
-**文法・Copilot サーバーを含む兄弟データ、`var/hist/`、`var/backup/` は保持する**。
-`--clean` はバックアップ世代や自動保存も削除するため、復旧作業前には実行しない。
+- `var/hist/`、`var/backup/`、tree-sitter 文法、Copilot language server は消さない。`--clean` はこれらも削除するため、
+  復旧作業の前には実行しない（[クリーンアップ](../README.md#クリーンアップ)）。
 
 ## 手動リビルド
+
+全パッケージのビルド成果物を作り直すときに使う（`--extract-package` は内部で実行するため不要）。`~/.emacs.d` で次を実行する。
 
 ```sh
 emacs --batch --eval "(setq user-emacs-directory \"$HOME/.emacs.d\")" \
   -l early-init.el -l init.el -f straight-rebuild-all
 ```
 
-Emacs 内からは `M-x straight-rebuild-all`。`early-init.el` が `load-path-filter-function`（Emacs 31.1）で
-load-path の走査結果をキャッシュしており、キャッシュはセッション中に無効化されない。
-再ビルドで既存のビルドディレクトリへ増えたファイルは、Emacs を再起動するか
-`(setq load-path-filter--cache nil)` を評価するまで読めない。
+Emacs 内からは `M-x straight-rebuild-all`。リビルドで新たに生成されたファイルは、Emacs を再起動するまで読み込まれない。
 
-## 組み込みパッケージの上書きを避ける
+パッケージのソース変更は、Emacs でパッケージのファイルを保存したときと `straight-pull-all` の実行時に straight が自動で記録し、
+次の起動時にそのパッケージだけをリビルドする。`straight-thaw-versions` でリビジョンを戻したときや、シェルから `loads/straight/repos/` で
+`git` コマンドを実行したときは記録されないため、`M-x straight-check-all` で変更を検出して変更分だけをリビルドする。
 
-straight の依存解決は、**組み込みで足りるパッケージでもレシピリポジトリに
-存在すればそちらをクローンする**。`straight--convert-recipe` が `:type built-in`
-へ落ちるのは、どのレシピリポジトリにも見つからなかったときだけである。
+## 組み込みパッケージの固定
 
-クローンされた版は `load-path` 上で組み込み版を覆い隠すため、`:straight nil`
-で組み込みを使うつもりの宣言（`24-org.el` の org など）が実際には ELPA 版を
-設定していた、という食い違いが起きる。
+straight は、組み込みで足りるパッケージでもレシピがあれば repo をクローンし、クローン版が組み込み版を覆い隠す。
+次の依存は `straight-override-recipe` で組み込み版（`:type built-in`）に固定している。固定したパッケージは lockfile に載らない。
 
-そのため、依存のうち **組み込み版で要件を満たすものだけ** `straight-override-recipe` で
-built-in へ固定する。固定は宣言ごとに置く。ただし多数のパッケージが共通で依存する
-`compat` / `seq` は、最初の依存元より前に効かせるため `init.el` にまとめて置く。
+| パッケージ | 配置 | 依存元 |
+|---|---|---|
+| `compat`、`seq` | `init.el` | vertico、corfu、consult、magit など |
+| `project` | `loads/inits/32-navigation.el` | breadcrumb |
+| `org`、`jsonrpc`、`track-changes` | `loads/inits/35-copilot.el` | copilot、copilot-chat |
 
-```elisp
-;; init.el (全パッケージ共通の依存。straight-use-package 'use-package より前)
-(dolist (pkg '(compat seq))
-  (straight-override-recipe (list pkg :type 'built-in)))
-;; 35-copilot.el (copilot / copilot-chat の依存)
-(dolist (pkg '(org jsonrpc track-changes))
-  (straight-override-recipe (list pkg :type 'built-in)))
-;; 32-navigation.el (breadcrumb の依存)
-(straight-override-recipe '(project :type built-in))
-```
-
-| パッケージ | 要求 | Emacs 31.1 組み込み | 扱い |
-|---|---|---|---|
-| `compat` | 30 (vertico / corfu / consult / magit / copilot など) | stub（版は Emacs に追随） | built-in へ固定。31.1 の stub が `compat-call` / `compat-function` を提供する |
-| `seq` | 2.24 (magit)、2.23 (ELPA 版 compat) | 2.24（preload 済み） | built-in へ固定 |
-| `org` | 9.4.6 (copilot-chat) | 9.8.7 | built-in へ固定 |
-| `jsonrpc` | 1.0.14 (copilot) | 1.0.29 | built-in へ固定 |
-| `project` | 0.9.8 (breadcrumb) | 0.12.0 | built-in へ固定（`tests/my-test-packages.el` の `my-test-packages-project-built-in` が固定） |
-| `track-changes` | 1.4 (copilot) | 1.5 | built-in へ固定（straight 版 1.5 とコードも同一） |
-| `transient` | 0.8.3 (copilot-chat) | 0.13.3 | 31.1 では要件を満たすが、magit が使う transient の差し替えを含めて未検証のため引き続き straight から導入 |
-
-`compat` / `seq` / `track-changes` の固定は `tests/my-test-packages.el` の
-`my-test-packages-common-deps-built-in` が検査する。
-
-固定したパッケージは lockfile にも載らない。組み込み版の要件を満たさなくなる
-パッケージを追加した場合は、この表とオーバーライドを見直す。
-
-Copilot の残りの依存（polymode / shell-maker / request / aio / mcp など）は
-組み込みに無いため通常どおり straight が管理する。
-切り替え方法は [../README.md](../README.md) の「環境ごとの切り替え」を参照。
+`compat` と `seq` は多数のパッケージが依存するため、最初の依存元より前に効くよう `init.el` で固定する。
+Copilot 用の 3 件は Copilot が有効なときだけ固定する。
+追加したパッケージが、表の依存について組み込み版より新しい版を要求するときは、この表と固定を見直す。
