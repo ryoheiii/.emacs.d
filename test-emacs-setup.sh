@@ -941,13 +941,16 @@ assert_clangd_setup_failure() {
     else
         record_fail "$label (exit=$rc)"
     fi
-    if [[ "$label" != *PATH* ]] && [ "$(readlink "$dir/home/.local/bin/clangd")" != /old/clangd ]; then
+    if [ "$(readlink "$dir/home/.local/bin/clangd")" != /old/clangd ]; then
         record_fail "$label replaced the previous clangd"
     fi
     if [ -d "$dir/home/.local/share/clangd" ]; then
         leftovers=$(find "$dir/home/.local/share/clangd" -name '.install-*' -print) \
             || harness_fatal "一時領域を走査できません。"
         if [ -n "$leftovers" ]; then record_fail "$label left temporary installer files"; fi
+    fi
+    if [ -e "$dir/home/.local/share/clangd/clangd_23.1.0" ]; then
+        record_fail "$label left an uncommitted clangd installation"
     fi
 }
 assert_clangd_setup_failure "clangd API failure" '安定版' STUB_CLANGD_CASE=api-failure
@@ -1088,6 +1091,131 @@ if HOME="$CLANGD_MANUAL_HOME" PATH="$SETUP_OK_STUB:$PATH" \
     record_pass "clangd setup and uninstall preserve a reused manual installation"
 else
     record_fail "clangd setup and uninstall preserve a reused manual installation"
+fi
+
+# 入口の削除後、本体の削除だけが失敗しても元の入口を復元する。
+CLANGD_BODY_FAIL_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+CLANGD_BODY_FAIL_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+mkdir -p "$CLANGD_BODY_FAIL_HOME/.local/share/clangd/clangd_23.1.0/bin" "$CLANGD_BODY_FAIL_HOME/.local/bin"
+touch "$CLANGD_BODY_FAIL_HOME/.local/share/clangd/clangd_23.1.0/.installed-by-emacs-setup" \
+    "$CLANGD_BODY_FAIL_HOME/.local/share/clangd/clangd_23.1.0/bin/clangd"
+ln -s ../share/clangd/clangd_23.1.0/bin/clangd "$CLANGD_BODY_FAIL_HOME/.local/bin/clangd"
+cat > "$CLANGD_BODY_FAIL_STUB/rm" <<'RMSTUB'
+#!/bin/bash
+if [ "$1" = -rf ]; then exit 1; fi
+exec /bin/rm "$@"
+RMSTUB
+chmod +x "$CLANGD_BODY_FAIL_STUB/rm"
+if HOME="$CLANGD_BODY_FAIL_HOME" PATH="$CLANGD_BODY_FAIL_STUB:$PATH" \
+    "$SCRIPT" --uninstall-clangd >/dev/null 2>&1; then
+    record_fail "clangd restores the entry when removing the body fails"
+elif [ -f "$CLANGD_BODY_FAIL_HOME/.local/bin/clangd" ] \
+    && [ "$(readlink "$CLANGD_BODY_FAIL_HOME/.local/bin/clangd")" = ../share/clangd/clangd_23.1.0/bin/clangd ]; then
+    record_pass "clangd restores the entry when removing the body fails"
+else
+    record_fail "clangd restores the entry when removing the body fails"
+fi
+
+# 手動の dangling な版 symlink は、ダウンロードより前に拒否する。
+CLANGD_TARGET_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+CLANGD_TARGET_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+make_setup_stubs "$CLANGD_TARGET_STUB" yes
+mkdir -p "$CLANGD_TARGET_HOME/.local/share/clangd"
+ln -s /missing/clangd "$CLANGD_TARGET_HOME/.local/share/clangd/clangd_23.1.0"
+if HOME="$CLANGD_TARGET_HOME" PATH="$CLANGD_TARGET_STUB:$PATH" \
+    "$SCRIPT" --setup --gui no >/dev/null 2>&1; then
+    record_fail "clangd setup rejects a dangling version symlink before download"
+elif [ "$(readlink "$CLANGD_TARGET_HOME/.local/share/clangd/clangd_23.1.0")" = /missing/clangd ] \
+    && ! grep -q 'curl https://github.com/clangd/clangd/releases/download/' "$CLANGD_TARGET_STUB/calls.log"; then
+    record_pass "clangd setup rejects a dangling version symlink before download"
+else
+    record_fail "clangd setup rejects a dangling version symlink before download"
+fi
+
+# 非 Linux の clean は、GNU 固有コマンドがなくても Emacs 側を清掃できる。
+CLANGD_BSD_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+CLANGD_BSD_STUB="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+mkdir -p "$CLANGD_BSD_HOME/.local/share/clangd/clangd_23.1.0" "$CLANGD_BSD_HOME/.emacs.d/var"
+touch "$CLANGD_BSD_HOME/.local/share/clangd/clangd_23.1.0/.installed-by-emacs-setup"
+make_stub_bin "$CLANGD_BSD_STUB" readlink rmdir
+printf '#!/bin/bash\nprintf "Darwin\\n"\n' > "$CLANGD_BSD_STUB/uname"
+chmod +x "$CLANGD_BSD_STUB/uname"
+for bsd_clean_action in --clean --clean-all; do
+    mkdir -p "$CLANGD_BSD_HOME/.emacs.d/var"
+    if HOME="$CLANGD_BSD_HOME" PATH="$CLANGD_BSD_STUB:$PATH" STUB_EXIT_READLINK=99 STUB_EXIT_RMDIR=99 \
+        "$SCRIPT" "$bsd_clean_action" >/dev/null 2>&1 \
+        && [ ! -e "$CLANGD_BSD_HOME/.emacs.d/var" ] \
+        && [ -f "$CLANGD_BSD_HOME/.local/share/clangd/clangd_23.1.0/.installed-by-emacs-setup" ] \
+        && [ ! -e "$CLANGD_BSD_STUB/calls.log" ]; then
+        record_pass "non-Linux $bsd_clean_action skips Linux clangd management without GNU commands"
+    else
+        record_fail "non-Linux $bsd_clean_action skips Linux clangd management without GNU commands"
+    fi
+done
+
+# 同じ排他を取得するまで uninstall は所有版と入口に触れない。
+CLANGD_LOCK_HOME="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
+if python3 - "$SCRIPT" "$CLANGD_LOCK_HOME" "$(command -v flock)" "$SETUP_OK_STUB" <<'LOCKTEST'
+import fcntl
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+script, root, real_flock, setup_stub = sys.argv[1:]
+for index, action in enumerate(('--uninstall-clangd', '--clean', '--setup')):
+    home = Path(root) / str(index)
+    parent = home / '.local/share'
+    body = parent / 'clangd/clangd_23.1.0'
+    (body / 'bin').mkdir(parents=True)
+    (body / '.installed-by-emacs-setup').touch()
+    (body / 'bin/clangd').write_text('#!/bin/bash\nprintf "clangd version 23.1.0\\n"\n')
+    (body / 'bin/clangd').chmod(0o755)
+    old = parent / 'clangd/clangd_21.1.0'
+    old.mkdir()
+    (old / '.installed-by-emacs-setup').touch()
+    (home / '.local/bin').mkdir(parents=True)
+    entry = home / '.local/bin/clangd'
+    entry.symlink_to(body / 'bin/clangd')
+    stub = home / 'stub'
+    stub.mkdir()
+    (stub / 'flock').write_text('#!/bin/bash\n: > "$HOME/lock-entered"\nexec "' + real_flock + '" "$@"\n')
+    (stub / 'flock').chmod(0o755)
+    fd = os.open(parent, os.O_RDONLY)
+    fcntl.flock(fd, fcntl.LOCK_EX)
+    env = dict(os.environ, HOME=str(home), PATH=os.pathsep.join((str(stub), setup_stub, os.environ['PATH'])))
+    args = [str(Path(script).resolve()), action]
+    if action == '--setup':
+        args += ['--gui', 'no']
+    p = subprocess.Popen(args, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        deadline = time.monotonic() + 5
+        while not (home / 'lock-entered').exists() and p.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        protected = (home / 'lock-entered').exists() and p.poll() is None and entry.exists() and old.exists()
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        rc = p.wait(timeout=10)
+        if not protected or rc != 0:
+            sys.exit(1)
+        if action == '--uninstall-clangd':
+            valid = not entry.is_symlink() and not body.exists() and not old.exists()
+        elif action == '--clean':
+            valid = entry.exists() and body.exists() and not old.exists()
+        else:
+            valid = entry.exists() and body.exists() and old.exists()
+        if not valid:
+            sys.exit(1)
+    finally:
+        os.close(fd)
+        if p.poll() is None:
+            p.kill()
+            p.wait()
+
+LOCKTEST
+then
+    record_pass "clangd setup and cleanup wait for the shared lock"
+else
+    record_fail "clangd setup and cleanup wait for the shared lock"
 fi
 
 # libgccjit なし: apt-get install へ進まずに停止する

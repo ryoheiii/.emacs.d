@@ -78,7 +78,7 @@ Options:
                             it after --install otherwise.
   --uninstall-node          Uninstall Node.js (offline install and/or fnm).
   --uninstall-clangd        Remove clangd versions installed by this script
-                            and their ~/.local/bin/clangd link.
+                            and their ~/.local/bin/clangd link (Linux only).
   -l, --list                List available Emacs versions for installation.
   -i <ver>, --install <ver> [-g|--gui <gtk3|lucid|pgtk|no>]
                             Install Emacs <ver> with optional GUI backend.
@@ -92,6 +92,7 @@ Options:
                             emacs --batch run that skipped early-init.el.
                             A symlink at that path is kept, not removed.
                             Also removes owned, inactive clangd versions.
+                            Clangd cleanup is skipped outside Linux.
   -C, --clean-all           Same as --clean, and also removes the packages.
                             Also uninstalls all clangd versions owned by this
                             script and their executable link.
@@ -492,14 +493,34 @@ uninstall_node() {
 # OS 標準パッケージは古く、apt.llvm.org は安定系列も nightly ビルドである。
 # clangd 公式の最新安定版 ZIP を使い、同梱の lib/ も含めて配置する。
 # https://clangd.llvm.org/installation#standalone-zip-releases を参照。
+# 親ディレクトリの inode を使い、削除後も残るロックファイルを作らずに排他する。
+# 呼び出し元のサブシェル終了まで FD を保持し、導入先の削除・再作成とも競合しない。
+lock_clangd() {
+    require_commands flock
+    if ! mkdir -p "$HOME/.local/share"; then
+        echo "Error: clangd の排他用ディレクトリを作成できません。" >&2
+        return 1
+    fi
+    if ! exec {clangd_lock_fd}<"$HOME/.local/share"; then
+        echo "Error: clangd の排他用ディレクトリを開けません。" >&2
+        return 1
+    fi
+    if ! flock -x "$clangd_lock_fd"; then
+        echo "Error: clangd の排他を取得できません。" >&2
+        return 1
+    fi
+}
+
 setup_clangd() (
-    local release_json stable major asset digest work_dir installed active target
+    local release_json stable major asset digest work_dir installed active target clangd_lock_fd
+    local had_link=no link_changed=no target_created=no committed=no keep_work_dir=no
     if [ "$(uname -m)" != x86_64 ]; then
         echo "Error: clangd 公式の Linux 安定版 ZIP は x86_64 向けです。" >&2
         exit 1
     fi
-    sudo apt-get install -y ca-certificates curl jq unzip
+    sudo apt-get install -y ca-certificates curl jq unzip util-linux
     require_commands curl jq unzip sha256sum
+    lock_clangd
     if ! release_json=$(curl -fsSL --connect-timeout 10 --max-time 60 \
         https://api.github.com/repos/clangd/clangd/releases/latest); then
         echo "Error: clangd の最新安定版を取得できません。" >&2
@@ -538,8 +559,45 @@ setup_clangd() (
         echo "Error: clangd 導入用の一時ディレクトリを作成できません。" >&2
         exit 1
     fi
-    trap 'rm -rf "$work_dir"' EXIT
     target="$CLANGD_INSTALL_BASE/clangd_$stable"
+    # 本体・入口の確定前に失敗した場合は、元のリンク値と配置を復元する。
+    rollback_clangd_setup() {
+        local rc=$?
+        trap - EXIT
+        if [ "$committed" = no ]; then
+            if [ "$link_changed" = yes ]; then
+                if [ "$had_link" = yes ]; then
+                    if ! mv -Tf "$work_dir/previous-link" "$CLANGD_BIN_DIR/clangd"; then
+                        echo "Error: 旧 clangd リンクを復元できません。退避先: $work_dir/previous-link" >&2
+                        keep_work_dir=yes
+                        rc=1
+                    fi
+                elif ! rm -f "$CLANGD_BIN_DIR/clangd"; then
+                    echo "Error: 未確定の clangd リンクを削除できません。" >&2
+                    keep_work_dir=yes
+                    rc=1
+                fi
+            fi
+            if [ "$target_created" = yes ] && [ "$keep_work_dir" = no ]; then
+                if ! rm -rf "$target"; then rc=1; fi
+            fi
+        fi
+        if [ "$keep_work_dir" = no ]; then
+            if ! rm -rf "$work_dir"; then rc=1; fi
+        fi
+        exit "$rc"
+    }
+    trap 'rollback_clangd_setup' EXIT
+    if [ -L "$target" ]; then
+        echo "Error: $target が symlink のため既存の配置を保持します。" >&2
+        exit 1
+    fi
+    if [ -L "$CLANGD_BIN_DIR/clangd" ]; then
+        local previous_link
+        previous_link=$(readlink "$CLANGD_BIN_DIR/clangd")
+        ln -s "$previous_link" "$work_dir/previous-link"
+        had_link=yes
+    fi
     if [ ! -e "$target" ]; then
         echo "Downloading official stable clangd $stable..."
         if ! curl -fsSL --connect-timeout 10 --max-time 300 "$asset" -o "$work_dir/clangd.zip"; then
@@ -574,9 +632,11 @@ setup_clangd() (
     if [ ! -e "$target" ]; then
         # 取得・検証を終えた新規配置だけに所有印を付け、既存の手動配置は所有扱いしない。
         : > "$work_dir/clangd_$stable/$CLANGD_OWNED_MARKER"
+        target_created=yes
         mv -T "$work_dir/clangd_$stable" "$target"
     fi
     ln -s "$target/bin/clangd" "$work_dir/clangd-link"
+    link_changed=yes
     mv -Tf "$work_dir/clangd-link" "$CLANGD_BIN_DIR/clangd"
     hash -r
     if ! active=$(clangd --version); then
@@ -591,14 +651,23 @@ setup_clangd() (
         echo "       export PATH=\"\$HOME/.local/bin:\$PATH\" をシェル設定に追加してください。" >&2
         exit 1
     fi
+    committed=yes
     echo "clangd $stable を $CLANGD_BIN_DIR/clangd に導入しました。"
 )
 
 ##### clangd の旧版整理・アンインストール #####
 # old は使用中の版を保持し、all はこのスクリプトが導入した全版を削除する。
 # インストール先や各版の symlink を辿らず、所有印のある通常ディレクトリだけを扱う。
-cleanup_clangd() {
-    local mode="$1" base active="" dir name
+cleanup_clangd() (
+    local mode="$1" base active="" dir name clangd_lock_fd entry_target="" link_removed=no
+    # GNU coreutils と flock を使う clangd 管理は Linux 専用。
+    # 非 Linux でも従来の Emacs clean は継続できるよう、ここだけスキップする。
+    if [ "$(uname)" != Linux ]; then
+        echo "Skipping clangd cleanup (Linux only)." >&2
+        return 0
+    fi
+    [ -e "$CLANGD_INSTALL_BASE" ] || [ -L "$CLANGD_INSTALL_BASE" ] || return 0
+    lock_clangd
     if [ -L "$CLANGD_INSTALL_BASE" ]; then
         echo "Skipping $CLANGD_INSTALL_BASE (symlink)." >&2
         return 0
@@ -627,15 +696,26 @@ cleanup_clangd() {
         fi
         if [ "$active" = "$base/$name/bin/clangd" ]; then
             [ "$mode" = all ] || continue
+            if ! entry_target=$(readlink "$CLANGD_BIN_DIR/clangd"); then
+                echo "Error: clangd の元のリンク値を取得できません。" >&2
+                return 1
+            fi
             if ! rm -f "$CLANGD_BIN_DIR/clangd"; then
                 echo "Error: clangd の実行リンクを削除できません。" >&2
                 return 1
             fi
+            link_removed=yes
         fi
         if ! rm -rf "${dir:?}"; then
+            if [ "$link_removed" = yes ]; then
+                if ! ln -s "$entry_target" "$CLANGD_BIN_DIR/clangd"; then
+                    echo "Error: clangd の入口リンクを復元できません。" >&2
+                fi
+            fi
             echo "Error: clangd の所有版 $name を削除できません。" >&2
             return 1
         fi
+        link_removed=no
         echo "Removed clangd: $name"
     done
     # 手動配置や不明なファイルが残る場合は、導入先ディレクトリごと保持する。
@@ -643,9 +723,10 @@ cleanup_clangd() {
         echo "Error: clangd の空の導入先を削除できません。" >&2
         return 1
     fi
-}
+)
 
 uninstall_clangd() {
+    require_linux
     cleanup_clangd all
 }
 
@@ -1098,7 +1179,7 @@ clean_all() {
         echo "Removing $LOADS_DIR/$PACKAGE_DIR ..."
         rm -rf "${LOADS_DIR:?}/${PACKAGE_DIR:?}"
     fi
-    uninstall_clangd
+    cleanup_clangd all
     echo "Emacs full clean complete."
 }
 
