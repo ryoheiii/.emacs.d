@@ -25,7 +25,7 @@ make test
 | `make test-invariants` | グローバルモードのフック登録・feature ロード状態・ts モードのフック parity・Copilot のロードゲート・組み込みパッケージ（`project`・`compat`・`seq`・`track-changes`）の上書き防止・`mode-line-invisible-mode` の登録・eglot 管理下の irony 抑止フック・recentf の保存メッセージ抑止 |
 | `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |
 | `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・`C-t` 表・非 LSP 環境での階層ナビゲーションのフォールバック・C バッファの header-line と読解補助キー・tty 子フレームでの corfu-popupinfo） |
-| `make test-setup` | 隔離した HOME で `test-emacs-setup.sh` を実行（引数パース、`--list` の抽出、ダウンロードの原子性、パッケージ復元のトランザクション、サンドボックスガード） |
+| `make test-setup` | 隔離した HOME で `test-emacs-setup.sh` を実行（引数パース、`--list` の抽出、ダウンロードの原子性、パッケージ復元のトランザクション、clangd 最新安定版の選択・導入失敗・PATH・所有判定・旧版整理・アンインストール、サンドボックスガード）。clangd の配布物 fixture には `python3`、実処理の検査には `jq`・`unzip`・`sha256sum`・`flock` が必要。sudo・APT・通信はスタブで検査する |
 | `make test-guards` | テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査（`test-emacs-setup.sh` のガード、`lint-sh` の環境分離、`run_trial` の失敗検査） |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |
 | `make test-audit-shell` | セットアップ・レビュー・ベンチ・lock照合の故障注入 |
