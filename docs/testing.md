@@ -1,201 +1,98 @@
 <!-- -*- gfm -*- -->
-# 回帰テストと計測
-
-Emacs 標準の ERT と Makefile で、設定のユニットテスト、起動検査、
-キーバインド不変条件、tty 動作、セットアップスクリプトを検証する。
+# テスト
 
 ```sh
-# lint からセットアップスクリプトまでを fail-fast で一括実行
-make test
+make test           # フルスイート。lint から test-platform までを順に実行し、最初の失敗で止まる
+make test-startup   # 起動確認だけ
 ```
+
+変更範囲ごとに選ぶターゲットは [検証手順](../.claude/rules/verification.md) を参照する。
+表示・キー・補完・端末初期化に触れたときは `make test-tty` と `make test-tty-live` も実行する。
+
+## 必要なツール
+
+- `make lint`: `shellcheck`（CI と同じ 0.11.0）
+- `make test-setup`: `python3`、`jq`、`unzip`、`sha256sum`、`flock`
+- `make test-audit-shell`、`make check-lockfile`: `python3`
+- `make test-tty-live`: Linux、`script`（util-linux）、`timeout`
+- `make test-gui`: GUI 対応 Emacs、`timeout`、X11 の `DISPLAY`
+
+`make test` を通しで実行できるのは Linux だけ。macOS では標準の bash 3.2 に `mapfile` が無く `lint` で止まるため、
+`make SHELL=<bash 4 以上のパス> <ターゲット>` の形で `test-tty-live` を除いて個別に実行する。
+
+## 実行環境
+
+- Emacs を起動するターゲット（`test-audit-shell` を除く）は、Git 追跡ファイルを作業ツリーの内容のまま（未コミットの変更も含めて）
+  一時ディレクトリへ複製し、そこで実行する。未追跡のファイルは複製されず、`lint-sh` も Git 追跡中のシェルスクリプトだけを検査する。
+  そのため新規ファイルは `git add` するまでテストから見えず、`custom/custom.el`、`loads/inits/99-private.el`、`var/` 配下も読み込まれない。
+- `custom/custom.el` を読まないため、`my/copilot-enabled` は既定の `auto` で検証される（Node.js があれば Copilot 関連を読み込む）。
+- `var/` を複製しないため tree-sitter 文法は「未導入」として扱われ、ts モードの検査は skip される。文法ありで検証するときは
+  `make install-test-grammars TEST_TREESIT_DIR=<文法ディレクトリ>` で文法を用意してから
+  `make test-cpp-config TEST_TREESIT_EXPECT=with TEST_TREESIT_DIR=<文法ディレクトリ>` を実行する。
+  `TEST_TREESIT_EXPECT` の既定は `auto` で、`with` / `without` は文法の有無を固定する。
+- worktree にはパッケージの実体（`loads/straight/repos/` と `build/`）が無いため、
+  `make test STRAIGHT_DIR=$HOME/.emacs.d/loads/straight` のように `STRAIGHT_DIR` で実体を指す。
+  `STRAIGHT_DIR` は末尾が `straight` のディレクトリでなければならない。
+- 別ビルドの Emacs で検証するときは `EMACS=<emacs のパス>` を渡す。
+- `test-setup`、`test-guards`、`test-audit-shell` は隔離した HOME で動き、`sudo`・`apt`・通信をスタブに置き換えるため実環境を変更しない。
 
 ## ターゲット一覧
 
+### `make test` が順に実行するターゲット
+
 | ターゲット | 検証内容 |
 |---|---|
-| `make test` | lint と test-* を fail-fast で一括実行（文法ありレーンは別途） |
-| `make lint` | `lint-sh` と `lint-el` をまとめて実行 |
-| `make lint-sh` | Git 追跡中のシェルスクリプトを shellcheck |
-| `make lint-el` | 全管理対象 Elisp の構文と設定の byte compile（警告・エラーは失敗） |
+| `make lint` | `lint-sh`（shellcheck）と `lint-el`（Elisp の構文と byte compile。警告も失敗） |
 | `make test-unit` | `early-init.el` のパスヘルパー |
-| `make test-startup` | フル起動・init-loader エラーログ・起動時警告（allowlist 外は失敗） |
-| `make test-keybinding` | `C-t` タグナビゲーションの固定キーバインドと追加キー（読解補助）、折りたたみ・見出し移動のキー、`C-z` のタブ操作、パッケージ固有キーマップ（vundo・magit・markdown）の `:bind :map` |
-| `make test-cpp-config` | C/C++ スタイル・eglot 起動条件・検索経路・起動時性能設定・tree-sitter 段階移行・irony ゲート・LSP 階層ナビゲーション（スタブ応答と実 jsonrpc のタイムアウト。clangd がある環境では実 clangd との結合）・outline / inlay hints / breadcrumb の読解補助 |
-| `make test-deferred` | `:defer N` 遅延パッケージの `:config` とグローバルモード有効化 |
-| `make test-invariants` | グローバルモードのフック登録・feature ロード状態・ts モードのフック parity・Copilot のロードゲート・組み込みパッケージ（`project`・`compat`・`seq`・`track-changes`）の上書き防止・`mode-line-invisible-mode` の登録・eglot 管理下の irony 抑止フック・recentf の保存メッセージ抑止 |
-| `make test-tty` | 非 GUI 分岐の tty ロード条件（corfu-terminal、GUI 限定宣言の eager 化カナリア） |
-| `make test-tty-live` | 実 pty での `emacs -nw` 起動（モード活性化・モードライン・端末初期化・`C-t` 表・非 LSP 環境での階層ナビゲーションのフォールバック・C バッファの header-line と読解補助キー・tty 子フレームでの corfu-popupinfo） |
-| `make test-setup` | 隔離した HOME で `test-emacs-setup.sh` を実行（引数パース、`--list` の抽出、ダウンロードの原子性、パッケージ復元のトランザクション、clangd 最新安定版の選択・導入失敗・PATH・所有判定・旧版整理・アンインストール、サンドボックスガード）。clangd の配布物 fixture には `python3`、実処理の検査には `jq`・`unzip`・`sha256sum`・`flock` が必要。sudo・APT・通信はスタブで検査する |
-| `make test-guards` | テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査（`test-emacs-setup.sh` のガード、`lint-sh` の環境分離、`run_trial` の失敗検査） |
+| `make test-startup` | フル起動、init-loader のエラーログ、起動時の警告 |
+| `make test-keybinding` | `C-t` の固定キーと追加キー、折りたたみのキー、`C-z` のタブ操作、パッケージ固有のキーマップ |
+| `make test-cpp-config` | C/C++ のスタイル、eglot 起動条件、検索経路、cc-mode と ts モードの切替、irony ゲート、読解補助。`clangd`、GNU Global、tree-sitter 文法が無い環境では、それを使う検査を skip する |
+| `make test-deferred` | `:defer` 付きパッケージの遅延ロード後の設定と、グローバルモードの有効化 |
+| `make test-invariants` | グローバルモードのフック登録、feature のロード状態、ts モードと cc-mode のフック登録の一致、組み込みパッケージの固定 |
+| `make test-tty` | 端末（非 GUI）向け分岐のロード条件（batch） |
+| `make test-tty-live` | 実 pty での `emacs -nw` 起動（モードライン、端末初期化、`C-t`、補完ポップアップ） |
+| `make test-setup` | 隔離した HOME での `emacs-setup.sh`（引数、ダウンロードの原子性、パッケージ復元、clangd の導入と削除） |
+| `make test-guards` | テスト基盤と lint 基盤の fail-closed ガードを故障注入で検査 |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |
-| `make test-audit-shell` | セットアップ・レビュー・ベンチ・lock照合の故障注入 |
-| `make test-platform` | 実 OS の入力メソッド分岐・生成物パス・PATH 区切り文字 |
-| `make test-gui` | Linux の実 GUI 起動・モードライン・Corfu 子フレームと確定・clipboard（通常の `make test` とは別） |
-| `make check-lockfile` | 導入済み repo の HEAD・変更・過不足と lockfile を照合 |
+| `make test-audit-shell` | セットアップ・ベンチ・lockfile 照合の故障注入 |
+| `make test-platform` | 実 OS の入力メソッド分岐、生成物パス、PATH 区切り文字 |
+
+### 個別に実行するターゲット
+
+| ターゲット | 内容 |
+|---|---|
+| `make test-gui` | Linux の実 GUI 起動とクリップボード |
+| `make check-lockfile` | 導入済み repo と lockfile の照合。照合先は `STRAIGHT_DIR`、導入しないことがある repo は `LOCK_ALLOW_MISSING` で指定する（[パッケージ管理](packages.md#更新と-lockfile)） |
 | `make install-test-grammars` | `TEST_TREESIT_DIR` に固定タグの C/C++ 文法を導入 |
 | `make clean-test` | `tests/` 配下の byte compile 生成物を削除 |
-| `make straight-thaw` | CI 専用。lockfile のリビジョンを適用して `straight-check-all` と lockfile 照合まで実行する（`CI=true` 以外では実行できない） |
+| `make straight-thaw` | CI 専用（`CI=true`）。lockfile のリビジョンを適用し、照合まで実行 |
 
-`make lint` は [shellcheck](https://www.shellcheck.net/) を必要とする。
-CI は runner 同梱版を使わず、`.github/workflows/test.yml` で **0.11.0 を明示導入**する。
-同梱版はバージョンが固定されず、`ubuntu-latest` の実体が上がるとチェック集合が変わって
-無関係な変更が落ちるためである。バージョンを上げるときは同ファイルの
-`SHELLCHECK_VERSION` と `SHELLCHECK_SHA256` を両方更新し、ローカルの shellcheck も
-同じ版へ揃えてから `make lint` が通ることを確認する。
+## `test-tty-live` の注意
 
-`make lint-sh` は `--norc` と `env -u SHELLCHECK_OPTS` を付けて実行する。
-`.shellcheckrc`（祖先探索ではドット無しの `shellcheckrc` も読まれる）と `SHELLCHECK_OPTS` は
-どちらも検査内容を書き換えるため、個人環境によって結果が変わらないようにしている。
+- straight のビルドキャッシュを日常使いの Emacs と共有するため、その Emacs を起動したまま実行しない。
+- コールドキャッシュ（未ビルド）のときは、先に `make test-startup` などの batch 系ターゲットでビルドを済ませる。
+  `test-tty-live` は 1 プロセスを 180 秒で打ち切るため、ビルドが間に合わないと失敗する。
 
-この 2 つはどちらが外れても通常の実行では気づけないため、`make test-guards` が
-`SHELLCHECK_OPTS=--enable=all` と `$HOME/.shellcheckrc` を注入して `make lint-sh` が
-影響を受けないことを検査する。注入が実際にレバーとして効くこと（optional チェックが
-本当に増えること）も正の対照で確かめる。リポジトリ外の祖先に `.shellcheckrc` がある
-環境では `$HOME` フォールバックが使われないため、該当の 2 件は `SKIP:` になる。
+## GUI・他 OS
 
-## 変更範囲ごとの最小検証
-
-`make test` を通しで回さない場合は、変更範囲に対応するターゲットを実行する。
-
-| 変更範囲 | 実行するターゲット |
-|---|---|
-| 設定ファイルの構文・byte compile 警告、シェルスクリプト | `make lint` |
-| `early-init.el` のパスヘルパー、バックアップ先 | `make test-unit` |
-| 起動経路の設定全般 | `make test-startup` |
-| `C-t` タグナビゲーションのキーバインド | `make test-keybinding` |
-| C/C++ 設定（スタイル、eglot 起動条件、検索経路、tree-sitter 切替、irony ゲート） | `make test-cpp-config` |
-| `:defer` 付きパッケージ宣言 | `make test-deferred` |
-| グローバルモードのフック登録、feature のロード状態、ts モードのフック parity | `make test-invariants` |
-| 表示・モードライン・キーバインド・補完・クリップボード・端末初期化・GUI 分岐 | `make test-tty` と `make test-tty-live` |
-| `emacs-setup.sh` | `make test-setup` |
-| テスト基盤・lint 基盤（`test-emacs-setup.sh`、`tests/my-bench-run.sh`、`Makefile` の `lint*` / `test-*`） | `make test-guards` |
-
-## テストの実行環境
-
-起動検査とキーバインド検査は、**Git 追跡ファイルだけを展開した一時ルート**で実行する
-（未コミットの作業ツリー差分は適用される）。実行時データは一時ルートへ隔離され、
-`custom/custom.el` や `loads/inits/99-private.el` のようなローカル専用の未追跡設定は
-読み込まれない。
-
-このため `var/` 配下は一時ルートへ展開されず、`make test` から見た
-tree-sitter 文法は通常「未導入」になる（システムの共有ライブラリ検索パスに
-文法が置かれている場合は導入済みとして扱われる）。C/C++ のスタイル検査は
-文法の可用性で排他になっており、未導入なら cc-mode 側
-（`my-test-cpp-config-google-style`）、導入済みなら ts 側
-（`my-test-cpp-config-c-ts-indent-google-equivalent`）が走る。
-入力途中（`ERROR` 状態）の桁を固定する `my-test-cpp-config-c-ts-error-indent`
-などの ts 専用検査も文法が要るため、未導入環境では skip される。
-ts 側を明示的に走らせる場合は `TEST_TREESIT_EXPECT=with` と
-`TEST_TREESIT_DIR=/文法のディレクトリ` を指定する。文法は一時ルートへ複製され、
-必須のテストが実行されない場合は失敗する。
-
-worktree で検証する場合は、パッケージ実体を共有するため
-`make test STRAIGHT_DIR=$HOME/.emacs.d/loads/straight` のように指定する。
-
-## `test-tty-live` の前提
-
-`script`（util-linux）と `timeout` を使う Linux 前提のターゲットで、
-実際の起動ライフサイクル（after-init → tty 端末初期化 → emacs-startup → window-setup）を
-pty 上で再現して検証する。
-
-- 非 Linux 環境では明示エラーで失敗する（`make test` のフル実行は Linux 前提。
-  macOS では個別ターゲットで代替する）
-- straight のビルドキャッシュを対話セッションと共有するため、対話 Emacs を
-  起動したままの実行は避ける
-- コールドキャッシュ時は先に `make test-startup` 等の batch 系ターゲットで
-  ビルドを温めてから実行する（timeout 180 秒のため）
-
-## GUI・他 OS・非native ビルド
-
-`make test-gui` は GUI 対応 Emacs、X11 の `DISPLAY`、`timeout` が必要。
-クリップボードへ固定文字列を書き込むため、日常のディスプレイと分離した Xvfb で実行する。
-パッケージは事前に専用の `STRAIGHT_DIR` へ準備する。
-
-```sh
-make test-startup STRAIGHT_DIR=/専用/straight
-xvfb-run -a make test-gui STRAIGHT_DIR=/専用/straight
-make test-tty test-tty-live STRAIGHT_DIR=/専用/straight
-```
-
-非native ビルドは、Emacs を `--without-native-compilation` でビルドした実行ファイルを
-`EMACS=/専用/emacs/bin/emacs` で各ターゲットへ渡す。`make test-platform` の環境行が
-`native-comp=nil` であることも確認する（JIT の停止だけでは代替しない）。
-
-macOS / Windows のバッチ起動は `.github/workflows/platform.yml` で Emacs 31.1 と
-lockfile の組合せを検証する。手動実行、または設定変更の PR で起動する。
-macOS では実 BSD `mv` によるパッケージアーカイブの置換・復元も検査する。
-Linux 固有のビルド・apt 導入は macOS / Windows の対象外。
-Windows の検査はバッチ起動と IME の GUI ガード・パスに限定し、GUI の日本語入力は含まない。
-
-tty 補完は標準の `tty-child-frames` を持つ 31.1 で Corfu 本体が描画し、corfu-popupinfo も
-tty で有効にする。`corfu-terminal` は `tty-child-frames` の無い Emacs 向けの代替として
-宣言だけを残す（31.1 では有効にならないことを `make test-tty` / `make test-tty-live` が検査する）。
-C/C++ は CI の 31.1 と snapshot の両レーンで文法あり・なしを検証する。
+- `make test-gui` はクリップボードへ固定文字列を書き込むため、日常のディスプレイと分離して実行する。
+  専用の straight を `make test-startup STRAIGHT_DIR=<専用の straight>` で準備してから、
+  `xvfb-run -a make test-gui STRAIGHT_DIR=<専用の straight>` を実行する（`xvfb-run` が `DISPLAY` を用意する）。
+- macOS / Windows の batch 起動は `.github/workflows/platform.yml` が検証する。このワークフローは手動実行のほか、起動経路を変更する PR で動く。
 
 ## 起動コストの計測
 
-起動時間の内訳を実 pty で測るハーネスを `tests/` に置く。`make` ターゲットではなく
-直接実行する（回帰テストではないため `make test` には含めない）。
-
 ```sh
-# 現行設定を 15 有効試行（ウォームアップ 3 回は破棄）
-tests/my-bench-run.sh now  15 .bench/out
-
-# emacs -Q -nw の下限
-tests/my-bench-run.sh bare 15 .bench/out
-
-# 中央値と IQR で集計
-tests/my-bench-summarize.sh .bench/out
+tests/my-bench-run.sh now  15 .bench/out    # 現行設定を 15 有効試行（ウォームアップ 3 回は破棄）
+tests/my-bench-run.sh bare 15 .bench/out    # emacs -Q -nw の下限
+tests/my-bench-summarize.sh .bench/out      # 中央値と IQR で集計
 ```
 
-`tests/my-bench-startup.el` が `window-setup-hook` 到達（t1）と遅延ロード完了（t3）の
-経過時間、および `use-package` 宣言ごとのコストを外部／組み込みへ分類して出力する。
-`use-package-compute-statistics` を使うため計測用パッケージの追加は不要である。
-
-注意点:
-
-- 専用 worktree で計測する。`STRAIGHT_DIR` は両側で同一の依存状態を持つ実体を指定する。
-  日常利用の cache への書込みを避ける場合は、独立した複製を1回作成して比較の両側へ使う。
-  build 内の絶対 symlink が複製元を向いていないことも確認する。
-- 修正済みの同一ハーネスから `BENCH_REPO_ROOT=/比較対象のcheckout` で対象を選び、
-  修正前後とも15有効試行を測る。main の作業ファイルを checkout で戻さない。
-  過去の計測訂正（`eval/7-elpaca-ceiling/CORRECTION.md`）を踏まえ、
-  異なる cache・ハーネス・環境の結果を同条件の比較として扱わない。
-- raw ログは実行ごとのディレクトリへ保存し、完走時だけ manifest を公開する。
-  集計は manifest に記録された有効試行だけを使う。manifest のない旧計測は再計測する。
-- `emacs-init-time` は `after-init-hook` の直前で止まるため、この設定の主要コストを
-  計測窓の外へ出す。判断には使わない
-- 出力先の `.bench/` は gitignored
+計測は専用の worktree で行う。変更前後を比べるときは `BENCH_REPO_ROOT=<比較する checkout>` で対象を切り替え、
+両方の計測で同じ `STRAIGHT_DIR` を使う。出力先の `.bench/` は gitignored。
 
 ## CI
 
-GitHub Actions は push と pull request で Emacs 31.1 の安定レーンと
-snapshot のカナリアレーンを実行する。snapshot の失敗は non-blocking とする。
-
-実測時間（2026-07 時点）: キャッシュミス時（全パッケージ clone）は
-安定レーンで約 4 分 30 秒、キャッシュヒット時は約 1 分 20 秒。
-Copilot 関連パッケージの追加により、キャッシュミス時はこれより伸びる。
-
-## 監査で追加した検証
-
-- `make test-audit`: シンボル置換の範囲・undo・失敗時保全、Global解析、補完、版選択、ユーティリティ、Markdown。
-- `make test-audit-shell`: 一時 HOME とスタブで archive/Node/レビュー公開の失敗、ベンチ有効試行、lock照合を検証する。Python 3 が必要。
-- `make lint-el`: 全管理対象 Elisp の構文を検査し、early-init/init/inits/site-elisp を一時出力先へコンパイルする。警告は未許可として失敗する。
-- `make check-lockfile STRAIGHT_DIR=/隔離した/straight`: lockfile の再現性を変更なしで検査する。HEAD差分と未コミット変更、ロック外repo、未許可の欠落を拒否する。
-
-文法の両レーンは次で再現できる。文法ありでは実編集5件と outline の折りたたみ1件、文法なしでは cc-mode の2件が必須となる。
-
-```sh
-make test-cpp-config TEST_TREESIT_EXPECT=without
-mkdir -p /tmp/emacs-test-grammars
-make install-test-grammars TEST_TREESIT_DIR=/tmp/emacs-test-grammars
-make test-cpp-config TEST_TREESIT_EXPECT=with TEST_TREESIT_DIR=/tmp/emacs-test-grammars
-```
-
-`test-tty-live` は同じ隔離 HOME を使う2プロセスで実行し、圧縮ファイルの起動引数、
-固定 CAPF 候補の表示・確定、保存後の undo 再読込、固定入力メソッドの状態遷移を確認する。
-undo 検証だけは fixture 自体が `/tmp` 内にあるため、一時ファイルの除外を局所的に無効化する。
-
-clipboard の ERT は転送コールバックに渡る文字列を固定fixtureで確認する。
-実 Mozc・clipboard・clangd・irony・Copilot の再現手順と実測結果は
-[tty の実サービス検証](integration.md) を参照する。これらは通常 CI の保証範囲外である。
+GitHub Actions は push と PR で、Emacs 31.1 の安定レーンと snapshot のカナリアレーン（失敗を許容）を実行する。
+実際の Mozc、クリップボード、irony-server、Copilot との連携は `make test` でも CI でも検証しない。clangd だけは、PATH にあれば
+`make test-cpp-config` が実際に起動して検証する。各ツールの導入と無いときの挙動は README の [外部ツール](../README.md#外部ツール) を参照する。

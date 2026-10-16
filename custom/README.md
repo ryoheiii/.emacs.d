@@ -1,18 +1,25 @@
-# 自分用カスタムデータ置き場
+<!-- -*- gfm -*- -->
+# custom/ の内容
 
-## snippets (for yasnippet)
+`custom.el`・個人スニペット（どちらも gitignored）と、Markdown プレビュー用の CSS / JS（Git 管理）を置く。
 
-* 追加スニペット集の本体：`yasnippet-snippets` パッケージ（straight 管理）。
-  パスはパッケージが公開する `yasnippet-snippets-dir` で参照する。
-* 設定：`~/.emacs.d/loads/inits/31-editing.el`
-* 個人スニペットはこのディレクトリに置く。次の 2 レイアウトに対応する。
-  * `custom/snippets/<mode>/` にモードディレクトリを直接置く
-  * `custom/snippets/snippets` を外部ディレクトリ（Dropbox 等）への symlink にする
-* 両方を同時に使う構成は yasnippet の仕様上サポートしない（起動時に警告が出る）。
-* 詳細は `.claude/rules/elisp-conventions.md` の
-  「【不変条件】yasnippet のスニペットディレクトリ」を参照する。
+## custom.el
 
-## css / js (for markdown)
+`M-x customize` の保存先。手で `setq` を書いてもよく、設定モジュールより先に読み込まれる。
+使い方は README の [環境ごとの設定](../README.md#環境ごとの設定) を参照。
 
-* `markdown-mode` のプレビュー表示に使う CSS / JS を置く。
-* 設定：`~/.emacs.d/loads/site-elisp/my-markdown.el`
+## snippets/
+
+個人用の yasnippet スニペット。汎用のスニペットは `yasnippet-snippets` パッケージが供給し、挿入は `C-c y`。
+次のどちらかのレイアウトで置く。
+
+- `custom/snippets/<mode>/` にモードごとのディレクトリを直接置く
+- `custom/snippets/snippets` を、直下に `<mode>/` を持つ外部ディレクトリ（Dropbox など）への symlink にする
+
+両方を同時に置く構成は非対応。起動時に警告が出て、`custom/snippets/<mode>/` 側は読み込まれない。
+レイアウトを新しく作ったり切り替えたときは Emacs を再起動する（既存のレイアウトへスニペットを足すだけなら `M-x yas-reload-all`）。
+
+## css/ と js/
+
+`C-c C-c p` で開く Markdown プレビュー（pandoc で生成する HTML）が読み込む CSS / JS。
+本体は `css/markdown-style.css` と `js/markdown-script.js` の 2 ファイル。js は HTML 本文の末尾へ挿入する断片で、`<script>` タグを含めたまま書く。
