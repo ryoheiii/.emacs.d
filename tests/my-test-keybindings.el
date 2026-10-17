@@ -7,6 +7,96 @@
 (require 'ert)
 (require 'ggtags)
 
+;;; 操作を探しながら覚えるヘルプ
+(ert-deftest my-test-keybindings-learning-entry ()
+  :tags '(:keybinding)
+  (dolist (entry '(("h" . my/key-guide) ("s" . my/command-palette)
+                   ("k" . describe-key) ("b" . describe-bindings)
+                   ("m" . describe-mode) ("t" . help-with-tutorial)))
+    (should (eq (keymap-lookup global-map (concat "C-c h " (car entry)))
+                (cdr entry)))))
+
+(ert-deftest my-test-keybindings-learning-current-context ()
+  "案内のキーはローカルな上書きとリマップを反映すること。"
+  :tags '(:keybinding)
+  (with-temp-buffer
+    (let ((map (make-sparse-keymap)))
+      (use-local-map map)
+      (keymap-set map "C-s" #'ignore)
+      (keymap-set map "C-c v" #'consult-line)
+      (should (equal (my/key-guide--binding 'consult-line) "C-c v"))
+      (define-key map [remap consult-line] #'forward-char)
+      (let ((entry (seq-find (lambda (entry) (eq (cdr entry) 'forward-char))
+                             (my/key-guide--candidates))))
+        (should entry)
+        (should (string-match-p "forward-char" (car entry)))))
+    ;; この設定では C-h を押してもヘルプへ届かない。
+    (should-not (string-match-p "C-h" (my/key-guide--binding 'describe-key)))))
+
+(ert-deftest my-test-keybindings-learning-palette-dispatch ()
+  "選んだ操作は元バッファの選択範囲と前置引数を受け取ること。"
+  :tags '(:keybinding)
+  (with-temp-buffer
+    (insert "abc")
+    (set-mark 1)
+    (let ((origin (current-buffer))
+          (my/key-guide-commands '(("コピー copy" . kill-ring-save)))
+          (current-prefix-arg '(4))
+          observed)
+      (cl-letf (((symbol-function 'completing-read)
+                 (lambda (_prompt collection &rest _) (caar collection)))
+                ((symbol-function 'kill-ring-save)
+                 (lambda (beg end &optional _region)
+                   (interactive "r")
+                   (setq observed (list (current-buffer) beg end current-prefix-arg)))))
+        (call-interactively #'my/command-palette)
+        (should (equal observed (list origin 1 4 '(4))))))))
+
+(ert-deftest my-test-keybindings-learning-palette-cancel ()
+  :tags '(:keybinding)
+  (with-temp-buffer
+    (insert "変更しない")
+    (cl-letf (((symbol-function 'completing-read)
+               (lambda (&rest _) (signal 'quit nil))))
+      (should (eq (condition-case nil (my/command-palette) (quit 'cancelled))
+                  'cancelled)))
+    (should (equal (buffer-string) "変更しない"))))
+
+(ert-deftest my-test-keybindings-learning-terminal-keys ()
+  "GUI の open/copy キーより、端末で入力できる文字キーを案内すること。"
+  :tags '(:keybinding)
+  (with-temp-buffer
+    (should (equal (my/key-guide--binding 'find-file) "C-x C-f"))
+    (should (equal (my/key-guide--binding 'kill-ring-save) "M-w"))
+    (should-not (string-match-p "<" (my/key-guide--binding 'describe-key)))
+    (let ((map (make-sparse-keymap)))
+      (use-local-map map)
+      (keymap-set map "M-w" #'ignore)
+      (should (equal (my/key-guide--binding 'kill-ring-save)
+                     "M-x kill-ring-save")))))
+
+(ert-deftest my-test-keybindings-learning-cpp-scope ()
+  :tags '(:keybinding)
+  (with-temp-buffer
+    (should-not (rassq 'my/gtags-find-definition (my/key-guide--candidates)))
+    (c++-mode)
+    (should (rassq 'my/gtags-find-definition (my/key-guide--candidates)))))
+
+(ert-deftest my-test-keybindings-learning-guide-origin ()
+  "ヘルプバッファではなく、呼び出し元のキーで一覧を作ること。"
+  :tags '(:keybinding)
+  (save-window-excursion
+    (with-temp-buffer
+      (let ((map (make-sparse-keymap)))
+        (use-local-map map)
+        (keymap-set map "C-s" #'ignore)
+        (keymap-set map "C-c v" #'consult-line)
+        (my/key-guide)
+        (with-current-buffer "*操作ガイド*"
+          (should (derived-mode-p 'help-mode))
+          (should (string-match-p "C-c v" (buffer-string)))
+          (should (string-match-p "C-g" (buffer-string))))))))
+
 ;;; 基本操作と日本語入力
 (ert-deftest my-test-keybindings-basic-bindings ()
   "設定の配置を変えても、日常の基本操作を同じキーで呼べること。"

@@ -20,6 +20,42 @@
   (error "my-test-tty-live は実 pty 専用"))
 
 ;;; 起動ライフサイクル
+(ert-deftest my-test-tty-live-learning-palette ()
+  "端末キーから操作検索を開き、元の編集バッファで実行できること。"
+  :tags '(:tty-live)
+  (save-window-excursion
+    (with-temp-buffer
+      ;; 実際の編集バッファと同様、通常の名前で復帰先も検査する。
+      (rename-buffer "key-guide-fixture" t)
+      (switch-to-buffer (current-buffer))
+      (insert "abc")
+      (execute-kbd-macro (kbd "C-c h s beginning-of-line RET"))
+      (should (= (point) (point-min)))
+      (should (equal (list 'after-palette (buffer-name) (buffer-string))
+                     '(after-palette "key-guide-fixture" "abc")))
+      (execute-kbd-macro (kbd "C-c h h"))
+      (should (equal (buffer-name) "*操作ガイド*"))
+      (execute-kbd-macro (kbd "q"))
+      (should (equal (list 'after-quit (buffer-name) (buffer-string))
+                     '(after-quit "key-guide-fixture" "abc"))))))
+
+(ert-deftest my-test-tty-live-learning-which-key ()
+  "日本語の候補を tty のウィンドウへ表示できること。"
+  :tags '(:tty-live)
+  (let ((width (frame-width))
+        (height (frame-height)))
+    (save-window-excursion
+      (unwind-protect
+          (progn
+            (set-frame-size (selected-frame) 80 24)
+            (which-key-show-keymap 'my/key-help-map t)
+            (should (get-buffer-window which-key--buffer))
+            (should-not (which-key--next-page-hint "C-c h"))
+            (with-current-buffer which-key--buffer
+              (should (string-match-p "操作を探す" (buffer-string)))))
+        (which-key--hide-popup)
+        (set-frame-size (selected-frame) width height)))))
+
 (ert-deftest my-test-tty-live-init-loader-errors-empty ()
   :tags '(:tty-live)
   (should (string-empty-p (init-loader-error-log))))
