@@ -563,6 +563,7 @@
     ("ウィンドウの縦横配置を入れ替え" . window-layout-transpose)
     ("端の補助ウィンドウを表示・非表示" . window-toggle-side-windows)
     ("名前のパターンから定義を探す" . xref-find-apropos)
+    ("種類を選んで名前の定義を探す" . xref-find-by-kind)
     ("名前の定義へ移動" . xref-find-definitions)
     ("別フレームで定義へ移動" . xref-find-definitions-other-frame)
     ("別ウィンドウで定義へ移動" . xref-find-definitions-other-window)
