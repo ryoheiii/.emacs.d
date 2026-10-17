@@ -119,12 +119,12 @@ C/C++ バッファで使う。バックエンドが eglot でも GNU Global で�
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-t d` / `C-t C-d` | `my/gtags-find-definition` | 定義を検索 |
-| `C-t u` / `C-t C-u` | `my/gtags-find-references` | 参照を検索 |
-| `C-t v` / `C-t C-v` | `my/gtags-find-symbol` | GTAGS に定義のないシンボルの出現箇所を検索 |
-| `C-t f` / `C-t C-f` | `my/gtags-find-file` | ファイル名で検索 |
-| `C-t p` / `C-t C-p` | `xref-go-back` | ジャンプ履歴を戻る |
-| `C-t n` / `C-t C-n` | `xref-go-forward` | ジャンプ履歴を進む |
+| `C-t d` / `C-t C-d` | `my/gtags-find-definition` | 定義を検索。呼び出している関数の実装や、使われているクラスの定義を読む |
+| `C-t u` / `C-t C-u` | `my/gtags-find-references` | 参照を検索。メンバー変数を読み書きする箇所や、関数がコールバックとして渡される箇所を調べる |
+| `C-t v` / `C-t C-v` | `my/gtags-find-symbol` | GTAGS に定義のないシンボルの出現箇所を検索。外部ライブラリの関数など、プロジェクト内に定義がない名前の利用例を探す |
+| `C-t f` / `C-t C-f` | `my/gtags-find-file` | ファイル名で検索。`#include` に書かれたヘッダや、名前が分かっている実装ファイルを開く |
+| `C-t p` / `C-t C-p` | `xref-go-back` | ジャンプ履歴を戻る。関数の実装を読み終えたら、調査を始めた呼び出し箇所へ戻る |
+| `C-t n` / `C-t C-n` | `xref-go-forward` | ジャンプ履歴を進む。戻ったあと、直前に読んでいた実装をもう一度確認する |
 
 ### 読解補助（`C-t` 配下の追加キー）
 
@@ -133,12 +133,12 @@ eglot（clangd）の管理下では LSP で検索し、それ以外では GNU Gl
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-t c` / `C-t C-c` | `my/lsp-find-callers` | 呼び出し元を検索 |
-| `C-t e` / `C-t C-e` | `my/lsp-find-callees` | 呼び出し先を検索（eglot 管理下のみ） |
-| `C-t t` / `C-t C-t` | `my/lsp-find-type-hierarchy` | 直接の基底クラスと派生クラスを一覧（eglot 管理下のみ） |
-| `C-t o` / `C-t C-o` | `my/lsp-find-other-file` | ヘッダ/ソースの切り替え |
-| `C-t s` / `C-t C-s` | `my/lsp-find-workspace-symbol` | 文字列でプロジェクト横断のシンボル検索 |
-| `C-t l` / `C-t C-l` | `my/eglot-inlay-hints-toggle` | inlay hints（引数名・推論型）のバッファ単位の ON / OFF（eglot 管理下のみ） |
+| `C-t c` / `C-t C-c` | `my/lsp-find-callers` | 呼び出し元を検索。注目している関数が、どの上位処理から呼ばれるかを調べる |
+| `C-t e` / `C-t C-e` | `my/lsp-find-callees` | 呼び出し先を検索（eglot 管理下のみ）。長い関数が処理を委譲する関数を一覧し、読む先を選ぶ |
+| `C-t t` / `C-t C-t` | `my/lsp-find-type-hierarchy` | 直接の基底クラスと派生クラスを一覧（eglot 管理下のみ）。インターフェースの実装クラスや、共通処理を持つ基底クラスを探す |
+| `C-t o` / `C-t C-o` | `my/lsp-find-other-file` | ヘッダ/ソースの切り替え。クラスの宣言・コメントとメソッドの実装を見比べる |
+| `C-t s` / `C-t C-s` | `my/lsp-find-workspace-symbol` | 文字列でプロジェクト横断のシンボル検索。名前の一部だけ分かるクラスや関数を探し、読む入口にする |
+| `C-t l` / `C-t C-l` | `my/eglot-inlay-hints-toggle` | inlay hints（引数名・推論型）のバッファ単位の ON / OFF（eglot 管理下のみ）。`true` や数値を渡す引数の意味、`auto` 変数の型を確認する |
 
 ### C/C++ バッファのその他のキー
 
