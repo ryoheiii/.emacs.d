@@ -56,6 +56,33 @@
         (which-key--hide-popup)
         (set-frame-size (selected-frame) width height)))))
 
+(ert-deftest my-test-tty-live-which-key-cpp-grouped ()
+  "C++ の C-t 案内で両キーと一つの説明を端末に表示すること。"
+  :tags '(:tty-live)
+  (let ((width (frame-width))
+        (height (frame-height)))
+    (save-window-excursion
+      (unwind-protect
+          (with-temp-buffer
+            (switch-to-buffer (current-buffer))
+            (c++-mode)
+            (set-frame-size (selected-frame) 80 24)
+            (should (eq (key-binding (kbd "C-t e")) 'my/lsp-find-callees))
+            (should (eq (key-binding (kbd "C-t C-e")) 'my/lsp-find-callees))
+            (which-key--show-keymap "C-t" (key-binding (kbd "C-t")) nil nil t)
+            (should (get-buffer-window which-key--buffer))
+            (let ((text ""))
+              (dotimes (page (which-key--pages-num-pages which-key--pages-obj))
+                (which-key--show-page page)
+                (with-current-buffer which-key--buffer
+                  (setq text (concat text (buffer-string)))
+                  (dolist (line (split-string (buffer-string) "\n"))
+                    (should (<= (string-width line) 80)))))
+              (should (string-match-p "e/C-e +: +呼び出し先を探す" text))
+              (should (= (length (split-string text "呼び出し先を探す")) 2))))
+        (which-key--hide-popup)
+        (set-frame-size (selected-frame) width height)))))
+
 (ert-deftest my-test-tty-live-init-loader-errors-empty ()
   :tags '(:tty-live)
   (should (string-empty-p (init-loader-error-log))))

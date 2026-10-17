@@ -154,6 +154,45 @@
   (should (equal (which-key--maybe-replace '("C-c z" . "unknown-operation"))
                  '("C-c z" . "unknown-operation"))))
 
+(ert-deftest my-test-keybindings-which-key-group-commands ()
+  "同一コマンドのキーをまとめ、別コマンド・prefix・非表示を区別すること。"
+  :tags '(:keybinding)
+  (require 'which-key)
+  (let* ((which-key-replacement-alist
+          '((("\\`hidden\\'" . nil) . t)
+            ((nil . "\\`forward-char\\'") . (nil . "移動"))
+            ((nil . "\\`backward-char\\'") . (nil . "移動"))))
+         (rows (which-key--format-and-replace
+                '(("C-f" . "forward-char") ("f" . "forward-char")
+                  ("b" . "backward-char")
+                  ("x" . "prefix") ("y" . "prefix")
+                  ("hidden" . "forward-char")))))
+    (should (equal (mapcar #'car rows) '("C-f/f" "b" "x" "y")))
+    (should (equal (mapcar #'caddr (seq-take rows 2)) '("移動" "移動"))))
+  ;; 全キー一覧では prefix を含むキー表記も欠落しない。
+  (should (equal (caar (which-key--format-and-replace
+                       '(("C-t C-e" . "my/lsp-find-callees")
+                         ("C-t e" . "my/lsp-find-callees")) t))
+                 "C-t C-e/C-t e")))
+
+(ert-deftest my-test-keybindings-which-key-overridden-command ()
+  "一方のキーが別コマンドに変われば、説明文が同じでも別々に表示すること。"
+  :tags '(:keybinding)
+  (require 'which-key)
+  (with-temp-buffer
+    (let ((map (make-sparse-keymap))
+          (which-key-replacement-alist
+           '(((nil . "\\`forward-char\\'") . (nil . "移動"))
+             ((nil . "\\`backward-char\\'") . (nil . "移動")))))
+      (keymap-set map "C-t e" #'forward-char)
+      (keymap-set map "C-t C-e" #'forward-char)
+      (use-local-map map)
+      (should (= (length (which-key--get-bindings (kbd "C-t"))) 1))
+      (keymap-set map "C-t C-e" #'backward-char)
+      (let ((rows (which-key--get-bindings (kbd "C-t"))))
+        (should (equal (mapcar #'car rows) '("e" "C-e")))
+        (should (equal (mapcar #'caddr rows) '("移動" "移動")))))))
+
 (ert-deftest my-test-keybindings-japanese-mode-help ()
   "モード固有のキー一覧にも日本語の説明を添えること。"
   :tags '(:keybinding)

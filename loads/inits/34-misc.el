@@ -7,6 +7,26 @@
 ;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
   :straight nil
+  :preface
+  (defun my/which-key-group-bindings (format-function bindings &optional full-key)
+    "BINDINGS の同一コマンドのキーをまとめ、説明を一度だけ表示する。
+FORMAT-FUNCTION と FULL-KEY による標準の翻訳・装飾・非表示を維持する。"
+    (let ((groups (make-hash-table :test #'eq))
+          rows)
+      (dolist (binding bindings)
+        ;; cdr は日本語への置換前に which-key がキーマップから取得した割り当て先。
+        ;; prefix や lambda など、コマンドを特定できない表示はまとめない。
+        (let* ((command (intern-soft (cdr binding)))
+               (row (car (funcall format-function (list binding) full-key)))
+               (group (and (commandp command) (not (keymapp command))
+                           (gethash command groups))))
+          (when row
+            (if group
+                (setcar group (concat (car group) "/" (car row)))
+              (push row rows)
+              (when (and (commandp command) (not (keymapp command)))
+                (puthash command row groups))))))
+      (nreverse rows)))
   :custom
   (which-key-idle-delay 0.5)             ; キーの続きに迷ったら早めに案内
   (which-key-idle-secondary-delay 0.1)
@@ -15,6 +35,7 @@
   :hook
   (after-init . which-key-mode)          ; Emacs 起動後に which-key モードを有効化
   :config
+  (advice-add 'which-key--format-and-replace :around #'my/which-key-group-bindings)
   ;; コマンド名に対する表示の置換なので、モード側がキーを上書きしても誤案内しない。
   (dolist (entry (append my/key-guide-commands my/key-guide--cpp-commands
                         my/key-guide--extra-descriptions))
