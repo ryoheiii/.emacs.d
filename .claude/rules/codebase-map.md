@@ -7,7 +7,7 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 
 ## 起動シーケンス
 
-1. `early-init.el` — Emacs UI 描画前に実行する。OS 判定定数（`IS-MAC`、`IS-LINUX`、`IS-WINDOWS`）、全ディレクトリパス変数（`my-emacs-dir`、`my-loads-dir`、`my-var-dir` など）、パスヘルパーを定義する。さらに `package.el` の無効化、`straight.el` のブートストラップ、バックアップ／自動保存先の設定、不要な UI 要素の除去を行う。
+1. `early-init.el` — Emacs UI 描画前に実行する。OS 判定定数（`IS-MAC`、`IS-LINUX`、`IS-WINDOWS`）、全ディレクトリパス変数（`my-emacs-dir`、`my-loads-dir`、`my-var-dir` など）、パスヘルパーを定義する。旧配置のデータは `my-runtime.el` で移行する。さらに `package.el` の無効化、`straight.el` のブートストラップ、バックアップ／自動保存先の設定、不要な UI 要素の除去を行う。
 2. `init.el` — 最小限のエントリーポイントである。`loads/site-elisp/` を `load-path` に加え、straight 経由で `use-package` をインストールし、`init-loader` で `loads/inits/` 内の設定を読み込む。
 3. `loads/inits/` — `init-loader` が番号／アルファベット順に読み込むモジュール型設定ファイル群である。
 
@@ -19,9 +19,11 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 | `loads/site-elisp/` | 自作の Elisp ライブラリ。`load-path` に含まれる。設定モジュールから呼ぶ、まとまった処理を置く |
 | `loads/straight/` | straight.el のリポジトリとビルド成果物 |
 | `custom/` | `custom.el`、YASnippet、Markdown 表示用 CSS／JS などのカスタムデータ |
-| `var/hist/` | 履歴、ブックマーク、TRAMP 永続化、transient の実行時データ |
+| `var/state/` | 履歴、ブックマーク、TRAMP 永続化、transient の実行時データ |
 | `var/backup/` | 自動保存・バックアップファイルの実行時生成先 |
-| `var/package/` | `eln-cache` などネイティブコンパイル成果物と `tree-sitter/`（文法ライブラリ）の実行時生成先 |
+| `var/packages/` | tree-sitter 文法、Copilot language server、irony-server の導入先 |
+| `var/cache/` | 再作成できるネイティブコンパイル、URL、Copilot Chat のキャッシュとベンチ作業領域 |
+| `var/tmp/` | Emacs が作る一時ファイル |
 | `tests/` | Elisp・シェル・Python の回帰テストと起動コスト計測。`Makefile` の各ターゲットが参照する |
 | `docs/eval/` | 設計判断の根拠となる実測結果と生ログ |
 
@@ -41,10 +43,12 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 | `(my-set-loads "subdir/")` | `~/.emacs.d/loads/subdir/` |
 | `(my-set-straight "subdir/")` | `~/.emacs.d/loads/straight/subdir/` |
 | `(my-set-custom "subdir/")` | `~/.emacs.d/custom/subdir/` |
-| `(my-set-history "filename")` | `~/.emacs.d/var/hist/filename` |
+| `(my-set-history "filename")` | `~/.emacs.d/var/state/filename` |
 | `(my-set-backup "filename")` | `~/.emacs.d/var/backup/filename` |
-| `(my-set-package "filename")` | `~/.emacs.d/var/package/filename` |
-| `(my-set-db "filename")` | `~/.emacs.d/var/database/filename` |
+| `(my-set-package "filename")` | `~/.emacs.d/var/packages/filename` |
+| `(my-set-cache "filename")` | `~/.emacs.d/var/cache/filename` |
+| `(my-set-temp "filename")` | `~/.emacs.d/var/tmp/filename` |
+| `(my-set-db "filename")` | `~/.emacs.d/var/state/database/filename` |
 
 これらの基底パスは `early-init.el` が定義する。呼び出し側でホームディレクトリやリポジトリ絶対パスを再構築しない。
 

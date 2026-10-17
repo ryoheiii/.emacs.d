@@ -7,7 +7,7 @@ README の [環境ごとの設定](../README.md#環境ごとの設定) を参照
 ## 起動シーケンス
 
 ```text
-early-init.el         OS 判定、パス変数、custom/custom.el の読み込み、straight.el の準備、起動中の画面表示の抑制
+early-init.el         OS 判定、保存先の指定・旧配置の移行、custom/custom.el の読み込み、straight.el の準備、起動中の画面表示の抑制
     ↓
 init.el               loads/site-elisp/ を load-path へ追加、use-package の導入、init-loader の起動
     ↓
@@ -27,9 +27,11 @@ loads/inits/NN-*.el   init-loader が番号順に読み込む設定モジュー�
 | `loads/site-elisp/` | 自作の Elisp ライブラリ（`load-path` に含まれる） | 一部（`my-*.el` だけ管理） |
 | `loads/straight/` | straight.el のリポジトリとビルド成果物（[パッケージ管理](packages.md)） | 一部（lockfile `versions/default.el` だけ管理） |
 | `custom/` | `custom.el`、個人スニペット、Markdown プレビュー用の CSS / JS（[custom/README.md](../custom/README.md)） | 一部（`custom.el` と `snippets/` は gitignored） |
-| `var/hist/` | 履歴、ブックマーク、undo 履歴などの実行時データと、irony-server の導入先（`irony/`） | gitignored |
+| `var/state/` | 保持する実行時データ。履歴、ブックマーク、undo、プロジェクト一覧、Transient 設定、URL Cookie、保存したチャット、`database/` | gitignored |
 | `var/backup/` | バックアップと自動保存 | gitignored |
-| `var/package/` | ネイティブコンパイルのキャッシュ（`eln-cache/`）、tree-sitter 文法（`tree-sitter/`）、Copilot language server（`copilot/`） | gitignored |
+| `var/packages/` | tree-sitter 文法（`tree-sitter/`）、Copilot language server（`copilot/`）、irony-server（`irony/`） | gitignored |
+| `var/cache/` | 再作成できるデータ。ネイティブコンパイル（`eln-cache/`）、URL、Copilot Chat のトークン・モデル一覧、ベンチ作業領域（`bench/`） | gitignored |
+| `var/tmp/` | Emacs の `temporary-file-directory`。`make-temp-file` などが作る一時ファイル | gitignored |
 | `tests/` | 回帰テストと起動コスト計測 | 管理 |
 | `docs/` | ドキュメント（`docs/eval/` は過去の計測記録と生ログ） | 管理 |
 | `.github/workflows/` | Linux の回帰テストと macOS / Windows の起動検証 | 管理 |
@@ -40,8 +42,43 @@ loads/inits/NN-*.el   init-loader が番号順に読み込む設定モジュー�
 `loads/site-elisp/` に置く。短い補助関数は設定のそばに残し、処理を追うためのファイル移動を増やさない。
 `emacs-setup.sh` は単独で実行できる入口、`test-emacs-setup.sh` はその検証としてルートに置く。
 
-`var/` と `loads/straight/` は手で編集しない。削除は `./emacs-setup.sh --clean`（`var/`）または `--clean-all`（加えて `loads/straight/`）で行う。
-復元できないデータや lockfile も消えるため、実行前に README の [クリーンアップ](../README.md#クリーンアップ) を確認する。
+## 実行時データと旧配置からの移行
+
+`var` は実行中に変わるデータをまとめる名前として維持する。直下を `state`（保持するデータ）、
+`cache`（再作成できるデータ）、`backup`（復旧用）、`packages`（導入物）、`tmp`（一時ファイル）に分ける。
+既存のパスヘルパーは互換性のため維持し、`my-set-history` は `var/state/` を指す。
+
+更新前に、同じ設定を使う Emacs をすべて終了する。次の起動時に `early-init.el` が `my-runtime.el` を読み、
+履歴やパッケージのロードより前に次を移す。内容は書き換えず、移行済みの項目は再度移さない。
+
+| 旧配置 | 移行先 |
+|---|---|
+| `var/hist/` | `var/state/`（中の `irony/` は `var/packages/irony/`） |
+| `var/package/` | `var/packages/`（中の `eln-cache/` は `var/cache/eln-cache/`） |
+| `var/database/` | `var/state/database/` |
+| 直下の `projects.eld` / `projects`、`transient/`、`url/`、`request/`、`copilot-chat/` | `var/state/` 内の同名項目 |
+| 旧 `url/cache/`（親の移行後は `var/state/url/cache/`） | `var/cache/url/`（Cookie と履歴は `var/state/url/` に保持） |
+| 直下の `.cache/copilot/` | `var/packages/copilot/` |
+| 直下の `eln-cache/` | `var/cache/legacy-eln-cache/`（現用キャッシュとは混ぜず保全） |
+| 直下の `.bench/` | `var/cache/bench/` |
+
+移行元と移行先に同名ファイルがある場合や、移行対象自体がリンクの場合は、上書きせず起動時にエラーを出す。
+移動済みの項目はそのまま残る。表示されたパスの両方を保全し、衝突やリンクを手動で解決してから再起動する。
+旧 `projects` だけがある環境では、そのファイルを引き続きプロジェクト一覧として使う。
+`.cache/` 自体がリンクの場合は、その中身を含め変更しない。未知の項目が残っている場合も削除しない。空になった場合だけディレクトリを取り除く。
+
+Copilot 本体の既定の導入先は `.cache/copilot/` で、`copilot-install-server` が作成する。
+本設定では `var/packages/copilot/` を指定する。ネイティブコンパイルの既定は直下の `eln-cache/` で、
+設定を読まないバッチや独自の起動方法では保存先変更が効かない。パッケージのビルド・復元・文法導入では
+先に `early-init.el` を読み込む。手動のバッチ実行も [手動リビルド](packages.md#手動リビルド) と同じ順序にする。
+
+外部ツールの `TMPDIR`、OS のソケット、GitHub の共有認証ファイル（`~/.config/github-copilot/`）は移さない。
+Copilot Chat の旧 `~/.cache/` 内のキャッシュはそのまま残し、新しい保存先で再取得する。
+`loads/straight/` は依存パッケージ基盤として従来の位置を維持する。
+
+`var/` と `loads/straight/` は手で編集しない。キャッシュの削除は `./emacs-setup.sh --clean-cache` を使う。
+`--clean` は `var/` 全体、`--clean-all` は加えて `loads/straight/` を消すため、
+実行前に README の [クリーンアップ](../README.md#クリーンアップ) を確認する。
 
 ## 設定モジュール（`loads/inits/`）
 
@@ -83,6 +120,7 @@ init-loader は 2 桁の数字で始まるファイルを番号順に読み込�
 | `my-lsp-nav.el` | `C-t c` / `e` / `t` / `o` / `s` の呼び出し階層・型階層・ヘッダ/ソース切替・横断シンボル検索（[コードリーディング補助](cpp.md#コードリーディング補助)） |
 | `my-markdown.el` | Markdown の編集補助と HTML 出力。mdh を優先し、無ければ Pandoc を使う |
 | `my-node-path.el` | fnm、nvm、オフライン導入先からの Node.js 検出。`35-copilot.el` が可用性判定の前に呼ぶ |
+| `my-runtime.el` | 旧保存先のデータを上書きせず用途別に移行する。`early-init.el` が絶対パスで読み込む |
 | `my-snippets.el` | 個人スニペットの配置解決と初期化。`31-editing.el` から読み込む |
 | `my-treesit.el` | tree-sitter 文法の取得元と導入コマンド |
 

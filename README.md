@@ -192,16 +192,26 @@ cc-mode に戻す方法は [C/C++ 開発環境](docs/cpp.md#文法の導入と-c
 - パッケージの更新と lockfile、アーカイブからの復元は [パッケージ管理](docs/packages.md)。
 - 設定を変更した後の検証は [テスト](docs/testing.md)。変更するときの規約は [AGENTS.md](AGENTS.md)。
 
+### 保存先の整理
+
+実行時データは `var/state/`、`var/cache/`、`var/backup/`、`var/packages/`、`var/tmp/` に分ける。
+旧配置から更新するときは、同じ設定を使う Emacs をすべて終了してから新しい設定を起動する。
+起動時に旧履歴やサーバーを移し、直下の `.cache/copilot/` と `eln-cache/` も `var/` 配下へ収める。
+同名ファイルの衝突は自動で上書きしない。詳しくは [保存先と移行手順](docs/architecture.md#実行時データと旧配置からの移行)。
+
 ### クリーンアップ
 
+Emacs を終了してから実行する。キャッシュだけの掃除には `--clean-cache` を使う。
+
 ```sh
-./emacs-setup.sh --clean             # var/ 配下と、このスクリプトが入れた clangd の旧版を削除（パッケージは残す）
+./emacs-setup.sh --clean-cache       # var/cache/ と var/tmp/ だけを削除（履歴・バックアップ・導入物は保持）
+./emacs-setup.sh --clean             # var/ 配下と、このスクリプトが入れた clangd の旧版を削除（straight のパッケージは残す）
 ./emacs-setup.sh --clean-all         # 上記に加えて loads/straight/（パッケージ）と、このスクリプトが入れた clangd を全版削除
 ./emacs-setup.sh --uninstall-clangd  # このスクリプトが入れた clangd だけを削除
 ./emacs-setup.sh --uninstall-node    # オフライン導入分と、このスクリプトが入れた fnm を丸ごと削除（既存の fnm 経由の Node.js は残す）
 ```
 
 `--clean` は次の復元できないデータも消す。バックアップ世代と自動保存、ミニバッファ履歴、カーソル位置、最近使ったファイル、
-ブックマーク、undo 履歴。tree-sitter 文法、Copilot language server、irony-server も消えるため、使うなら再導入する。
+ブックマーク、undo 履歴、プロジェクト一覧、保存したチャット。tree-sitter 文法、Copilot language server、irony-server も消えるため、使うなら再導入する。
 `--clean-all` は Git 管理の lockfile `loads/straight/versions/default.el` も消す。パッケージは起動時に lockfile のリビジョンで
 取得されるため、Emacs を起動する前に `git checkout -- loads/straight/versions/default.el` で戻す。

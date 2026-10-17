@@ -31,7 +31,7 @@ tree-sitter の「文法」は C/C++ の構文を読み取るためのライブ�
 ```
 
 Emacs からは `M-x my/treesit-install-c-grammars`（`C-u` 付きで導入済みでも再ビルド）。
-導入先は `var/package/tree-sitter/`。導入後に再起動すると ts モードへ切り替わる。
+導入先は `var/packages/tree-sitter/`。導入後に再起動すると ts モードへ切り替わる。
 
 cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-for-cc nil)` を書く（次の起動から効く）。
 再起動せずに切り替えるには `M-: (setq my/use-treesit-for-cc nil)` を評価し、開いているバッファで `M-x normal-mode` を実行する。
@@ -54,7 +54,7 @@ cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-fo
 - 解析によるエラー・警告の表示（flymake）は既定で無効。有効にするには `loads/inits/99-private.el` で `eglot-stay-out-of` から `flymake` を外す。
   inlay hints も既定で無効（[inlay hints](#inlay-hints)）。
 - `C-t d` などで移動した先のプロジェクト外のファイル（`/usr/include` など）も同じ clangd の管理下に入り、移動先でも LSP で検索できる。
-- irony-server の導入先は `var/hist/irony/`。導入後に C/C++ バッファを開き直すと irony が有効になる。eglot 管理下のバッファでは irony を自動的に止める。
+- irony-server の導入先は `var/packages/irony/`。導入後に C/C++ バッファを開き直すと irony が有効になる。eglot 管理下のバッファでは irony を自動的に止める。
 
 ## タグナビゲーション
 

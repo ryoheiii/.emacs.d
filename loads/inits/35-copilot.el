@@ -172,6 +172,10 @@ prog-mode のバッファを開くたびにエラーになる。導入は M-x co
     (request-storage-directory (my-set-history "request/")))
 
 ;;;; Copilot Chat - GitHub Copilot Chat によるコード分析・対話
+  ;; モデル一覧の保存処理は親ディレクトリを作らないため、先に準備する。
+  ;; GitHub の共通認証ファイルは他のクライアントも使うので既定の場所を維持する。
+  (make-directory (my-set-cache "copilot-chat/") t)
+  (set-file-modes (my-set-cache "copilot-chat/") #o700)
   (use-package copilot-chat
     :straight (:host github :repo "chep/copilot-chat.el" :files ("*.el"))
     :commands (copilot-chat-display copilot-chat-transient
@@ -216,6 +220,9 @@ prog-mode のバッファを開くたびにエラーになる。導入は M-x co
            ("C-c J c" . copilot-chat-cancel)                     ; 応答を中断
            ("C-c J q" . copilot-chat-reset))                     ; チャットリセット
     :custom
+    (copilot-chat-default-save-dir (my-set-history "copilot-chat/"))
+    (copilot-chat-token-cache (my-set-cache "copilot-chat/token"))
+    (copilot-chat-models-cache-file (my-set-cache "copilot-chat/models.json"))
     ;; モデルはサーバー側デフォルトに委ねる（C-c J m で切り替え可能）
     (copilot-chat-frontend 'org)                                 ; org-mode フロントエンド
     ;; org フロントエンド用システムプロンプト（日本語回答指示を末尾に追加）

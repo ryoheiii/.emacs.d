@@ -46,7 +46,7 @@ make test-startup   # 起動確認だけ
 | ターゲット | 検証内容 |
 |---|---|
 | `make lint` | `lint-sh`（shellcheck）と `lint-el`（Elisp の構文と byte compile。警告も失敗） |
-| `make test-unit` | `early-init.el` のパスヘルパー、自動保存先の作成、端末専用ビルドの load-path キャッシュ |
+| `make test-unit` | `early-init.el` のパスヘルパー、保存先の移行・衝突時のデータ保全、自動保存先の作成、端末専用ビルドの load-path キャッシュ |
 | `make test-startup` | フル起動、init-loader のエラーログ、起動時の警告 |
 | `make test-keybinding` | 基本操作・ウィンドウ操作・IME と `C-h` 変換、`C-t`、折りたたみ、`C-z` のタブ操作、パッケージ固有のキーマップ |
 | `make test-cpp-config` | C/C++ のスタイル、eglot 起動条件、検索経路、cc-mode と ts モードの切替、irony ゲート、読解補助。`clangd`、GNU Global、tree-sitter 文法が無い環境では、それを使う検査を skip する |
@@ -88,13 +88,13 @@ make test-startup   # 起動確認だけ
 ## 起動コストの計測
 
 ```sh
-tests/my-bench-run.sh now  15 .bench/out    # 現行設定を 15 有効試行（ウォームアップ 3 回は破棄）
-tests/my-bench-run.sh bare 15 .bench/out    # emacs -Q -nw の下限
-tests/my-bench-summarize.sh .bench/out      # 中央値と IQR で集計
+tests/my-bench-run.sh now  15 var/cache/bench/out    # 現行設定を 15 有効試行（ウォームアップ 3 回は破棄）
+tests/my-bench-run.sh bare 15 var/cache/bench/out    # emacs -Q -nw の下限
+tests/my-bench-summarize.sh var/cache/bench/out      # 中央値と IQR で集計
 ```
 
 計測は専用の worktree で行う。変更前後を比べるときは `BENCH_REPO_ROOT=<比較する checkout>` で対象を切り替え、
-両方の計測で同じ `EMACS` と `STRAIGHT_DIR` を使う。出力先の `.bench/` は gitignored。
+両方の計測で同じ `EMACS` と `STRAIGHT_DIR` を使う。出力先の `var/cache/bench/` は gitignored。
 完走時に作られる `*-manifest.tsv` が集計対象を確定するため、ログだけを抜き出して混ぜない。
 
 ## CI
@@ -103,3 +103,7 @@ GitHub Actions は push と PR で、Emacs 31.1 の安定版と開発途中の s
 snapshot 版は次の Emacs で起きそうな問題を早めに見つけるための検証で、失敗しても CI 全体を失敗にはしない。
 実際の Mozc、クリップボード、irony-server、Copilot との連携は `make test` でも CI でも検証しない。clangd だけは、PATH にあれば
 `make test-cpp-config` が実際に起動して検証する。各ツールの導入と無いときの挙動は README の [外部ツール](../README.md#外部ツール) を参照する。
+
+保存先の回帰検査では `test-audit` が Copilot のインストール先（npm 起動はスタブ）と、
+native-comp 対応ビルドで同期・非同期コンパイルの出力先を確認する。
+`test-audit-shell` は `--clean-cache` が履歴・導入物・リンク先を保全することも確認する。

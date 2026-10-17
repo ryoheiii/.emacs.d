@@ -106,9 +106,9 @@ make_fake_home() {
     harness_require_dir "$home"
     mkdir -p "$home/.emacs.d/loads/straight/repos" \
              "$home/.emacs.d/loads/straight/versions" \
-             "$home/.emacs.d/var/hist" \
+             "$home/.emacs.d/var/state" \
              "$home/.emacs.d/var/backup" \
-             "$home/.emacs.d/var/package" || harness_fatal "$home を初期化できません。"
+             "$home/.emacs.d/var/packages" || harness_fatal "$home を初期化できません。"
 }
 
 record_pass() {
@@ -1047,14 +1047,14 @@ fi
 
 # 実際の setup が付けたマーカーも、専用 uninstall で回収できる。
 CLANGD_REMOVE_HOME="$SETUP_NEXT_STUB/home"
-mkdir -p "$CLANGD_REMOVE_HOME/.emacs.d/var/hist" "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight"
-touch "$CLANGD_REMOVE_HOME/.emacs.d/var/hist/keep" "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight/keep"
+mkdir -p "$CLANGD_REMOVE_HOME/.emacs.d/var/state" "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight"
+touch "$CLANGD_REMOVE_HOME/.emacs.d/var/state/keep" "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight/keep"
 if [ -f "$CLANGD_REMOVE_HOME/.local/share/clangd/clangd_24.2.5/.installed-by-emacs-setup" ] \
     && HOME="$CLANGD_REMOVE_HOME" "$SCRIPT" --uninstall-clangd >/dev/null 2>&1 \
     && HOME="$CLANGD_REMOVE_HOME" "$SCRIPT" --uninstall-clangd >/dev/null 2>&1 \
     && [ ! -e "$CLANGD_REMOVE_HOME/.local/share/clangd" ] \
     && [ ! -L "$CLANGD_REMOVE_HOME/.local/bin/clangd" ] \
-    && [ -f "$CLANGD_REMOVE_HOME/.emacs.d/var/hist/keep" ] \
+    && [ -f "$CLANGD_REMOVE_HOME/.emacs.d/var/state/keep" ] \
     && [ -f "$CLANGD_REMOVE_HOME/.emacs.d/loads/straight/keep" ]; then
     record_pass "clangd setup and repeated uninstall remove all owned artifacts"
 else
@@ -1422,7 +1422,7 @@ assert_exit "clean succeeds"     0  --clean
 assert_exit "clean-all succeeds" 0  --clean-all
 
 # early-init.el を読まない emacs --batch が作る迷子の eln-cache を回収すること。
-# 本設定での正規の保存先は var/package/eln-cache/ で、直下のものは重複でしかない。
+# 本設定での正規の保存先は var/cache/eln-cache/ で、直下のものは重複でしかない。
 assert_clean_removes_stray_eln() {
     local stray="$HOME/.emacs.d/eln-cache"
     rm -rf "$stray"
@@ -1531,6 +1531,12 @@ if [ "$1" = install ]; then
     mkdir -p "$HOME/.local/bin"
     cat > "$HOME/.local/bin/emacs" <<'INNER'
 #!/bin/bash
+# 機能検査は -Q でサイト設定も読まない。--version はこの条件を要しない。
+if [ "$1" != --version ]; then
+    quick=no
+    for arg in "$@"; do [ "$arg" = -Q ] && quick=yes; done
+    [ "$quick" = yes ] || exit 92
+fi
 case "${FAKE_EMACS_MODE:-ok}" in
     version-fail) exit 1 ;;
     native-nil)

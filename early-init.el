@@ -40,10 +40,12 @@
 (defvar my-custom-dir   (expand-file-name "custom/"   my-emacs-dir))
 
 (defvar my-var-dir      (expand-file-name "var/"      my-emacs-dir))
-(defvar my-history-dir  (expand-file-name "hist/"     my-var-dir))
+(defvar my-history-dir  (expand-file-name "state/"    my-var-dir))
 (defvar my-backup-dir   (expand-file-name "backup/"   my-var-dir))
-(defvar my-package-dir  (expand-file-name "package/"  my-var-dir))
-(defvar my-db-dir       (expand-file-name "database/" my-var-dir))
+(defvar my-package-dir  (expand-file-name "packages/" my-var-dir))
+(defvar my-cache-dir    (expand-file-name "cache/"    my-var-dir))
+(defvar my-temp-dir     (expand-file-name "tmp/"      my-var-dir))
+(defvar my-db-dir       (expand-file-name "database/" my-history-dir))
 
 ;;;; パス設定ヘルパ関数
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))
@@ -56,7 +58,36 @@
 (defun my-set-history (&rest args) (expand-file-name (apply 'concat args) my-history-dir))
 (defun my-set-backup (&rest args) (expand-file-name (apply 'concat args) my-backup-dir))
 (defun my-set-package (&rest args) (expand-file-name (apply 'concat args) my-package-dir))
+(defun my-set-cache (&rest args) (expand-file-name (apply 'concat args) my-cache-dir))
+(defun my-set-temp (&rest args) (expand-file-name (apply 'concat args) my-temp-dir))
 (defun my-set-db (&rest args) (expand-file-name (apply 'concat args) my-db-dir))
+
+;;;; eln-cache の保存先を変更
+;; native-comp 無効ビルドでは `native-comp-eln-load-path' 自体が無く、
+;; `startup-redirect-eln-cache' が void-variable になるため変数の有無で判定する
+;; （`my-test-audit-non-native-early-init' が固定する）。
+(when (boundp 'native-comp-eln-load-path)
+  (startup-redirect-eln-cache (my-set-cache "eln-cache/")))
+
+;;;; 旧配置の移行と保存先の準備
+;; init.el より前なので、load-path に依存せず補助ライブラリを読む。
+(load (my-set-loads "site-elisp/my-runtime.el") nil t)
+(my/runtime-migrate-layout my-emacs-dir)
+(dolist (directory (list my-history-dir my-backup-dir my-cache-dir
+                        my-package-dir my-temp-dir))
+  (make-directory directory t))
+;; Emacs 内で作る一時ファイル。外部ツールの TMPDIR は変更しない。
+(setq temporary-file-directory (file-name-as-directory my-temp-dir))
+
+;;;; プロジェクト履歴と URL の保存先
+;; 31.1 より前の projects が残っていれば、その履歴を引き続き使う。
+(setq project-list-file
+      (if (and (file-exists-p (my-set-history "projects"))
+               (not (file-exists-p (my-set-history "projects.eld"))))
+          (my-set-history "projects")
+        (my-set-history "projects.eld")))
+(setq url-configuration-directory (my-set-history "url/")
+      url-cache-directory (my-set-cache "url/"))
 
 ;;;; システムのゴミ箱ディレクトリ
 (setq trash-directory (my-set-history "trash/"))
@@ -81,15 +112,10 @@
 ;;;; TRAMP 設定
 (setq tramp-persistency-file-name (my-set-history "tramp-" user-full-name))
 
-;;;; Transient パッケージの一時ファイル保存先
-(setq transient-history-file (my-set-history "transient/history.el"))
-
-;;;; eln-cache の保存先を変更
-;; native-comp 無効ビルドでは `native-comp-eln-load-path' 自体が無く、
-;; `startup-redirect-eln-cache' が void-variable になるため変数の有無で判定する
-;; （`my-test-audit-non-native-early-init' が固定する）。
-(when (boundp 'native-comp-eln-load-path)
-  (startup-redirect-eln-cache (my-set-package "eln-cache/")))
+;;;; Transient の履歴・設定値・表示レベル
+(setq transient-history-file (my-set-history "transient/history.el")
+      transient-values-file (my-set-history "transient/values.el")
+      transient-levels-file (my-set-history "transient/levels.el"))
 
 ;;;; yasnippet のデフォルト snippets/ ディレクトリ生成を防止
 ;; straight.el のビルド過程で yasnippet がロードされる前に設定する必要がある

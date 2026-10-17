@@ -20,7 +20,7 @@ REPO_ROOT="${BENCH_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PROBE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EMACS="${EMACS:-emacs}"
 STRAIGHT_DIR="${STRAIGHT_DIR:-$REPO_ROOT/loads/straight}"
-BENCH_ROOT="$REPO_ROOT/.bench/$MODE"
+BENCH_ROOT="$REPO_ROOT/var/cache/bench/$MODE"
 
 # 1 試行あたりの上限。超えたら無効試行として扱う。
 TRIAL_TIMEOUT="${TRIAL_TIMEOUT:-300}"
@@ -38,7 +38,7 @@ if [ "$#" -ne 3 ] || [[ ! "$TRIALS" =~ ^[1-9][0-9]*$ ]] ||
   echo "Error: ベンチの引数・数値設定が不正です。" >&2
   exit 1
 fi
-if [ -L "$REPO_ROOT/.bench" ] || [ -L "$BENCH_ROOT" ]; then
+if [ -L "$REPO_ROOT/var" ] || [ -L "$REPO_ROOT/var/cache" ] || [ -L "$REPO_ROOT/var/cache/bench" ] || [ -L "$BENCH_ROOT" ]; then
   echo "Error: ベンチ専用ディレクトリの symlink は使用できません。" >&2
   exit 1
 fi

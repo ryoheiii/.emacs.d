@@ -90,13 +90,42 @@ class AuditShellTests(unittest.TestCase):
         marker = self.repo / 'var/backup/precious'
         marker.parent.mkdir(parents=True)
         marker.write_text('unrecoverable')
-        for action in ('--clean', '--clean-all', '--uninstall', '--uninstall-node',
+        for action in ('--clean', '--clean-cache', '--clean-all', '--uninstall', '--uninstall-node',
                        '--setup-node', '--setup-treesit', '--list', '--packing-package',
                        '--extract-package', '--help'):
             with self.subTest(action=action):
                 r = self.setup_cmd(action, '--help')
                 self.assertNotEqual(r.returncode, 0, r.stdout)
                 self.assertEqual(marker.read_text(), 'unrecoverable')
+
+    def test_clean_cache_preserves_state_and_installed_tools(self):
+        for part in ('state', 'backup', 'packages', 'cache', 'tmp'):
+            marker = self.repo / 'var' / part / 'sentinel'
+            marker.parent.mkdir(parents=True)
+            marker.write_text(part)
+        # キャッシュ内のリンクを削除しても、参照先には触れない。
+        (self.repo / 'var/cache/state-link').symlink_to('../state')
+        result = self.setup_cmd('--clean-cache')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for part in ('state', 'backup', 'packages'):
+            self.assertEqual((self.repo / 'var' / part / 'sentinel').read_text(), part)
+        for part in ('cache', 'tmp'):
+            self.assertFalse((self.repo / 'var' / part).exists())
+        self.assertEqual(self.setup_cmd('--clean-cache').returncode, 0)
+
+    def test_clean_cache_preserves_linked_directories(self):
+        external = self.root / 'external'
+        external.mkdir()
+        (external / 'sentinel').write_text('keep')
+        for part in ('var', 'var/cache', 'var/tmp'):
+            with self.subTest(part=part):
+                link = self.repo / part
+                link.parent.mkdir(parents=True, exist_ok=True)
+                link.symlink_to(external)
+                self.assertEqual(self.setup_cmd('--clean-cache').returncode, 0)
+                self.assertTrue(link.is_symlink())
+                self.assertEqual((external / 'sentinel').read_text(), 'keep')
+                link.unlink()
 
     def test_failed_archive_preserves_previous_archive(self):
         self.package_tree()
@@ -113,15 +142,16 @@ class AuditShellTests(unittest.TestCase):
     def test_extract_preserves_grammars_and_server(self):
         self.package_tree()
         for part in ('tree-sitter', 'copilot', 'eln-cache'):
-            p = self.repo / 'var/package' / part / 'sentinel'
+            base = 'var/cache' if part == 'eln-cache' else 'var/packages'
+            p = self.repo / base / part / 'sentinel'
             p.parent.mkdir(parents=True)
             p.write_text(part)
         self.assertEqual(self.setup_cmd('--packing-package').returncode, 0)
         r = self.setup_cmd('--extract-package')
         self.assertEqual(r.returncode, 0, r.stderr)
         for part in ('tree-sitter', 'copilot'):
-            self.assertEqual((self.repo / 'var/package' / part / 'sentinel').read_text(), part)
-        self.assertFalse((self.repo / 'var/package/eln-cache').exists())
+            self.assertEqual((self.repo / 'var/packages' / part / 'sentinel').read_text(), part)
+        self.assertFalse((self.repo / 'var/cache/eln-cache').exists())
 
     def package_build_fixture(self, error_log=''):
         """実 Emacs で起動判定を評価し、依存のビルドは fixture 内へ隔離する。"""
@@ -136,6 +166,9 @@ class AuditShellTests(unittest.TestCase):
         bootstrap.parent.mkdir()
         bootstrap.write_text("(provide 'straight)\n")
         shutil.copyfile(ROOT / 'early-init.el', self.repo / 'early-init.el')
+        site = self.repo / 'loads/site-elisp'
+        site.mkdir(parents=True)
+        shutil.copyfile(ROOT / 'loads/site-elisp/my-runtime.el', site / 'my-runtime.el')
         # init-loader の捕捉後の状態を再現する。診断本文は外へ出してはいけない。
         self.env['AUDIT_INIT_ERROR_LOG'] = error_log or ''
         init = '' if error_log is None else (
@@ -218,7 +251,7 @@ class AuditShellTests(unittest.TestCase):
     def test_bench_rejects_paths_before_deletion(self):
         fake = self.root / 'bench-repo'
         (fake / 'tests').mkdir(parents=True)
-        (fake / '.bench').mkdir()
+        (fake / 'var/cache/bench').mkdir(parents=True)
         shutil.copyfile(ROOT / 'tests/my-bench-run.sh', fake / 'tests/my-bench-run.sh')
         victim = fake / 'victim'
         victim.mkdir()
@@ -653,7 +686,7 @@ class AuditShellTests(unittest.TestCase):
         external = self.root / 'external-cache'
         external.mkdir()
         (external / 'keep').write_text('keep')
-        package = self.repo / 'var/package'
+        package = self.repo / 'var/cache'
         package.mkdir(parents=True)
         (package / 'eln-cache').symlink_to(external)
         (package / 'unknown-data').write_bytes(b'unrecoverable')

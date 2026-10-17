@@ -51,8 +51,8 @@ fi; \
 mkdir -p "$$test_root/loads"; \
 ln -s "$(TEST_STRAIGHT_DIR)" "$$test_root/loads/straight"; \
 if [ -n "$(TEST_TREESIT_DIR)" ]; then \
-	mkdir -p "$$test_root/var/package/tree-sitter"; \
-	cp -a "$(TEST_TREESIT_DIR)/." "$$test_root/var/package/tree-sitter/"; \
+	mkdir -p "$$test_root/var/packages/tree-sitter"; \
+	cp -a "$(TEST_TREESIT_DIR)/." "$$test_root/var/packages/tree-sitter/"; \
 fi;
 endef
 

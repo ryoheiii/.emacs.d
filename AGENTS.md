@@ -31,6 +31,7 @@ C/C++ 開発、Markdown／Org、Mozc／Migemo による日本語編集に使う 
   発見した場合は内容を表示せず、場所と対処方針だけを報告する。
 - `var/`、`loads/straight/`、`eln-cache`、`package.tar.gz` などの自動生成物を手で編集せず、
   リポジトリルートへ生成物を置かない。削除には `emacs-setup.sh` の対応コマンドを使う。
+  キャッシュだけの削除は、Emacs 終了後に `--clean-cache`（`var/cache/` と `var/tmp/`）を使う。
   `--clean` はバックアップ・自動保存・操作履歴など復元不能なデータも消し、
   `--clean-all` はさらにパッケージを消すため、目的と影響について承認を得てから実行する。
 - 依頼範囲の調査・編集・検証と、その変更に起因する失敗の修正・再検証は継続して行う。
@@ -77,7 +78,7 @@ tty の必須検証は上記のとおり。文書・指示だけの変更では�
 
 調査で `emacs --batch` を直接実行するときは必ず `early-init.el` を読み込む。
 省くと native-comp の生成物が直下の `eln-cache/` に落ちる
-（正規の保存先は `var/package/eln-cache/`）。作業中のチェックアウトを指す例:
+（正規の保存先は `var/cache/eln-cache/`）。作業中のチェックアウトを指す例:
 
 ```sh
 emacs --batch --eval '(setq user-emacs-directory (file-name-as-directory default-directory))' \

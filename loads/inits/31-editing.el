@@ -65,7 +65,7 @@
   ;; :custom より前に評価される節。導入先を 1 箇所で決めて可用性判定と共有する。
   ;; :hook から参照する関数もここで定義する (:init だと多重定義警告が出る)
   :preface
-  (defconst my/irony-server-prefix (my-set-history "irony")
+  (defconst my/irony-server-prefix (my-set-package "irony")
     "irony-server の導入先。`irony-server-install-prefix' と一致させる。")
 
   (defun my/irony-server-available-p ()
