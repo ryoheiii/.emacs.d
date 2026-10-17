@@ -11,13 +11,13 @@
 ;;
 ;; 前提: 呼び出し側の shim が early-init より前に use-package-compute-statistics を t にする。
 
-;;;;; [Group] Bench - 依存 ;;;;;
+;;; 依存
 (require 'my-test-deferred)
 
 (unless (boundp 'my-test-deferred--feature-modes)
   (error "my-test-deferred--feature-modes が未定義です"))
 
-;;;;; [Group] Bench - READY 述語 ;;;;;
+;;; READY 述語
 ;; 判定条件は tests/my-test-tty-live.el の my-test-tty-live--deferred-ready-p と同一に保つ。
 ;; 独自の READY 定義を増やさない（条件がずれると計測値の意味がずれるため）。
 (defun my-bench--xclip-expected-p ()
@@ -40,7 +40,7 @@
              (and (featurep 'xclip)
                   (bound-and-true-p xclip-mode))))))
 
-;;;;; [Group] Bench - パッケージ分類 ;;;;;
+;;; パッケージ分類
 (defun my-bench--package-class (package)
   "PACKAGE が外部管理か組み込みかを返す。
 
@@ -64,7 +64,7 @@
       'external)
      (t 'builtin))))
 
-;;;;; [Group] Bench - 集計と出力 ;;;;;
+;;; 集計と出力
 (defun my-bench--emit (format-string &rest args)
   "計測結果を機械可読な 1 行として標準エラーへ出す。"
   (princ (concat "MY_BENCH " (apply #'format format-string args) "\n")
@@ -76,7 +76,7 @@
 
 ;; 計測区間が他の宣言を内包してしまう「容器」宣言。合計から除外する。
 ;;
-;; init.el:25-31 は (init-loader-load ...) を use-package init-loader の :config 内で
+;; init.el は (init-loader-load ...) を use-package init-loader の :config 内で
 ;; 呼ぶため、init-loader の :use-package-secs は loads/inits/ の全宣言を内包する。
 ;; これを加算すると全体が二重計上になる（実測で eager の総和が emacs-init-time を
 ;; 超えることで検出した）。
@@ -89,9 +89,8 @@
     (if v (float-time v) 0.0)))
 
 ;; `use-package-statistics-time' は :use-package / :preface / :init / :config の
-;; 4 区間を単純加算するが、use-package-core.el の gather 呼び出し位置
-;; (:use-package が 1916/1928、:preface 1292/1297、:init 1640/1652、:config 1677/1689)
-;; から分かるとおり :use-package は他 3 つを内包する最外周区間である。
+;; 4 区間を単純加算する。ただし use-package-core.el の統計収集では、
+;; :use-package が他の 3 区間を内包する最外周区間になっている。
 ;; したがって単純加算は二重・三重計上になる（実測でも合計が経過時間を超えた）。
 ;; ここでは宣言 1 件あたりの実コストとして :use-package-secs だけを使う。
 ;;
@@ -136,7 +135,7 @@
           (my-bench--emit "total class=%s count=%d eager=%.6f config=%.6f"
                           class (nth 2 cell) (nth 0 cell) (nth 1 cell)))))))
 
-;;;;; [Group] Bench - ランナー ;;;;;
+;;; ランナー
 (defvar my-bench--t1 nil
   "window-setup-hook 到達時点の経過秒。")
 

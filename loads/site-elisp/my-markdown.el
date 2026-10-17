@@ -1,26 +1,26 @@
 ;;; my-markdown.el --- Markdown カスタム関数群 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; markdown-mode で使用するカスタム変数と関数
+;; Markdown の編集補助と HTML 出力。mdh を優先し、無ければ Pandoc を使う。
 
 ;;; Code:
 
 (declare-function markdown-export "markdown-mode")
 (declare-function markdown-export-file-name "markdown-mode")
 
-;;; 変数定義（コンフィギュレーション）
+;;; HTML 出力に使うファイル
 ;; Markdown 用のカスタム CSS ファイルのパス
 (defvar my-markdown-css-file
   (my-set-custom "css/markdown-style.css")
-  "Path to custom markdown CSS file.")
+  "Markdown の HTML 出力に使う CSS ファイル。")
 
 ;; Markdown 用のカスタム JavaScript ファイルのパス
 (defvar my-markdown-js-file
   (my-set-custom "js/markdown-script.js")
-  "Path to custom markdown JS file.")
+  "Markdown の HTML 出力に使う JavaScript ファイル。")
 
-;; CSS を遅延ロードしつつ HTML に埋め込む関数
+;; CSS の内容を読む。HTML への埋め込みは 25-markdown.el で行う。
 (defun my-markdown-load-css ()
-  "Load the content of the markdown CSS file."
+  "Markdown 用 CSS の内容を文字列で返す。ファイルが無ければ nil。"
   (when (file-exists-p my-markdown-css-file)
     (with-temp-buffer
       (insert-file-contents my-markdown-css-file)
@@ -33,9 +33,8 @@
   (insert "    "))
 
 ;; Pandoc コマンドの設定（遅延構築: 初回参照時にサブプロセスでバージョン取得）
-;; その他 option: "--toc --toc-depth=2", "--highlight-style=tango"
 (defun my-get-pandoc-version ()
-  "Pandoc のバージョン番号を取得し、数値で返す。"
+  "Pandoc のメジャーバージョンを整数で返す。取得できなければ nil。"
   (let* ((version-str (shell-command-to-string "pandoc --version | head -n 1 | awk '{print $2}'"))
          (version-num (when (string-match "\\([0-9]+\\)\\.\\([0-9]+\\)" version-str)
                         (string-to-number (match-string 1 version-str)))))
@@ -95,7 +94,7 @@ mdh の実行失敗は *mdh* バッファに表示する。"
         output))))
 
 (defun my/markdown-setup ()
-  "Things that must run *after* `markdown-mode' comes up."
+  "Markdown バッファでスペルチェック、折り返し、見出し操作などを有効にする。"
   (flyspell-mode  1)                   ; スペルチェック
   (visual-line-mode 1)                 ; ソフト折り返し
   (display-line-numbers-mode 1)        ; 行番号
@@ -105,7 +104,7 @@ mdh の実行失敗は *mdh* バッファに表示する。"
 
 ;; 折りたたみ `<details>` を挿入
 (defun markdown-insert-details ()
-  "Insert <details> HTML tag with a <summary>."
+  "<summary> を含む <details> 要素を挿入する。"
   (interactive)
   (insert "<details><summary>text</summary><div>\n\n</div></details>"))
 

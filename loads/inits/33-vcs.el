@@ -8,8 +8,7 @@
 (declare-function magit-restore-window-configuration "magit-mode")
 (declare-function magit-mode-get-buffers "magit-mode")
 
-;;;;; [Group] Version-control - バージョン管理関連 ;;;;;
-;;; Magit
+;;; Magit - Git の状態確認と操作
 (use-package magit
   :straight t
   :bind (("C-x G" . magit-status)
@@ -19,12 +18,11 @@
   ;; :bind から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
   :preface
   (defun mu-magit-kill-buffers ()
-    "Restore window configuration and kill all Magit buffers."
+    "ウィンドウ構成を復元し、現在のリポジトリの Magit バッファをすべて閉じる。"
     (interactive)
     (let ((buffers (magit-mode-get-buffers)))
       (magit-restore-window-configuration)
-      (mapc #'kill-buffer buffers)))
-  )
+      (mapc #'kill-buffer buffers))))
 
 ;;; Diff-hl - 変更点を表示 (git-gutter の置き換え)
 (use-package diff-hl
@@ -35,10 +33,9 @@
   :config
   (global-diff-hl-mode +1)
   (global-diff-hl-show-hunk-mouse-mode +1)
-  (diff-hl-margin-mode +1)
-  )
+  (diff-hl-margin-mode +1))
 
-;;; Difftastic
+;;; Difftastic - 構文を考慮した差分表示を Magit から呼ぶ
 (use-package difftastic
   :straight t
   :bind (:map magit-blame-read-only-mode-map
@@ -49,15 +46,13 @@
   (with-eval-after-load 'magit-diff
     (transient-append-suffix 'magit-diff '(-1 -1)
       [("D" "Difftastic diff (dwim)" difftastic-magit-diff)
-       ("S" "Difftastic show" difftastic-magit-show)]))
-  )
+       ("S" "Difftastic show" difftastic-magit-show)])))
 
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn
   :straight t
   :defer t
-  :commands (svn-status svn-update)
-  )
+  :commands (svn-status svn-update))
 
 (provide '33-vcs)
 ;;; 33-vcs.el ends here

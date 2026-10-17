@@ -9,8 +9,7 @@
 (declare-function my-markdown-load-css "my-markdown")
 (declare-function my-markdown-pandoc-command "my-markdown")
 
-;;;;; [Group] Markdown - Markdown 関連 ;;;;;
-;;; markdown-mode - markdown mode の設定
+;;; markdown-mode - 編集、表示、HTML 出力
 (use-package markdown-mode
   :straight t
   :mode (("\\.md\\'" . markdown-mode)
@@ -34,7 +33,7 @@
               ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
               ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入
               ("C-c C-v d" . markdown-insert-details)         ; 折り畳み項目を挿入
-              ("C-c TAB"   . my-markdown-insert-tab))         ; 4 スペースを TAB で挿入
+              ("C-c TAB"   . my-markdown-insert-tab))         ; C-c TAB で 4 スペースを挿入
   :config
   (require 'my-markdown)
   ;; Pandoc コマンドと CSS を遅延設定（markdown-mode ロード時に初めて構築）
@@ -46,30 +45,24 @@
                 <style>\n%s\n</style>\n
                 <script src='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.0/highlight.min.js'></script>\n
                 <script>hljs.configure({languages: []});hljs.highlightAll();</script>\n"
-                (my-markdown-load-css)))
-  )
+                (my-markdown-load-css))))
 
 ;;; markdown-toc - 目次生成
 (use-package markdown-toc
   :straight t
   :after markdown-mode
-  :hook ((markdown-mode . markdown-toc-mode)          ; テーブルの自動整形
-         ;; (markdown-mode . markdown-toc-insert-toc) ; 保存時に目次を自動挿入
-         ;; (before-save . markdown-toc-update-toc)   ; 保存前に目次を更新
-         )
+  :hook ((markdown-mode . markdown-toc-mode))          ; 目次操作用のマイナーモード
   :bind (:map markdown-mode-map
               ("C-c C-v t" . markdown-toc-generate-toc))      ; 目次を手動で生成
   :custom
-  (markdown-toc-without-markdown-toc t)               ; コメントを含めない
-  (markdown-toc-headline-style 'atx)                  ; 見出しのスタイル
-  )
+  (markdown-toc-without-markdown-toc t)               ; 目次を囲む自動更新用コメントを出力しない
+  (markdown-toc-headline-style 'atx))                  ; 見出しのスタイル
 
 ;;; pandoc-mode - Markdown を他の形式に変換
 (use-package pandoc-mode
   :straight t
   :commands (pandoc-mode)
-  :hook (markdown-mode . pandoc-mode)
-  )
+  :hook (markdown-mode . pandoc-mode))
 
 (provide '25-markdown)
 ;;; 25-markdown.el ends here

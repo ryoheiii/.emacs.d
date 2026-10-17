@@ -14,10 +14,10 @@
 (defvar my/gtags-history nil "タグ検索のシンボル名履歴。")
 (defvar my/gtags-file-history nil "タグ検索のファイル名履歴。")
 
-;; ── global 直接実行エンジン ──────────────────────────────
+;;; global 直接実行エンジン
 
 (defun my/gtags--project-root ()
-  "GTAGS ファイルを探索してプロジェクトルートを返す."
+  "GTAGS がある親ディレクトリを返す。見つからなければ現在のディレクトリ。"
   (or (locate-dominating-file default-directory "GTAGS")
       default-directory))
 
@@ -123,7 +123,7 @@ ALIST は xref の表示設定。複数件は Consult のプレビューを使�
           (xref-show-xrefs (lambda () xrefs) nil))
       (message "見つかりません: %s" input))))
 
-;; ── 検索コマンド ─────────────────────────────────────────
+;;; 検索コマンド
 
 (defun my/gtags--find (flag prompt label)
   "LABEL の入力欄で名前を補完し、FLAG の検索結果から選ぶ.
@@ -164,9 +164,9 @@ PROMPT が non-nil なら GNU Global を使う。"
   (interactive)
   (my/gtags--find "-P" nil "Find file: "))
 
-;; 'global -uv' を用いた GTAGS の手動フル更新
+;; global -uv でタグを差分更新する（既存データベースが対象）。
 (defun update-gtags ()
-  "Update GTAGS database."
+  "GNU Global のタグデータベースを手動で更新する。"
   (interactive)
   (when (and (buffer-file-name) (executable-find "global"))
     (start-process "gtags-update" nil "global" "-uv")))

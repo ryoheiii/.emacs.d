@@ -1,6 +1,7 @@
 ;;; 31-editing.el --- コード編集とタグナビゲーションの設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; コード編集、C/C++ スタイル、タグナビゲーション、スニペット関連パッケージの設定
+;; コード編集、C/C++ スタイル、タグナビゲーション、スニペットの設定。
+;; スニペットの配置解決は my-snippets.el にまとめる。
 ;; ggtags カスタム関数群は loads/site-elisp/my-gtags.el、
 ;; LSP 階層ナビゲーション (C-t c/e/t/o/s) は loads/site-elisp/my-lsp-nav.el に定義
 
@@ -12,8 +13,8 @@
 (declare-function symbol-overlay-get-symbol "symbol-overlay")
 (declare-function my/safe-irony-completion-at-point "31-editing")
 
-;;;;; [Group] Code-editing - コード編集関連 ;;;;;
-;;; Google C Style - Google の C スタイルガイドを適用
+;;; コード編集関連
+;;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style
   :straight t
   :hook (c-mode-common . my/google-c-style-setup)
@@ -23,16 +24,14 @@
 19-language-modes.el の my/cc-mode-setup とのフック実行順に依存しないための再明示."
     (google-set-c-style)
     (google-make-newline-indent)
-    (setq c-basic-offset 4))
-  )
+    (setq c-basic-offset 4)))
 
-;;; Aggressive Indent - コード編集時の自動インデント調整
+;;;; Aggressive Indent - コード編集時の自動インデント調整
 (use-package aggressive-indent
   :straight t
-  :hook (emacs-lisp-mode . aggressive-indent-mode)
-  )
+  :hook (emacs-lisp-mode . aggressive-indent-mode))
 
-;;; Smart Newline - 改行時の自動インデントと位置調整
+;;;; Smart Newline - 改行時の自動インデントと位置調整
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :straight t
@@ -40,17 +39,15 @@
   ;; C-m は smart-newline-mode-map が束縛するためグローバルには束縛しない
   ;; （グローバル束縛はフックで限定したモード以外の RET まで置き換えていた）。
   :hook ((c++-mode c-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
-         . smart-newline-mode)
-  )
+         . smart-newline-mode))
 
-;;; move-text - テキスト行の移動機能
+;;;; move-text - テキスト行の移動機能
 (use-package move-text
   :straight t
   :bind (("C-M-p" . move-text-up)
-         ("C-M-n" . move-text-down))
-  )
+         ("C-M-n" . move-text-down)))
 
-;;; Irony - C/C++ のコード補完とシンボル情報の提供
+;;;; Irony - C/C++ のコード補完とシンボル情報の提供
 ;; C/C++ 補完の三段フォールバックの 2 段目。
 ;;   1. clangd + compile_commands.json/.clangd あり → eglot (18-built-in-package.el)
 ;;   2. irony-server 実体あり                        → irony (ここ)
@@ -115,10 +112,9 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
          (message "irony: completion error (%s)" (error-message-string err)))
        nil)))
   (unless (advice-member-p #'my/safe-irony-completion-at-point 'irony-completion-at-point)
-    (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point))
-  )
+    (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point)))
 
-;;; Yasnippet Snippets - 追加スニペット集
+;;;; Yasnippet Snippets - 追加スニペット集
 ;; yasnippet の :config 内で宣言すると straight の登録とビルドが :defer 1 まで遅れ、
 ;; フレーム表示後に同期処理が走って入力がブロックされる。トップレベルへ出して起動中に済ませる。
 ;; ロード自体は :after で yasnippet に追随させる。yasnippet-snippets.el は冒頭で
@@ -127,86 +123,10 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
 (use-package yasnippet-snippets
   :straight t
   :after yasnippet
-  :demand t
-  )
+  :demand t)
 
-;;; Yasnippet - コードスニペットの管理と挿入
-(defun my/yas-personal-snippet-dirs (&optional root)
-  "個人スニペットの top-level ディレクトリ一覧を返す。
-ROOT の既定は `custom/snippets/'。
-
-2 つのレイアウトを支える (どちらの環境も実在する)。
-  A: ROOT/<mode>/ に実体のモードディレクトリを直接置く    -> ROOT を返す
-  B: ROOT/snippets を外部ディレクトリへの symlink にする  -> ROOT/snippets を返す
-
-yasnippet は top-level dir 直下のディレクトリ名をメジャーモード名として intern する
-ため、B の構成で ROOT を登録すると架空モード `snippets' が作られ、同じツリーを二重に
-走査する。A と B が同時に成立する構成は yasnippet の契約では表現できないため非対応と
-し、B を優先して警告する (A 側のモードディレクトリはロードしない)。"
-  (let* ((root (or root (my-set-custom "snippets")))
-         (linked (expand-file-name "snippets" root))
-         (linked-p (file-directory-p linked))
-         (root-mode-dirs
-          (and (file-directory-p root)
-               (seq-remove (lambda (dir)
-                             (equal (file-name-nondirectory dir) "snippets"))
-                           (seq-filter #'file-directory-p
-                                       (directory-files root t "\\`[^.]" t))))))
-    ;; `file-directory-p' は壊れた symlink に対して nil を返すため、検出しないと
-    ;; リンク先の消失が無警告で握り潰される。
-    (dolist (path (list root linked))
-      (when (and (file-symlink-p path) (not (file-directory-p path)))
-        (display-warning 'my-config
-                         (format "スニペットディレクトリの symlink が壊れている: %s" path)
-                         :warning)))
-    (cond
-     ((and linked-p root-mode-dirs)
-      (display-warning
-       'my-config
-       (format "個人スニペットの 2 レイアウトが混在している。%s を優先し、%s 直下のモードディレクトリはロードしない"
-               linked root)
-       :warning)
-      (list linked))
-     (linked-p (list linked))
-     (root-mode-dirs (list root))
-     (t nil))))
-
-(defun my/yas-resolve-snippet-dirs (dirs)
-  "DIRS のうち解決できる要素だけを返し、除外した要素を `display-warning' で報告する。
-`yas-snippet-dirs' (関数) は解決できない要素に対して error を送出するため、
-そのままでは `yas-global-mode' ごと失敗する。パス参照ミスを黙って握り潰さない
-よう、除外は必ず可視化する。"
-  (let (kept dropped)
-    (dolist (entry dirs)
-      (let ((path (cond ((stringp entry) entry)
-                        ((and (symbolp entry)
-                              (boundp entry)
-                              (stringp (symbol-value entry)))
-                         (symbol-value entry)))))
-        (if (and path (file-directory-p path))
-            (push entry kept)
-          (push entry dropped))))
-    (dolist (entry (nreverse dropped))
-      (display-warning 'my-config
-                       (format "yas-snippet-dirs から解決できない要素を除外した: %S" entry)
-                       :warning))
-    (nreverse kept)))
-
-(defun my/yas-setup ()
-  "`yas-snippet-dirs' を解決済みの値へ確定し、可能なら `yas-global-mode' を有効にする。
-有効化した場合は non-nil を返す。
-
-全エントリが解決できず `yas-snippet-dirs' が nil になると、`yas--load-snippet-dirs'
-は `(call-interactively \\='yas-load-directory)' を呼び、起動が対話プロンプトで
-停止する。その場合はモードを有効化せず、警告して縮退する。"
-  (setq yas-snippet-dirs (my/yas-resolve-snippet-dirs yas-snippet-dirs))
-  (cond
-   (yas-snippet-dirs (yas-global-mode 1) t)
-   (t (display-warning
-       'my-config
-       "利用できるスニペットディレクトリが無いため yas-global-mode を有効化しない"
-       :warning)
-      nil)))
+;;;; Yasnippet - コードスニペットの管理と挿入
+(require 'my-snippets)
 
 (use-package yasnippet
   :straight t
@@ -226,11 +146,10 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
         (append (my/yas-personal-snippet-dirs)
                 (list 'yasnippet-snippets-dir)))
   :config
-  (my/yas-setup)
-  )
+  (my/yas-setup))
 
-;;;;; [Group] Tags - タグナビゲーション ;;;;;
-;;; Ggtags - GNU Global によるソースコード内のシンボル検索とナビゲーション
+;;; タグナビゲーション
+;;;; Ggtags - GNU Global によるソースコード内のシンボル検索とナビゲーション
 ;; ggtags の xref バックエンドを経由せず、global コマンドを call-process で直接実行し
 ;; 結果を consult-xref → vertico で高速表示する
 (use-package ggtags
@@ -273,11 +192,10 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
   (ggtags-highlight-tag nil)          ; パフォーマンス: カーソル位置のタグハイライト無効化
   :config
   (require 'my-gtags)
-  (require 'my-lsp-nav)
-  )
+  (require 'my-lsp-nav))
 
-;;;;; [Group] Multi-editing - 複数編集 ;;;;;
-;;; Multiple Cursors - 複数カーソルによる編集機能
+;;; 複数編集
+;;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :straight t
   ;; 遅延ロードする。本体を起動時にロードすると初回描画までに約 170ms を要し、
@@ -292,7 +210,7 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
   :init
   ;; `repeat-mode` 用の `repeat-map` を作成
   (defvar-keymap my/mc-repeat-map
-    :doc "Keymap for repeating multiple-cursors commands"
+    :doc "multiple-cursors の操作を続けて実行するためのキーマップ。"
     :repeat t
     "p"  'mc/mark-previous-like-this
     "C-p" 'mc/mark-previous-like-this
@@ -321,16 +239,14 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
   ;; C-q をプレフィックスにしたため、標準の quoted-insert は C-q C-q で呼ぶ。
   ;; defvar-keymap の後に足すので :repeat の対象にならず、repeat-mode は継続しない。
   (keymap-set my/mc-repeat-map "C-q" #'quoted-insert)
-  (keymap-global-set "C-q" my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
-  )
+  (keymap-global-set "C-q" my/mc-repeat-map)) ; `C-q` をプレフィックスキーとして設定
 
-;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
+;;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :straight t
-  :bind (("C-," . er/expand-region))
-  )
+  :bind (("C-," . er/expand-region)))
 
-;;; symbol-overlay - シンボルのハイライトと置換
+;;;; symbol-overlay - シンボルのハイライトと置換
 ;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
 (use-package symbol-overlay
   :straight t
@@ -375,7 +291,8 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
 
   ;; 現在の関数・メソッド内のシンボルをリネーム
   (defun my-symbol-overlay-rename-in-function ()
-    "現在の関数やメソッド内に表示されているシンボルのみをリネームする."
+    "現在の関数・メソッド内で、カーソル位置のシンボルと同名の箇所を置換する。
+関数の境界を扱わないモードでは、現在の編集可能範囲全体を対象にする。"
     (interactive)
     (let* ((symbol (symbol-overlay-get-symbol))
            (new-name (read-string (format "Rename '%s' to: " symbol)))
@@ -398,8 +315,7 @@ yasnippet は top-level dir 直下のディレクトリ名をメジャーモー�
                  ((derived-mode-p 'python-mode)
                   (save-excursion (python-nav-end-of-defun) (point)))
                  (t (point-max))))) ;; その他のモードではファイル全体
-      (my/symbol-overlay-replace-region symbol new-name start end)))
-  )
+      (my/symbol-overlay-replace-region symbol new-name start end))))
 
 (provide '31-editing)
 ;;; 31-editing.el ends here

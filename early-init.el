@@ -1,17 +1,15 @@
 ;;; early-init.el --- Emacs の起動前設定  -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; Emacs の起動前に実行される設定（パッケージ管理・ディレクトリ設定）
+;; init.el より前に、保存先・個人設定・パッケージ基盤を準備する。
+;; 起動中だけ抑える GC とファイルハンドラは、対応する起動フックで復元する。
 
 ;;; Code:
 
-;;;;; [Group] Debug ;;;;;
-;; (setq debug-on-error t)
-
-;;;;; [Group] GC - 起動時の GC 抑制 ;;;;;
+;;; 起動時の GC 抑制
 ;; 起動中は GC を完全に抑制し、emacs-startup-hook で適正値に復元（00-core.el）
 (setq gc-cons-threshold most-positive-fixnum)
 
-;;;;; [Group] Startup - file-name-handler 最適化 ;;;;;
+;;; file-name-handler 最適化
 ;; init 読み込み中はハンドラを無効化し、引数のファイルを開く前に復元する
 ;; (バッチ実行では復元フックが発火しないため対話起動に限定する)
 (defvar my/saved-file-name-handler-alist nil)
@@ -26,30 +24,28 @@
         file-name-handler-alist nil)
   (add-hook 'after-init-hook #'my/restore-file-name-handlers -90))
 
-;;;;; [Group] Define - 定数
-;;; OS判定用定数
+;;; 定数
+;;;; OS判定用定数
 (defconst IS-MAC (eq system-type 'darwin))
 (defconst IS-LINUX (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 (defconst IS-WINDOWS (memq system-type '(cygwin windows-nt ms-dos)))
 
+;;; 自動生成ファイル関連制御
+;;;; Emacs の各種ディレクトリとファイルパスの設定
+(defvar my-emacs-dir    (expand-file-name user-emacs-directory))
 
+(defvar my-loads-dir    (expand-file-name "loads/"    my-emacs-dir))
+(defvar my-straight-dir (expand-file-name "straight/" my-loads-dir))
 
-;;;;; [Group] Auto Files Place - 自動生成ファイル関連制御 ;;;;;
-;;; Emacs の各種ディレクトリとファイルパスの設定
-(defvar my-emacs-dir    (expand-file-name user-emacs-directory))      ;; /path/to/userhome/.emacs.d/
+(defvar my-custom-dir   (expand-file-name "custom/"   my-emacs-dir))
 
-(defvar my-loads-dir    (expand-file-name "loads/"    my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads
-(defvar my-straight-dir (expand-file-name "straight/" my-loads-dir))  ;; /path/to/userhome/.emacs.d/loads/straight
+(defvar my-var-dir      (expand-file-name "var/"      my-emacs-dir))
+(defvar my-history-dir  (expand-file-name "hist/"     my-var-dir))
+(defvar my-backup-dir   (expand-file-name "backup/"   my-var-dir))
+(defvar my-package-dir  (expand-file-name "package/"  my-var-dir))
+(defvar my-db-dir       (expand-file-name "database/" my-var-dir))
 
-(defvar my-custom-dir   (expand-file-name "custom/"   my-emacs-dir))  ;; /path/to/userhome/.emacs.d/custom
-
-(defvar my-var-dir      (expand-file-name "var/"      my-emacs-dir))  ;; /path/to/userhome/.emacs.d/var
-(defvar my-history-dir  (expand-file-name "hist/"     my-var-dir))    ;; /path/to/userhome/.emacs.d/var/hist/
-(defvar my-backup-dir   (expand-file-name "backup/"   my-var-dir))    ;; /path/to/userhome/.emacs.d/var/backup/
-(defvar my-package-dir  (expand-file-name "package/"  my-var-dir))    ;; /path/to/userhome/.emacs.d/var/package/
-(defvar my-db-dir       (expand-file-name "database/" my-var-dir))    ;; /path/to/userhome/.emacs.d/var/database/
-
-;;; パス設定ヘルパ関数
+;;;; パス設定ヘルパ関数
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))
 
 (defun my-set-loads (&rest args) (expand-file-name (apply 'concat args) my-loads-dir))
@@ -62,46 +58,45 @@
 (defun my-set-package (&rest args) (expand-file-name (apply 'concat args) my-package-dir))
 (defun my-set-db (&rest args) (expand-file-name (apply 'concat args) my-db-dir))
 
-;;; システムのゴミ箱ディレクトリ
+;;;; システムのゴミ箱ディレクトリ
 (setq trash-directory (my-set-history "trash/"))
 
-;;; カスタムファイル設定
+;;;; カスタムファイル設定
 (setq custom-file (my-set-custom "custom.el"))
 (load custom-file 'noerror)
 
-;;; バックアップ設定
+;;;; バックアップ設定
 ;; auto-save-file-name-transforms は保存先ディレクトリを作成しないため、
 ;; fresh 環境や --clean 後でも auto-save が失敗しないよう事前に作成する
 (make-directory my-backup-dir t)
 (add-to-list 'backup-directory-alist (cons "." my-backup-dir))
 (setq auto-save-file-name-transforms `((".*" ,my-backup-dir t)))
 
-;;; オートセーブリスト
+;;;; オートセーブリスト
 (setq auto-save-list-file-prefix (my-set-history "auto-save-list/.saves-" user-full-name))
 
-;;; ブックマーク設定
+;;;; ブックマーク設定
 (setq bookmark-default-file (my-set-history "bookmark-" user-full-name))
 
-;;; TRAMP 設定
+;;;; TRAMP 設定
 (setq tramp-persistency-file-name (my-set-history "tramp-" user-full-name))
 
-;;; Transient パッケージの一時ファイル保存先
+;;;; Transient パッケージの一時ファイル保存先
 (setq transient-history-file (my-set-history "transient/history.el"))
 
-;;; eln-cache の保存先を変更
+;;;; eln-cache の保存先を変更
 ;; native-comp 無効ビルドでは `native-comp-eln-load-path' 自体が無く、
 ;; `startup-redirect-eln-cache' が void-variable になるため変数の有無で判定する
 ;; （`my-test-audit-non-native-early-init' が固定する）。
 (when (boundp 'native-comp-eln-load-path)
   (startup-redirect-eln-cache (my-set-package "eln-cache/")))
 
-;;; yasnippet のデフォルト snippets/ ディレクトリ生成を防止
+;;;; yasnippet のデフォルト snippets/ ディレクトリ生成を防止
 ;; straight.el のビルド過程で yasnippet がロードされる前に設定する必要がある
 ;; （use-package の :init では間に合わない — :straight が先に処理されるため）
 (setq yas-snippet-dirs (list (my-set-custom "snippets")))
 
-
-;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;
+;;; 起動時の UI 最適化
 (setq frame-inhibit-implied-resize t) ; フレームの暗黙リサイズを抑制
 (setq inhibit-compacting-font-caches t) ; フォントキャッシュの圧縮を抑制
 (setq use-file-dialog nil)           ; ファイル選択ウィンドウを使用しない
@@ -117,10 +112,8 @@
       scroll-bar-mode nil)
 (blink-cursor-mode 0)                ; カーソルの点滅を止める
 
-
-
-;;;;; [Group] Package Management - パッケージ管理 ;;;;;
-;;; load-path 走査結果のキャッシュ (Emacs 31.1)
+;;; パッケージ管理
+;;;; load-path 走査結果のキャッシュ (Emacs 31.1)
 ;; load/require のたびに load-path の全ディレクトリ (straight の build/ 配下と組み込み) を
 ;; 拡張子ごとに探索する処理を、ディレクトリ単位のファイル一覧キャッシュで絞り込む。
 ;; キャッシュはセッション中に無効化されないため、既存のビルドディレクトリへ後から
@@ -131,7 +124,7 @@
 (require 'regexp-opt)
 (setq load-path-filter-function #'load-path-filter-cache-directory-files)
 
-;;; 'straight.el' の設定
+;;;; 'straight.el' の設定
 ;; ベースディレクトリの指定
 ;; テストハーネスは my-straight-base-dir-override で実体の loads/ を指定する
 ;; (一時テストルート経由のビルドで実キャッシュに dangling symlink を作らないため)

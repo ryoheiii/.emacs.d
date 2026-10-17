@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-emacs-setup.sh — emacs-setup.sh の引数パースと終了コードの回帰テスト
+# test-emacs-setup.sh — セットアップの引数、導入・復元・削除と失敗時の保全を検査する
 #
 # 【重要】このスクリプトへ set -e を追加してはならない。
 # ((PASS++)) は PASS=0 のとき後置インクリメントの旧値 0 を返すため終了ステータスが 1 になり、
@@ -222,7 +222,7 @@ assert_guard "guard rejects .emacs.d symlinked into real home" 1 "" \
     "EMACS_SETUP_TEST_SANDBOX=1" "HOME=$GUARD_SYMLINKED"
 
 # 6c. .local がサンドボックス外（実ホームでもない場所）を指す → 拒否
-# ブラックリストではなくホワイトリストであることを固定する。
+# 実ホーム以外でも、隔離した HOME の外への参照は拒否することを確認する。
 GUARD_OUTSIDE="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 GUARD_FOREIGN="$(harness_mktemp)" || harness_fatal "一時ディレクトリを作成できません。"
 mkdir -p "$GUARD_OUTSIDE/.emacs.d" "$GUARD_FOREIGN/important"
@@ -841,7 +841,7 @@ case "$1" in
         # 回帰検出用の埋め草。判定側が grep -q などへパイプすると、読み手が
         # 先に終了してここが SIGPIPE で落ち、pipefail 経由で「見つかりません」へ
         # 倒れる。1 行だけのスタブでは実 apt-cache と違って再現しないため、
-        # パイプバッファ (既定 64KiB) を確実に超える量を吐いて確定的に暴く。
+        # パイプバッファ (既定 64KiB) を超える量を出し、読み手の早期終了による失敗を再現する。
         printf -v pad '%*s' 1024 ''
         for _ in {1..256}; do printf '%s\n' "$pad"; done
         ;;

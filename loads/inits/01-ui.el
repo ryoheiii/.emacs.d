@@ -1,20 +1,20 @@
 ;;; 01-ui.el --- UI 設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; Emacs の基本 UI 設定
+;; 行・列の表示、選択文字列の検索、GUI 用フォントを設定する。
 
 ;;; Code:
 
 ;; tty 専用ビルドには存在しない GUI 用 API をコンパイラへ伝える。
 (declare-function set-fontset-font "fontset.c")
 
-;;;;;; [Group] UI Settings - インターフェース ;;;;;;
+;;; 位置表示と確認・評価結果
 (column-number-mode t)                  ; カーソル位置の列番号表示
 (line-number-mode t)                    ; カーソル位置の行番号表示
 (setq frame-title-format (format "%%f - Emacs@%s" (system-name))) ; タイトルバーにフルパス表示
-(setq use-short-answers t)              ; 確認ダイアログを簡略化 (yes/no → y/n)
-(setq eval-expression-print-length nil) ; evalした結果を全部表示
+(setq use-short-answers t)              ; yes/no の確認を y/n で答えられるようにする
+(setq eval-expression-print-length nil) ; M-: の結果表示でリストの要素数を省略しない
 
-;; タブ幅・インデント設定
+;;; インデントと行の扱い
 (setq-default tab-width 4
               indent-tabs-mode nil)
 
@@ -25,10 +25,11 @@
 (setq kill-whole-line t)                ; 行の先頭でC-kを一回押すだけで行全体を消去する
 (setq require-final-newline t)          ; 保存時に最終改行を自動付与(POSIX 準拠)
 
-;; 選択範囲を isearch
+;;; 選択文字列からの検索
+;; 選択した文字列を検索語として isearch を開始する。
 (advice-add 'isearch-mode :around
             (lambda (orig-fn &rest args)
-              "Isearch with default text if there is a selection."
+              "選択した文字列があれば、それを初期検索語にして ORIG-FN を ARGS で呼ぶ。"
               (if (and transient-mark-mode mark-active (not (eq (mark) (point))))
                   (let ((search-text (buffer-substring-no-properties (mark) (point))))
                     (isearch-update-ring search-text)
@@ -39,7 +40,7 @@
                       (isearch-repeat-backward)))
                 (apply orig-fn args))))
 
-;;;;;; [Group] Font Settings - フォント設定 ;;;;;;
+;;; フォント設定
 ;; Ricty Diminished Discord フォントの設定
 ;; インストール: sudo apt install fonts-ricty-diminished
 ;; daemon 起動では初期化時に GUI がないため、通常起動時の即時適用に加えて

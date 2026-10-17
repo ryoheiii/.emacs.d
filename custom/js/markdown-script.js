@@ -1,7 +1,7 @@
 <script>
 /**
- * - <pre><code>...</code></pre> ブロックに「Copy」ボタンを追加
- * - クリック時に中身をクリップボードにコピー
+ * Pandoc の --include-after-body に渡す HTML 断片（script タグも必要）。
+ * 各コードブロックに「Copy」ボタンを付け、本文だけをコピーする。
  */
 document.addEventListener("DOMContentLoaded", () => {
   // ページ内のすべての <pre><code>...</code></pre> を取得
@@ -11,20 +11,19 @@ document.addEventListener("DOMContentLoaded", () => {
     button.className = "copy-button";
     button.innerText = "Copy";
 
-    // ボタン押下時の処理
     button.addEventListener("click", () => {
-      // コードブロック全体のテキストをそのままコピー
+      // ボタンのラベルを含めず、code 要素のテキストだけをコピーする。
       navigator.clipboard.writeText(codeBlock.innerText).then(() => {
-        // コピー成功時、ボタン表示を一時的に変更
+        // コピーできたときだけ成功表示へ変え、1.5 秒後に戻す。
         button.innerText = "Copied!";
         setTimeout(() => { button.innerText = "Copy"; }, 1500);
       });
     });
 
-    // ボタンの絶対配置用に親 <pre> を relative に
+    // 親の pre 要素を、CSS で指定したボタン位置の基準にする。
     const pre = codeBlock.parentNode;
     pre.style.position = "relative";
-    // <pre>内にボタンを追加
+    // code の外側へ置き、コピー対象の本文と分ける。
     pre.appendChild(button);
   });
 });

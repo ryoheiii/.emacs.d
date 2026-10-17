@@ -1,4 +1,4 @@
-# .emacs.d
+# Emacs の生成物と外部ライブラリ
 
 #*#
 *.dat
@@ -16,7 +16,7 @@ custom/snippets/*
 
 !.gitkeep
 
-# 個別ファイル
+# 個人設定・出力ファイル・一時的な計画
 custom/custom.el
 99-private.el
 README.html
@@ -27,7 +27,7 @@ plan.md
 .cache/
 __pycache__/
 
-# Claude Code
+# Claude Code のローカル設定と作業領域
 .claude/settings.local.json
 .claude/review-state/
 .claude/worktrees/

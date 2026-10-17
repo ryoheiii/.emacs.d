@@ -11,7 +11,7 @@
 (require 'ert)
 (require 'cl-lib)
 
-;;;;; [Group] Deferred - 組み込みコマンドの初回ロード ;;;;;
+;;; 組み込みコマンドの初回ロード
 (ert-deftest my-test-deferred-ediff-settings ()
   :tags '(:deferred)
   ;; 標準のコマンド入口からロードした後もウィンドウ配置を保つ。
@@ -46,7 +46,7 @@
           (lambda () (error "テスト用の辞書エラー")))))
       (should (= messages 1)))))
 
-;;;;; [Group] Scoring - 一致なしのキャッシュと一時エラーの再試行 ;;;;;
+;;; 一致なしのキャッシュと一時エラーの再試行
 (ert-deftest my-test-deferred-flx-cache-results ()
   :tags '(:deferred)
   (require 'flx)
@@ -79,7 +79,7 @@
       (should (= (my/get-flx-score "candidate" "query") 42))
       (should (= calls 2)))))
 
-;;;;; [Group] Deferred - 遅延ロード後のグローバルモード有効化 ;;;;;
+;;; 遅延ロード後のグローバルモード有効化
 ;; :if ガードが環境依存のもの (xclip, migemo) と GUI 限定のもの
 ;; (pulsar, spacious-padding, nyan-mode) は対象外とする。
 (defconst my-test-deferred--feature-modes
@@ -97,7 +97,7 @@
     (require (car entry))
     (should (default-value (cdr entry)))))
 
-;;;;; [Group] Deferred - Difftastic の Magit メニュー ;;;;;
+;;; Difftastic の Magit メニュー
 (ert-deftest my-test-deferred-difftastic-magit-menu-before-load ()
   :tags '(:deferred)
   (should-not (featurep 'magit))
@@ -121,7 +121,7 @@
     (should (eq (lookup-key magit-blame-read-only-mode-map (kbd key))
                 'difftastic-magit-show))))
 
-;;;;; [Group] Deferred - yasnippet のスニペットディレクトリ ;;;;;
+;;; yasnippet のスニペットディレクトリ
 ;; 31-editing.el の :init は 'yasnippet-snippets-dir を yas-snippet-dirs へ
 ;; あらかじめ入れる。yasnippet-snippets-initialize (autoload の eval-after-load) は
 ;; (member 'yasnippet-snippets-dir yas-snippet-dirs) が真なら何もしないため、
@@ -259,7 +259,7 @@
   (should-not (member yas--default-user-snippets-dir (yas-snippet-dirs)))
   (should-not (file-directory-p yas--default-user-snippets-dir)))
 
-;;;;; [Group] Deferred - 遅延ロード時の警告 ;;;;;
+;;; 遅延ロード時の警告
 ;; 遅延 :config が出す警告は my-test-startup.el のロード時点では未発生のため、
 ;; 起動検査を素通りする。require 後にここで検査する。
 (ert-deftest my-test-deferred-no-unexpected-warnings ()

@@ -31,7 +31,14 @@ loads/inits/NN-*.el   init-loader が番号順に読み込む設定モジュー�
 | `var/backup/` | バックアップと自動保存 | gitignored |
 | `var/package/` | ネイティブコンパイルのキャッシュ（`eln-cache/`）、tree-sitter 文法（`tree-sitter/`）、Copilot language server（`copilot/`） | gitignored |
 | `tests/` | 回帰テストと起動コスト計測 | 管理 |
-| `docs/` | ドキュメント（`docs/eval/` は実測ログ） | 管理 |
+| `docs/` | ドキュメント（`docs/eval/` は過去の計測記録と生ログ） | 管理 |
+| `.github/workflows/` | Linux の回帰テストと macOS / Windows の起動検証 | 管理 |
+| `.claude/` | 共通の規約・スキルと Claude Code の設定 | 一部（ローカル設定・作業領域は gitignored） |
+| `.codex/` | Codex の設定と共通スキルへのリンク | 管理 |
+
+設定値・フック・キーバインドは `loads/inits/` に置き、まとまった処理は
+`loads/site-elisp/` に置く。短い補助関数は設定のそばに残し、処理を追うためのファイル移動を増やさない。
+`emacs-setup.sh` は単独で実行できる入口、`test-emacs-setup.sh` はその検証としてルートに置く。
 
 `var/` と `loads/straight/` は手で編集しない。削除は `./emacs-setup.sh --clean`（`var/`）または `--clean-all`（加えて `loads/straight/`）で行う。
 復元できないデータや lockfile も消えるため、実行前に README の [クリーンアップ](../README.md#クリーンアップ) を確認する。
@@ -71,10 +78,17 @@ init-loader は 2 桁の数字で始まるファイルを番号順に読み込�
 
 | ファイル | 内容 |
 |---|---|
+| `my-c-ts-edit.el` | C/C++ ts モードの自動改行、空白削除、入力途中のインデント。`19-language-modes.el` から読み込む |
 | `my-gtags.el` | `C-t` のタグナビゲーション。`C-t d` / `C-t u` は LSP 優先で GNU Global へフォールバック、ほかは GNU Global（[タグナビゲーション](cpp.md#タグナビゲーション)） |
 | `my-lsp-nav.el` | `C-t c` / `e` / `t` / `o` / `s` の呼び出し階層・型階層・ヘッダ/ソース切替・横断シンボル検索（[コードリーディング補助](cpp.md#コードリーディング補助)） |
-| `my-markdown.el` | Markdown の pandoc プレビューと CSS |
+| `my-markdown.el` | Markdown の編集補助と HTML 出力。mdh を優先し、無ければ Pandoc を使う |
+| `my-node-path.el` | fnm、nvm、オフライン導入先からの Node.js 検出。`35-copilot.el` が可用性判定の前に呼ぶ |
+| `my-snippets.el` | 個人スニペットの配置解決と初期化。`31-editing.el` から読み込む |
 | `my-treesit.el` | tree-sitter 文法の取得元と導入コマンド |
+
+`my-c-ts-edit.el`、`my-node-path.el`、`my-snippets.el` は補助処理の定義を持つ。
+モードの有効化や PATH の更新は、設定モジュールから必要な関数を呼ぶ時点で行う。
+これらを読み込んでも、c-ts-mode・treesit・yasnippet・Copilot 本体の遅延ロードは維持される。
 
 設定を書き足すときの規約（番号帯、`use-package` の書き方、パスヘルパー、端末（`emacs -nw`）での動作を保つ条件）は
 [AGENTS.md の「変更に応じて読む規約」](../AGENTS.md#変更に応じて読む規約) から該当する規約を開く。変更後の検証は [テスト](testing.md)。

@@ -10,7 +10,6 @@
 (declare-function dashboard-initialize "dashboard")
 (declare-function dashboard-resize-on-hook "dashboard")
 
-;;;;; [Group] Buffer-and-File-management - バッファとファイル管理関連 ;;;;;
 ;;; xclip - クリップボードとの共有
 (use-package xclip
   :if (and (not (display-graphic-p)) ; GUIではない
@@ -19,8 +18,7 @@
   :straight t
   :defer 0.5
   :config
-  (xclip-mode 1)
-  )
+  (xclip-mode 1))
 
 ;;; dashboard - Emacs のスタートアップ画面をカスタマイズ
 ;; dashboard-setup-startup-hook は after-init-hook へ描画関数を登録するが、after-init の
@@ -40,8 +38,7 @@
       (add-hook 'emacs-startup-hook #'dashboard-initialize)
       (add-hook 'window-setup-hook #'dashboard-resize-on-hook)
       (add-hook 'window-size-change-functions #'dashboard-resize-on-hook 100)))
-  :hook (after-init . my/dashboard-setup)
-  )
+  :hook (after-init . my/dashboard-setup))
 
 ;;; recentf - 最近使用したファイルの履歴管理
 (use-package recentf
@@ -51,20 +48,18 @@
   (recentf-max-saved-items 2000)                                 ; 保存するファイルの数
   (recentf-max-menu-items 15)                                    ; メニューに表示するアイテム数
   (recentf-exclude '("recentf-"))                 ; 除外するファイルパターン
-  (recentf-auto-cleanup 'never)                                  ; 自動整理の設定
+  (recentf-auto-cleanup 'never)                                  ; 履歴の自動削除を無効化
   (recentf-save-file (my-set-history "recentf-" user-full-name)) ; recentf の保存パス
   (recentf-show-messages nil)                                    ; 自動保存の "Wrote ..." を出さない
   :config
-  ;; アイドル 30 秒ごとに recentf リストを自動保存する。
+  ;; 入力が止まって 30 秒たったときに recentf リストを保存する。
   ;; recentf-autosave-interval は定周期タイマーのため使わない。
-  (run-with-idle-timer 30 t #'recentf-save-list)
-  )
+  (run-with-idle-timer 30 t #'recentf-save-list))
 
 ;;; recentf-ext - recentf の拡張機能
 (use-package recentf-ext
   :straight t
-  :after recentf
-  )
+  :after recentf)
 
 ;;; pixel-scroll - ピクセル単位のスムーズなスクロール(組み込み)
 ;; ロード時の GUI 判定のため daemon 起動は対象外
@@ -74,8 +69,7 @@
   :if (display-graphic-p)
   :hook (after-init . pixel-scroll-precision-mode)
   :custom
-  (pixel-scroll-precision-interpolate-page t) ; ページ送りも補間する
-  )
+  (pixel-scroll-precision-interpolate-page t)) ; ページ送りも補間する
 
 ;;; anzu - 検索・置換時にマッチ数や現在位置を表示
 (use-package anzu
@@ -83,10 +77,9 @@
   :hook (after-init . global-anzu-mode)
   :custom
   (anzu-mode-lighter "")                    ; モードラインの表示を非表示
-  (anzu-deactivate-region t)                ; 領域選択時も `anzu` を使う
+  (anzu-deactivate-region t)                ; 選択範囲の置換を始めるときに選択表示を解除する
   (anzu-search-threshold 1000)              ; 最大検索数
-  (anzu-replace-to-string-separator " => ") ; 置換時の表示フォーマット
-  )
+  (anzu-replace-to-string-separator " => ")) ; 置換時の表示フォーマット
 
 (provide '30-buffer-file)
 ;;; 30-buffer-file.el ends here

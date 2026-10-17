@@ -8,26 +8,25 @@
 (declare-function color-saturate-name "color")
 (declare-function perfect-margin-mode "perfect-margin")
 
-;;;;; [Group] Visual - 視覚効果関連 ;;;;;
-;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
+;;; カーソルと編集箇所の強調
+;;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
 (use-package pulsar
   :straight t
   ;; tty ではパルスアニメーションが再描画のカクつきを生むため GUI 限定
   :if (display-graphic-p)
   :defer 0.5
   :config
-  (pulsar-global-mode 1)
-  )
+  (pulsar-global-mode 1))
 
-;;; goggles - 編集箇所をハイライト
+;;;; goggles - 編集箇所をハイライト
 (use-package goggles
   :straight t
   :hook ((prog-mode text-mode) . goggles-mode)
   :config
-  (setq-default goggles-pulse t)
-  )
+  (setq-default goggles-pulse t))
 
-;;; spacious-padding - 画面に余白を付ける
+;;; 余白と本文の配置
+;;;; spacious-padding - 画面に余白を付ける
 (use-package spacious-padding
   :straight t
   :if (display-graphic-p)
@@ -41,24 +40,22 @@
            :right-divider-width 30
            :scroll-bar-width 8))
 
-  ;; Read the doc string of `spacious-padding-subtle-frame-lines' as it
-  ;; is very flexible and provides several examples.
+  ;; アクティブなモードラインは背景になじませ、非アクティブ側は境界を残す。
   (setq spacious-padding-subtle-frame-lines
         `( :mode-line-active 'default
            :mode-line-inactive vertical-border))
-  (spacious-padding-mode 1)
-  )
+  (spacious-padding-mode 1))
 
-;;; perfect-margin - バッファが一つの時に中央寄せ
+;;;; perfect-margin - ウィンドウの左右の余白を調整して本文を中央へ寄せる
 (use-package perfect-margin
   :straight t
   :defer 0.5
   :config
   (setq perfect-margin-ignore-filters nil)
-  (perfect-margin-mode 1)
-  )
+  (perfect-margin-mode 1))
 
-;;; Rainbow-delimiters - 括弧の色分けで対応関係を視覚化
+;;; 括弧の色分け
+;; rainbow-delimiters で括弧の深さと対応関係を表示する。
 (use-package rainbow-delimiters
   :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
@@ -73,7 +70,7 @@
   (rainbow-delimiters-depth-8-face ((t (:foreground "#bf616a"))))  ;; 深めの赤
   (rainbow-delimiters-depth-9-face ((t (:foreground "#a3be8c"))))  ;; 緑リピート
 
-  ;; **括弧の過不足 (エラー) を目立たせる**
+  ;; 対応しない括弧をエラー色で目立たせる。
   (rainbow-delimiters-mismatched-face ((t (:foreground "#ff6c6b" :background "#5f0000" :weight bold :underline t))))
   (rainbow-delimiters-unmatched-face ((t (:foreground "#ffffff" :background "#af0000" :weight bold :underline t))))
   :bind (("C-c l" . rainbow-delimiters-using-stronger-colors))  ;; より強調した色に変更
@@ -91,30 +88,28 @@
   (set-face-attribute 'rainbow-delimiters-unmatched-face nil
                       :foreground     'unspecified
                       :inherit        'error
-                      :strike-through t)
-  )
+                      :strike-through t))
 
-;;; Nerd-icons - グラフィック環境向けのアイコン
+;;; GUI 用アイコン
+;;;; Nerd-icons - グラフィック環境向けのアイコン
 (use-package nerd-icons
   :straight t
-  :if (display-graphic-p)
-  )
+  :if (display-graphic-p))
 
-;;; Nerd-icons-completion - vertico 等の補完パッケージでアイコンを表示
+;;;; Nerd-icons-completion - vertico 等の補完パッケージでアイコンを表示
 (use-package nerd-icons-completion
   :straight t
   :if (display-graphic-p)
-  :hook (after-init . nerd-icons-completion-mode)
-  )
+  :hook (after-init . nerd-icons-completion-mode))
 
-;;; Nerd-icons-dired - dired でアイコンを表示
+;;;; Nerd-icons-dired - dired でアイコンを表示
 (use-package nerd-icons-dired
   :straight t
   :if (display-graphic-p)
-  :hook (dired-mode . nerd-icons-dired-mode)
-  )
+  :hook (dired-mode . nerd-icons-dired-mode))
 
-;;; Nyan-mode バッファ上での位置をニャンキャットが教えてくれる
+;;; モードラインの補助表示
+;;;; nyan-mode - バッファ内の位置をキャラクターで表示
 (use-package nyan-mode
   :straight t
   :if (display-graphic-p)
@@ -122,36 +117,32 @@
   :custom
   (nyan-bar-length 24)
   :config
-  (nyan-mode 1)
-  )
+  (nyan-mode 1))
 
-;;; Minions - マイナーモードをハンバーガーメニューで表示
+;;;; Minions - マイナーモードをハンバーガーメニューで表示
 (use-package minions
   :straight t
   :defer 0.5
   :config
-  (minions-mode 1)
-  )
+  (minions-mode 1))
 
-;;; page-break-lines ^Lの改ページ文字の表示を良くする
+;;; page-break-lines - 改ページ文字 ^L を横線として表示
 (use-package page-break-lines
   :straight t
   :defer 0.5
   :config
-  (global-page-break-lines-mode 1)
-  )
+  (global-page-break-lines-mode 1))
 
-;;; highlight-defined - 既知のシンボルに色を付ける
+;;; Emacs Lisp の色付け
+;;;; highlight-defined - 既知のシンボルに色を付ける
 (use-package highlight-defined
   :straight t
-  :hook (emacs-lisp-mode . highlight-defined-mode)
-  )
+  :hook (emacs-lisp-mode . highlight-defined-mode))
 
-;;; highlight-quoted - 引用符と引用記号に色を付ける
+;;;; highlight-quoted - 引用符と引用記号に色を付ける
 (use-package highlight-quoted
   :straight t
-  :hook (emacs-lisp-mode . highlight-quoted-mode)
-  )
+  :hook (emacs-lisp-mode . highlight-quoted-mode))
 
 (provide '23-visual)
 ;;; 23-visual.el ends here

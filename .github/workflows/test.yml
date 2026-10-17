@@ -36,7 +36,7 @@ jobs:
 
       # runner 同梱の shellcheck はバージョンが固定されない。ubuntu-latest の
       # 実体が上がるとチェック集合が変わり、無関係な変更が make lint で落ちる。
-      # ローカルと同じ版を明示導入して結果を揃える。
+      # CI ではこの版を固定し、ローカル検証でも同じ版を使う。
       - name: shellcheck をバージョン固定で導入
         env:
           SHELLCHECK_VERSION: "0.11.0"

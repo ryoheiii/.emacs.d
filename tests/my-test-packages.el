@@ -6,8 +6,8 @@
 
 (require 'ert)
 
-;;;;; [Group] Packages - 削除済み feature ;;;;;
-;; 今後の削除フェーズでは、削除したパッケージをこの表へ追記する。
+;;; 削除済み feature
+;; 廃止したパッケージが起動経路へ戻らないよう、この一覧で検査する。
 (defconst my-test-packages--banned-features
   '(paradox amx smooth-scroll affe
     diminish smart-mode-line volatile-highlights highlight-symbol
@@ -19,7 +19,7 @@
   (dolist (feature my-test-packages--banned-features)
     (should-not (featurep feature))))
 
-;;;;; [Group] Packages - eager-load 回帰検知 ;;;;;
+;;; 意図しない即時ロードの検知
 (defconst my-test-packages--deferred-features
   '(irony
     ediff
@@ -38,7 +38,8 @@
     breadcrumb
     ;; c-ts-mode.el をロードすると treesit.el まで読み込まれる。
     ;; ts モードのバッファを開くまで不要なので、起動経路では絶対にロードしない。
-    c-ts-mode)
+    c-ts-mode
+    treesit)
   "フル起動直後に遅延ロード状態でなければならない feature。")
 
 (ert-deftest my-test-packages-deferred-features ()
@@ -46,14 +47,14 @@
   (dolist (feature my-test-packages--deferred-features)
     (should-not (featurep feature))))
 
-;;;;; [Group] Packages - ts モードのフック parity ;;;;;
+;;; ts モードのフック登録
 ;; c-ts-mode / c++-ts-mode は derived-mode-p 上は c-mode / c++-mode の派生だが、
 ;; 親モードのフックは実行されない。ts モードへ切り替わった環境でも C-t タグ
 ;; ナビゲーション・LSP 自動起動・補完フォールバックを失わないよう、cc-mode 側と
 ;; 同じフックが個別に登録されていることを固定する。
 (defconst my-test-packages--ts-mode-hook-entries
   '(ggtags-mode                 ; C-t タグナビゲーション (ggtags-mode-map)
-    my/eglot-cc-maybe-ensure    ; clangd + CDB がある環境の LSP 自動起動
+    my/eglot-cc-maybe-ensure    ; clangd と CDB または .clangd がある環境の自動起動
     my/irony-maybe-enable       ; 非 LSP 環境の補完フォールバック
     hs-minor-mode               ; コード折りたたみ
     smart-newline-mode          ; 改行時のインデント調整
@@ -71,7 +72,7 @@
     (dolist (fn my-test-packages--ts-mode-hook-entries)
       (should (memq fn (default-value hook))))))
 
-;;;;; [Group] Packages - Copilot のロードゲート ;;;;;
+;;; Copilot のロードゲート
 ;; straight.el の use-package 統合は :straight を :if より先に処理する
 ;; (use-package-keywords 上で :ensure/:straight は 2 番目、:if は 9 番目)。
 ;; そのため :if で無効化しても straight-use-package は実行され、GitHub からの
@@ -126,7 +127,7 @@
   (should (memq 'my/copilot-maybe-enable (default-value 'prog-mode-hook)))
   (should-not (memq 'copilot-mode (default-value 'prog-mode-hook))))
 
-;;;;; [Group] Packages - 起動時ブロッキング ;;;;;
+;;; 起動時ブロッキング
 ;; find-at-startup は loads/straight/repos 配下を同期走査するため、起動が
 ;; リポジトリ規模とページキャッシュの温度に比例してブロックする。
 ;; 代替の検出経路まで含めて固定しないと、find-at-startup を外しただけで
@@ -149,7 +150,7 @@
   (should (memq #'straight-register-file-modification
                 (default-value 'before-save-hook))))
 
-;;;;; [Group] Packages - ライブラリ解決先 ;;;;;
+;;; ライブラリ解決先
 (defun my-test-packages--straight-build-p (library)
   "LIBRARY の解決先が straight のビルドディレクトリ配下なら non-nil を返す。
 ディレクトリ名は公開変数 `straight-build-dir' から取る。既定値 \"build\" を

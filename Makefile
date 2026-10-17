@@ -243,7 +243,7 @@ test-tty-live: | prepare-straight
 	MY_TTY_TEST_PHASE=write timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null; \
 	MY_TTY_TEST_PHASE=read timeout 180 script -qec "$$test_root/run-tty-test.sh" /dev/null
 
-# GUI も tty-live と同じ early-init shim でユーザーデータと依存を隔離する。
+# GUI も tty-live と同じ early-init ラッパーで保存先を隔離し、STRAIGHT_DIR の依存を使う。
 .PHONY: test-platform test-gui
 test-platform: | prepare-straight
 	@set -eu; \
@@ -286,7 +286,7 @@ test-setup:
 	trap 'find "$$test_home" -depth -delete' EXIT; \
 	EMACS_SETUP_TEST_SANDBOX=1 HOME="$$test_home" ./test-emacs-setup.sh
 
-# テスト基盤と lint 基盤自身の fail-closed ガードを故障注入で検査する。
+# テスト基盤と lint 基盤が、失敗を成功と誤判定しないことを故障注入で検査する。
 # 子として test-emacs-setup.sh を何度も起動するため、test-setup と同じ隔離 HOME を渡す。
 test-guards:
 	@set -eu; \

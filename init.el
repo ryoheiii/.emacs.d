@@ -1,10 +1,10 @@
 ;;; init.el --- Emacs 初期設定  -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; Emacs の起動時に実行する設定
+;; 自作ライブラリの検索パスと use-package を準備し、番号順に設定を読み込む。
 
 ;;; Code:
 
-;;;;; [Group] ロードパスの追加 ;;;;;
+;;; ロードパスの追加
 (defun add-to-load-path (&rest paths)
   "指定した PATHS を `load-path` に追加。"
   (dolist (path paths)
@@ -13,7 +13,7 @@
       (normal-top-level-add-subdirs-to-load-path))))
 (add-to-load-path "site-elisp/") ; my-loads-dir 内のディレクトリを指定
 
-;;;;; [Group] Use-package 設定 ;;;;;
+;;; Use-package 設定
 (eval-when-compile
   (require 'straight))
 
@@ -29,15 +29,14 @@
 (straight-use-package 'use-package)
 (setq straight-use-package-by-default t) ; 'use-package' で ':straight t' を省略可能に
 
-;;;;; [Group] Init-loader 設定 ;;;;;
+;;; Init-loader 設定
 (use-package init-loader
   :straight t
   :custom
   ;; ロードエラーがあったときだけ *init log* を表示する (nil だと黙って握り潰される)
   (init-loader-show-log-after-init 'error-only)
   :config
-  (init-loader-load (my-set-loads "inits/"))
-  )
+  (init-loader-load (my-set-loads "inits/")))
 
 (provide 'init)
 ;;; init.el ends here

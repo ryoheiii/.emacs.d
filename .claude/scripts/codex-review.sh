@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Codex CLI の1回の回答を、新規成果物として検証してから公開する。
+# Codex CLI が今回生成した回答を検証し、指定先のファイルへ保存する。
 # codex-review.sh PROMPT REPLY {SESSION_FILE | --resume SESSION_ID}
 # CODEX_REVIEW_MODEL / CODEX_REVIEW_EFFORT / CODEX_REVIEW_TIMEOUT_SEC で上書き可能。
-# 終了: 0=成功, 1=引数/CLI/公開失敗, 2=新回答なし, 3=session不正, 124=timeout
+# 終了コード: 0=成功, 1=引数・CLI・保存の失敗, 2=新しい回答なし, 3=セッション不正, 124=時間切れ
 set -u
 MODEL="${CODEX_REVIEW_MODEL:-gpt-5.6-sol}"
 EFFORT="${CODEX_REVIEW_EFFORT:-xhigh}"
@@ -55,8 +55,8 @@ if [ "$MODE_ARG" != --resume ]; then
   sources+=("$STAGING/session")
   targets+=("$MODE_ARG")
 fi
-# 全公開先を検証し、各親と同じファイルシステム上に新旧の成果物を用意する。
-# session 保存不能のとき reply だけを更新することを防ぐ。
+# 全保存先を検証し、各親ディレクトリと同じファイルシステム上に新旧のファイルを用意する。
+# セッション ID を保存できない場合に、回答だけが更新されることを防ぐ。
 new_files=() old_files=() existed=() published=0 success=no
 cleanup() {
   local rc=$? i

@@ -1,13 +1,36 @@
 ;;; my-test-keybindings.el --- タグ操作キーバインドの回帰テスト  -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; C/C++ タグナビゲーションの固定キーバインドと関数定義を検証する。
+;; 基本操作、C/C++ タグナビゲーション、パッケージ固有のキーを検証する。
 
 ;;; Code:
 
 (require 'ert)
 (require 'ggtags)
 
-;;;;; [Group] Keybinding - タグナビゲーション ;;;;;
+;;; 基本操作と日本語入力
+(ert-deftest my-test-keybindings-basic-bindings ()
+  "設定の配置を変えても、日常の基本操作を同じキーで呼べること。"
+  :tags '(:keybinding)
+  (dolist (binding '(("C-c a" . align)
+                     ("C-c M-a" . align-regexp)
+                     ("C-c d" . delete-indentation)
+                     ("M-?" . help-for-help)
+                     ("C-c C-i" . hippie-expand)
+                     ("C-c ;" . comment-or-uncomment-region)
+                     ("M-f" . forward-symbol)
+                     ("<f7>" . toggle-truncate-lines)
+                     ("C-c 0" . my/copy-file-name)
+                     ("C-c C-r" . my/window-resizer)
+                     ("M-p" . my/other-window-or-split)
+                     ("<zenkaku-hankaku>" . toggle-input-method)
+                     ("<muhenkan>" . my/input-method-off)
+                     ("<henkan>" . my/input-method-on)))
+    (should (eq (keymap-lookup global-map (car binding)) (cdr binding))))
+  ;; 端末で C-h がヘルプへ戻らず、従来どおり DEL に変換されること。
+  (should (equal (key-description (lookup-key key-translation-map (kbd "C-h")))
+                 "DEL")))
+
+;;; タグナビゲーション
 (defconst my-test-keybindings--bindings
   '(("C-t d" . my/gtags-find-definition)
     ("C-t C-d" . my/gtags-find-definition)
@@ -74,7 +97,7 @@
   (dolist (command my-test-keybindings--commands)
     (should (fboundp command))))
 
-;;;;; [Group] Keybinding - 折りたたみ・見出し ;;;;;
+;;; 折りたたみ・見出し
 ;; <f9> は outline が有効な C/C++ ts モードでは関数単位の折りたたみ、それ以外では
 ;; 従来の hs-toggle-hiding。既存の <f5> / C-\ は変更しない。
 (defconst my-test-keybindings--folding-bindings
@@ -92,7 +115,7 @@
   ;; M-s o は Emacs 標準の occur のまま (consult-outline で奪わない)
   (should (eq (lookup-key global-map (kbd "M-s o")) 'occur)))
 
-;;;;; [Group] Keybinding - シンボル操作 ;;;;;
+;;; シンボル操作
 ;; highlight-symbol 廃止後も symbol-overlay でハイライトと置換が揃っていること
 (defconst my-test-keybindings--symbol-overlay-bindings
   '(([f3]      . symbol-overlay-put)
@@ -108,7 +131,7 @@
     (let ((key (if (stringp (car binding)) (kbd (car binding)) (car binding))))
       (should (eq (lookup-key global-map key) (cdr binding))))))
 
-;;;;; [Group] Keybinding - 複数カーソル ;;;;;
+;;; 複数カーソル
 ;; multiple-cursors は遅延ロードするため、repeat-map と C-q プレフィックスは
 ;; パッケージ本体をロードせずに使える状態でなければならない。
 ;; mc/* は autoload 経由で解決されるので、束縛の存在だけを固定する。
@@ -120,7 +143,7 @@
   (dolist (key '("n" "p" "a" "d" "u" "s" "i" "l" "o"))
     (should (commandp (lookup-key my/mc-repeat-map (kbd key))))))
 
-;;;;; [Group] Keybinding - 検索 ;;;;;
+;;; 検索
 ;; Emacs では C-S は C-s と同一のキーイベントであるため、両方を :bind へ並べると
 ;; 後勝ちで一方が到達不能になる。バッファ内検索と横断検索が別々のキーから
 ;; 呼べる状態を固定する（横断検索は端末が送出できる M-s l へ置く）。
@@ -140,7 +163,7 @@
   (should-not (eq (lookup-key global-map (kbd "C-s"))
                   (lookup-key global-map (kbd "M-s l")))))
 
-;;;;; [Group] Keybinding - タブ操作 ;;;;;
+;;; タブ操作
 ;; C-z はタブ操作のプレフィックス。C-z 1〜9 は引数なしの tab-bar-select-tab が
 ;; 押した数字キー (last-command-event) からタブ番号を読む前提で同じコマンドを共有する。
 (defconst my-test-keybindings--tab-bar-bindings
@@ -178,7 +201,7 @@
           (should (= (1+ (tab-bar--current-tab-index)) n))))
     (tab-bar-close-other-tabs)))
 
-;;;;; [Group] Keybinding - パッケージ固有キーマップ ;;;;;
+;;; パッケージ固有キーマップ
 ;; :bind :map で宣言したキーは、パッケージのロード後に eval-after-load 経由で入る。
 ;; 宣言の移し替えで束縛が消えても起動検査では気づけないため、ロード後の状態を固定する。
 (defconst my-test-keybindings--package-map-bindings

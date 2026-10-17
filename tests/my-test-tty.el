@@ -2,7 +2,7 @@
 ;;; Commentary:
 ;; バッチ起動時の非 GUI 分岐と tty 向けロード条件を検証する。
 ;; GUI 限定 feature の未ロード検査は、after-init 未発火の純ロード状態に限定した
-;; eager 化(:demand 追加や無条件 require の混入)へのカナリアである。
+;; 即時ロード（:demand 追加や無条件 require の混入）を検出するための検査である。
 ;; :if ガードの削除自体は :defer/:hook 遅延によりバッチでは観測できないため、
 ;; その検出は実 pty で全タイマーを発火させる my-test-tty-live.el 側が担う。
 ;; 同様に、遅延パッケージの :custom(doom-modeline-icon 等)は未ロードのバッチでは
@@ -16,7 +16,7 @@
 
 (require 'ert)
 
-;;;;; [Group] TTY - 端末向け Corfu ;;;;;
+;;; 端末向け Corfu
 (ert-deftest my-test-tty-corfu-terminal-enabled ()
   :tags '(:tty)
   (if (featurep 'tty-child-frames)
@@ -24,7 +24,7 @@
     (should (featurep 'corfu-terminal))
     (should (default-value 'corfu-terminal-mode))))
 
-;;;;; [Group] TTY - GUI 限定 feature ;;;;;
+;;; GUI 限定 feature
 (defconst my-test-tty--gui-only-features
   '(pulsar
     spacious-padding
@@ -40,7 +40,7 @@ corfu-popupinfo は tty 子フレームで有効にするため対象外とす�
   (dolist (feature my-test-tty--gui-only-features)
     (should-not (featurep feature))))
 
-;;;;; [Group] TTY - xclip の遅延ロード ;;;;;
+;;; xclip の遅延ロード
 (ert-deftest my-test-tty-xclip-deferred ()
   :tags '(:tty)
   ;; 条件が成立する環境でも :defer 0.5 の idle timer 前は未ロードが正しい。

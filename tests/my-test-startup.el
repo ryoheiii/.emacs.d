@@ -1,14 +1,14 @@
 ;;; my-test-startup.el --- 起動回帰テスト  -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;; init-loader が記録したエラーと起動時警告を検出し、
-;; バッチ起動を fail-closed にする。
+;; エラーや警告がある起動を成功扱いしない。
 
 ;;; Code:
 
 (require 'seq)
 (require 'subr-x)
 
-;;;;; [Group] Startup - init-loader エラー検査 ;;;;;
+;;; init-loader エラー検査
 (defun my-test-startup--format-error (entry)
   "init-loader の ENTRY をファイル名とエラー要約だけに整形する。"
   (if (string-match "\\`\\(.+\\.elc?\\)\\. \\(.*\\)\\'" entry)
@@ -27,9 +27,9 @@
       (message "起動設定エラー: %s" (my-test-startup--format-error entry)))
     (kill-emacs 1)))
 
-;;;;; [Group] Startup - 起動時警告検査 ;;;;;
-;; レコーダー(EMACS_TEST_OPTIONS / tty shim が注入)の欠落は「警告なし」と
-;; 区別できず false green になるため、未導入自体を fail-closed で検出する。
+;;; 起動時警告検査
+;; 警告の記録処理は EMACS_TEST_OPTIONS / tty 用の起動ラッパーが設定する。
+;; 記録処理が欠けた状態を「警告なし」と誤判定しないよう、存在も検査する。
 (unless (and (boundp 'my-test--recorded-warnings)
              (advice-member-p 'my-test--record-warning 'display-warning))
   (message "起動回帰テスト: 警告レコーダーが未導入です(ハーネスの注入を確認)")

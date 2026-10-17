@@ -16,13 +16,13 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 | パス | 用途 |
 |---|---|
 | `loads/inits/` | 番号付き設定モジュール。00=コア、01=UI、02=キーバインド、10=関数、18=組み込み、19=言語モード、20〜35=外部パッケージ（機能別）、99=プライベート |
-| `loads/site-elisp/` | ユーザー作成の Elisp ライブラリ。`load-path` に含まれる |
+| `loads/site-elisp/` | 自作の Elisp ライブラリ。`load-path` に含まれる。設定モジュールから呼ぶ、まとまった処理を置く |
 | `loads/straight/` | straight.el のリポジトリとビルド成果物 |
 | `custom/` | `custom.el`、YASnippet、Markdown 表示用 CSS／JS などのカスタムデータ |
 | `var/hist/` | 履歴、ブックマーク、TRAMP 永続化、transient の実行時データ |
 | `var/backup/` | 自動保存・バックアップファイルの実行時生成先 |
 | `var/package/` | `eln-cache` などネイティブコンパイル成果物と `tree-sitter/`（文法ライブラリ）の実行時生成先 |
-| `tests/` | ERT による回帰テストと起動コスト計測ハーネス。`Makefile` の各ターゲットが参照する |
+| `tests/` | Elisp・シェル・Python の回帰テストと起動コスト計測。`Makefile` の各ターゲットが参照する |
 | `docs/eval/` | 設計判断の根拠となる実測結果と生ログ |
 
 ## 番号プレフィックス

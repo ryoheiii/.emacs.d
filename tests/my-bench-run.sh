@@ -64,7 +64,7 @@ setup_bench_root() {
     git -C "$REPO_ROOT" diff --binary | git -C "$BENCH_ROOT" apply --whitespace=nowarn
   fi
 
-  # パッケージは worktree の実体を共有する（ベンチルート配下へ再クローンしない）。
+  # STRAIGHT_DIR のパッケージを使う（ベンチルート配下へ再クローンしない）。
   if [ -e "$BENCH_ROOT/loads/straight" ] || [ -L "$BENCH_ROOT/loads/straight" ]; then
     find "$BENCH_ROOT/loads/straight" -depth -delete
   fi
@@ -245,7 +245,7 @@ while [ "$valid" -lt "$TRIALS" ]; do
   fi
 done
 
-# manifest が唯一のコミット点。前回の有効試行と wall 値をまとめて切り替える。
+# 全試行の完了後に manifest を置き換え、集計対象のログと経過時間を同時に確定する。
 pending_manifest="$(mktemp "$OUT_DIR/.$MODE-manifest.XXXXXX")"
 trap 'rm -f "$pending_manifest"' EXIT
 cp "$manifest" "$pending_manifest"
