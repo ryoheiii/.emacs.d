@@ -7,6 +7,46 @@
 ;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
   :straight nil
+  :preface
+  (declare-function which-key--popup-max-dimensions "which-key")
+  (defvar my/which-key--keymap nil
+    "which-key の候補を取得しているキーマップ。")
+  (defun my/which-key-with-keymap (function &optional prefix keymap filter recursive)
+    "FUNCTION による候補取得中、実際の割り当てを参照できるようにする。"
+    (let ((my/which-key--keymap
+           (or keymap
+               (make-composed-keymap
+                (append (current-active-maps t)
+                        (mapcar #'symbol-value which-key-extra-keymaps))))))
+      (funcall function prefix keymap filter recursive)))
+  (defun my/which-key-group-bindings (format-function bindings &optional full-key)
+    "BINDINGS の同一コマンドのキーを、端末幅に収まる単位でまとめる。
+FORMAT-FUNCTION と FULL-KEY による標準の翻訳・装飾・非表示を維持する。"
+    (let ((groups (make-hash-table :test #'eq))
+          ;; 説明欄を確保し、多数の別名キーも全て読める幅で小分けにする。
+          (key-width-limit (max 1 (/ (cdr (which-key--popup-max-dimensions)) 4)))
+          rows)
+      (dolist (binding bindings)
+        ;; 表示用の文字列から型は復元できないため、元のキーで実体を取得する。
+        ;; シンボルコマンドだけをまとめ、マクロ・prefix・無名関数は維持する。
+        (let* ((command (and my/which-key--keymap
+                             (lookup-key my/which-key--keymap (kbd (car binding)))))
+               (command (and (symbolp command) (commandp command)
+                             (not (keymapp command)) command))
+               (command (and command
+                             (or (and which-key-compute-remaps
+                                      (command-remapping command))
+                                 command)))
+               (row (car (funcall format-function (list binding) full-key)))
+               (group (and command (gethash command groups)))
+               (keys (and group row (concat (car group) "/" (car row)))))
+          (when row
+            (if (and keys (<= (string-width keys) key-width-limit))
+                (setcar group keys)
+              (push row rows)
+              (when command
+                (puthash command row groups))))))
+      (nreverse rows)))
   :custom
   (which-key-idle-delay 0.5)             ; キーの続きに迷ったら早めに案内
   (which-key-idle-secondary-delay 0.1)
@@ -15,6 +55,8 @@
   :hook
   (after-init . which-key-mode)          ; Emacs 起動後に which-key モードを有効化
   :config
+  (advice-add 'which-key--get-bindings :around #'my/which-key-with-keymap)
+  (advice-add 'which-key--format-and-replace :around #'my/which-key-group-bindings)
   ;; コマンド名に対する表示の置換なので、モード側がキーを上書きしても誤案内しない。
   (dolist (entry (append my/key-guide-commands my/key-guide--cpp-commands
                         my/key-guide--extra-descriptions))
