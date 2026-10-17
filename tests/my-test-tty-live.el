@@ -142,12 +142,41 @@
                 (with-current-buffer (get-buffer transient--buffer-name)
                   (should (get-buffer-window (current-buffer)))
                   (should (string-match-p (cadr entry) (buffer-string)))
-                  ;; 表示前の実文字列を測り、切り詰めで幅違反を隠さない。
+                  ;; 見出しとセル先頭の1空白を考慮し、列の対応を実表示幅で測る。
+                  (when (equal (car entry) "C-c J t")
+                    (dolist (column '(("操作" . "d") ("会話" . "M")
+                                      ("質問" . "p") ("コード" . "y")
+                                      ("補助" . "b")))
+                      (let ((window (get-buffer-window (current-buffer)))
+                            heading key)
+                        (goto-char (point-min))
+                        (search-forward (car column))
+                        (setq heading (car (window-text-pixel-size
+                                            window (line-beginning-position)
+                                            (match-beginning 0))))
+                        (goto-char (point-min))
+                        (search-forward (concat " " (cdr column) " "))
+                        (setq key (car (window-text-pixel-size
+                                        window (line-beginning-position)
+                                        (1+ (match-beginning 0)))))
+                        (ert-info ((format "見出し %s: %s、キー %s: %s"
+                                           (car column) heading (cdr column) key))
+                          (should (= (1+ heading) key))))))
+                  ;; align-to の表示属性も含めて測り、切り詰めの範囲外も数える。
+                  ;; tty の1ピクセルは1桁。右端の継続記号の領域は使わない。
                   (goto-char (point-min))
                   (while (not (eobp))
-                    (should (<= (string-width
-                                 (buffer-substring-no-properties
-                                  (line-beginning-position) (line-end-position))) 80))
+                    (let* ((window (get-buffer-window (current-buffer)))
+                           ;; 計測はウィンドウの point を動かすことがある。
+                           (width (save-excursion
+                                    (car (window-text-pixel-size
+                                          window (line-beginning-position)
+                                          (line-end-position)
+                                          (* 2 (window-body-width window))))))
+                           (limit (save-excursion (window-max-chars-per-line window))))
+                      (ert-info ((format "メニュー %s の行 %s"
+                                         (car entry) (line-number-at-pos)))
+                        (should (<= width limit))))
                     (forward-line 1)))
                 ;; C-g は親へ戻る。C-q は親を含めてすべて閉じる。
                 (execute-kbd-macro (kbd "C-q"))

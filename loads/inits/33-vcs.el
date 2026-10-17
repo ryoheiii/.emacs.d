@@ -11,6 +11,10 @@
 ;;; Magit - Git の状態確認と操作
 (use-package magit
   :straight t
+  :custom
+  ;; 全角の説明も実表示幅で列揃えする。:custom は遅延ロード前に適用され、
+  ;; Magit を開かず Copilot Chat を使う場合にも同じ Transient 設定が届く。
+  (transient-align-variable-pitch t)
   :bind (("C-x G" . magit-status)
          ("C-x M-g" . magit-dispatch)
          :map magit-status-mode-map
@@ -257,8 +261,8 @@
   :init
   (with-eval-after-load 'magit-diff
     (transient-append-suffix 'magit-diff '(-1 -1)
-      [("D" "変更を構文差分で表示" difftastic-magit-diff)
-       ("S" "コミットを構文差分で表示" difftastic-magit-show)])))
+      [("D" "変更を構文比較" difftastic-magit-diff)
+       ("S" "履歴を構文比較" difftastic-magit-show)])))
 
 ;;; Dsvn - SVN 管理ツール
 (use-package dsvn

@@ -222,7 +222,7 @@ prog-mode のバッファを開くたびにエラーになる。導入は M-x co
                  ("g" . ,(my/key-guide-description 'copilot-chat-switch-to-buffer))
                  ("q" . "戻る")
                  ("M" . "モデル選択")
-                 ("C" . "生成モデル")
+                 ("C" . "コミット用")
                  ("S" . ,(my/key-guide-description 'copilot-chat-save))
                  ("L" . ,(my/key-guide-description 'copilot-chat-load))
                  ("k" . ,(my/key-guide-description 'copilot-chat-kill-instance))

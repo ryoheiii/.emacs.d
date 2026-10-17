@@ -97,6 +97,14 @@
     (require (car entry))
     (should (default-value (cdr entry)))))
 
+(ert-deftest my-test-deferred-copilot-menu-alignment-before-magit ()
+  "Magit を開かなくても全角説明の列揃え設定が届くこと。"
+  :tags '(:deferred)
+  (should-not (featurep 'magit))
+  (require 'copilot-chat-transient)
+  (should transient-align-variable-pitch)
+  (should-not (featurep 'magit)))
+
 ;;; Difftastic の Magit メニュー
 (ert-deftest my-test-deferred-difftastic-magit-menu-before-load ()
   :tags '(:deferred)
