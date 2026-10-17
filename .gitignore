@@ -4,6 +4,7 @@
 *.dat
 *.elc
 elpa/
+# 設定を読まない起動や旧版が作る保存先も、移行するまで追跡しない
 eln-cache/
 /tree-sitter/
 var/*
@@ -23,7 +24,7 @@ README.html
 package.tar.gz
 plan.md
 
-# キャッシュ
+# 旧配置と Python のキャッシュ
 .cache/
 __pycache__/
 
@@ -32,5 +33,5 @@ __pycache__/
 .claude/review-state/
 .claude/worktrees/
 
-# ベンチ計測の一時生成物
+# 旧配置のベンチ計測データ（現行の出力先は var/cache/bench/）
 .bench/

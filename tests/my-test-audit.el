@@ -439,5 +439,71 @@
     (should-not (get-buffer dashboard-buffer-name))
     (should-not (memq #'dashboard-initialize emacs-startup-hook))))
 
+(ert-deftest my-test-audit-copilot-install-location ()
+  "実際のインストールコマンドが var を使うことを、通信せず確認する。"
+  :tags '(:audit)
+  (skip-unless (my/copilot-available-p))
+  (require 'copilot)
+  (should (equal copilot-install-dir (my-set-package "copilot/")))
+  (let (command)
+    (cl-letf (((symbol-function 'executable-find) (lambda (_) "/stub/npm"))
+              ((symbol-function 'copilot-async-start-process)
+               (lambda (_success _failure &rest args) (setq command args))))
+      (copilot-install-server))
+    (should (equal (seq-take command 4)
+                   (list "/stub/npm" "-g" "--prefix" copilot-install-dir)))
+    (should (file-directory-p copilot-install-dir))
+    (should-not (file-exists-p (my-set-emacs ".cache")))))
+
+(ert-deftest my-test-audit-deferred-storage-locations ()
+  "ライブラリを実ロードしても、保存先が既定の場所へ戻らない。"
+  :tags '(:audit)
+  (dolist (library '(project url-cache transient)) (require library))
+  (dolist (entry '((project-list-file . "var/state/projects.eld")
+                   (url-cache-directory . "var/cache/url/")
+                   (transient-values-file . "var/state/transient/values.el")
+                   (transient-levels-file . "var/state/transient/levels.el")))
+    (should (equal (symbol-value (car entry)) (my-set-emacs (cdr entry)))))
+  (when (my/copilot-available-p)
+    (require 'copilot-chat)
+    (require 'request)
+    (dolist (entry '((request-storage-directory . "var/state/request/")
+                     (copilot-chat-default-save-dir . "var/state/copilot-chat/")
+                     (copilot-chat-token-cache . "var/cache/copilot-chat/token")
+                     (copilot-chat-models-cache-file . "var/cache/copilot-chat/models.json")))
+      (should (equal (symbol-value (car entry)) (my-set-emacs (cdr entry)))))
+    (should (file-directory-p (my-set-cache "copilot-chat/")))))
+
+(ert-deftest my-test-audit-native-cache-location ()
+  "同期・非同期コンパイルの実生成物が、ともに var/cache に収まる。"
+  :tags '(:audit)
+  (skip-unless (and (fboundp 'native-comp-available-p) (native-comp-available-p)))
+  ;; ERT 自体が eln 保存先を差し替えるので、検査対象の設定を読み直す。
+  (load (expand-file-name "early-init.el" user-emacs-directory) nil t)
+  (let ((source (make-temp-file "my-storage-native-" nil ".el")))
+    (unwind-protect
+        (progn
+          (with-temp-file source
+            (insert ";;; -*- lexical-binding: t; -*-\n"
+                    "(defun my-storage-native-probe () 42)\n"))
+          (let ((output (native-compile source)))
+            (should (file-exists-p output))
+            (should (file-in-directory-p output (my-set-cache "eln-cache/"))))
+          ;; straight の native build と同じ子プロセス経路も通す。
+          (with-temp-file source
+            (insert ";;; -*- lexical-binding: t; -*-\n"
+                    "(defun my-storage-async-probe () 43)\n"))
+          (native-compile-async source nil t)
+          (let ((deadline (+ (float-time) 60)))
+            (while (and (not (fboundp 'my-storage-async-probe))
+                        (< (float-time) deadline))
+              (accept-process-output nil 0.1)))
+          (should (fboundp 'my-storage-async-probe))
+          (let ((output (comp-el-to-eln-filename source)))
+            (should (file-exists-p output))
+            (should (file-in-directory-p output (my-set-cache "eln-cache/"))))
+          (should-not (file-exists-p (my-set-emacs "eln-cache"))))
+      (delete-file source))))
+
 (provide 'my-test-audit)
 ;;; my-test-audit.el ends here

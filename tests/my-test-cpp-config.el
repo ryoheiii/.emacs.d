@@ -189,7 +189,7 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
     (should (eq (my-test-cpp-config--dispatch #'my/c++-mode-dispatch nil) 'c++-mode))))
 
 (ert-deftest my-test-cpp-config-treesit-grammar-dir-isolated ()
-  "文法の配置先は var/package/ 配下へ隔離し、リポジトリ直下へ置かない."
+  "文法の配置先は var/packages/ 配下へ隔離し、リポジトリ直下へ置かない."
   :tags '(:cpp-config)
   (skip-unless (and (fboundp 'treesit-available-p) (treesit-available-p)))
   ;; 実ディレクトリは導入時まで存在しないため文字列前方一致で判定する
@@ -660,9 +660,9 @@ my/irony-maybe-enable がサーバー未導入時のロードを止めるため�
     (should (autoloadp (symbol-function 'irony-install-server)))))
 
 (ert-deftest my-test-cpp-config-irony-server-prefix ()
-  "irony の導入先は var/hist/ 配下で、可用性判定と同じ場所を指すこと."
+  "irony の導入先は var/packages/ 配下で、可用性判定と同じ場所を指すこと."
   :tags '(:cpp-config)
-  (should (string-prefix-p (file-name-as-directory (my-set-history ""))
+  (should (string-prefix-p (file-name-as-directory (my-set-package ""))
                            my/irony-server-prefix))
   ;; 遅延パッケージの :custom は theme 値として記録され、パッケージのロード時に
   ;; 適用される。実ロードして反映と :config の設定を確認する

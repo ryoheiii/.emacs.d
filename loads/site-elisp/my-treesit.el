@@ -1,6 +1,6 @@
 ;;; my-treesit.el --- tree-sitter 文法の配置先と導入経路 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; C/C++ の tree-sitter 文法を var/package/tree-sitter/ へ導入するためのライブラリ。
+;; C/C++ の tree-sitter 文法を var/packages/tree-sitter/ へ導入するためのライブラリ。
 ;; 既定の ~/.emacs.d/tree-sitter/ (リポジトリ直下) は使わない。
 ;;
 ;; 導入経路は次の 2 つで、どちらも同じレシピ (固定タグ) と同じ導入先を使う。
