@@ -48,12 +48,12 @@ make test-startup   # 起動確認だけ
 | `make lint` | `lint-sh`（shellcheck）と `lint-el`（Elisp の構文と byte compile。警告も失敗） |
 | `make test-unit` | `early-init.el` のパスヘルパー、保存先とデータ保全、自動保存先の作成、端末専用ビルドの load-path キャッシュ |
 | `make test-startup` | フル起動、init-loader のエラーログ、起動時の警告 |
-| `make test-keybinding` | 基本操作・ウィンドウ操作・IME と `C-h` 変換、操作ガイド・検索の文脈と中止、`C-t`、折りたたみ、`C-z` のタブ操作、パッケージ固有のキーマップ |
+| `make test-keybinding` | 基本操作・ウィンドウ操作・IME と `C-h` 変換、操作ガイド・検索の文脈と中止、日本語説明の標準キー網羅・補完・ヘルプ・Git メニュー、`C-t`、折りたたみ、`C-z` のタブ操作、パッケージ固有のキーマップ |
 | `make test-cpp-config` | C/C++ のスタイル、eglot 起動条件、検索経路、cc-mode と ts モードの切替、irony ゲート、読解補助。`clangd`、GNU Global、tree-sitter 文法が無い環境では、それを使う検査を skip する |
 | `make test-deferred` | `:defer` 付きパッケージの遅延ロード後の設定と、グローバルモードの有効化 |
 | `make test-invariants` | グローバルモードのフック登録、feature のロード状態、ts モードと cc-mode のフック登録の一致、組み込みパッケージの固定 |
 | `make test-tty` | 対話画面を開かない batch 実行で、端末向け設定が読み込まれる条件を検証 |
-| `make test-tty-live` | 擬似端末（pty）で実際に `emacs -nw` を起動し、モードライン、端末初期化、`C-t`、操作検索・日本語のキー案内、補完ポップアップを検証 |
+| `make test-tty-live` | 擬似端末（pty）で実際に `emacs -nw` を起動し、モードライン、端末初期化、`C-t`、操作検索・日本語のキー案内とヘルプ・80 桁の Git メニュー、補完ポップアップを検証 |
 | `make test-setup` | 隔離した HOME での `emacs-setup.sh`（引数、ダウンロードの原子性、パッケージ復元、clangd の導入と削除） |
 | `make test-guards` | テスト基盤と lint が、失敗を成功と誤判定しないことを故障注入で検査 |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |

@@ -16,7 +16,8 @@
   (after-init . which-key-mode)          ; Emacs 起動後に which-key モードを有効化
   :config
   ;; コマンド名に対する表示の置換なので、モード側がキーを上書きしても誤案内しない。
-  (dolist (entry (append my/key-guide-commands my/key-guide--cpp-commands))
+  (dolist (entry (append my/key-guide-commands my/key-guide--cpp-commands
+                        my/key-guide--extra-descriptions))
     (add-to-list 'which-key-replacement-alist
                  (cons (cons nil (concat "\\`" (regexp-quote (symbol-name (cdr entry)))
                                          "\\'"))

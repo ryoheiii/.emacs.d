@@ -109,7 +109,7 @@
       (error
        (unless my/ispell-capf-warned
          (setq my/ispell-capf-warned t)
-         (message "ispell: completion error (%s)" (error-message-string err)))
+         (message "ispell: 補完に失敗しました（%s）" (error-message-string err)))
        nil)))
   :custom
   (ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない

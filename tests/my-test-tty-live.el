@@ -60,6 +60,56 @@
   :tags '(:tty-live)
   (should (string-empty-p (init-loader-error-log))))
 
+(ert-deftest my-test-tty-live-japanese-help ()
+  "実際の端末入力で日本語のキー説明を開けること。"
+  :tags '(:tty-live)
+  (save-window-excursion
+    (execute-kbd-macro (kbd "C-c h k C-x C-s"))
+    (with-current-buffer (help-buffer)
+      (should (string-prefix-p "日本語の説明: ファイルを保存" (buffer-string))))))
+
+(ert-deftest my-test-tty-live-japanese-tab-menu ()
+  "狭い端末でタブ操作の日本語説明を表示できること。"
+  :tags '(:tty-live)
+  (let ((width (frame-width))
+        (height (frame-height)))
+    (save-window-excursion
+      (unwind-protect
+          (progn
+            (set-frame-size (selected-frame) 80 24)
+            (which-key-show-keymap 'tab-bar-prefix-map t)
+            (with-current-buffer which-key--buffer
+              (should (string-match-p "次のタブへ移動" (buffer-string)))
+              (should (string-match-p "タブを新規作成" (buffer-string)))))
+        (which-key--hide-popup)
+        (set-frame-size (selected-frame) width height)))))
+
+(ert-deftest my-test-tty-live-japanese-magit-menu ()
+  "Git の日本語の入口が 80 桁の端末に収まること。"
+  :tags '(:tty-live)
+  (require 'magit)
+  (let ((width (frame-width))
+        (height (frame-height)))
+    (save-window-excursion
+      (unwind-protect
+          (progn
+            (set-frame-size (selected-frame) 80 24)
+            (execute-kbd-macro (kbd "C-x M-g"))
+            (with-current-buffer (get-buffer transient--buffer-name)
+              (should (get-buffer-window (current-buffer)))
+              (should (string-match-p "コミット" (buffer-string)))
+              (should (string-match-p "Git の操作" (buffer-string)))
+              (goto-char (point-min))
+              (while (not (eobp))
+                (should (<= (string-width
+                             (buffer-substring-no-properties
+                              (line-beginning-position) (line-end-position))) 80))
+                (forward-line 1))))
+        ;; 終了時もコマンドループを通し、一時キーマップの解除まで完了する。
+        (when (get-buffer-window transient--buffer-name)
+          (execute-kbd-macro (kbd "C-g")))
+        (set-frame-size (selected-frame) width height)))))
+
 (defconst my-test-tty-live--after-init-modes
   '(doom-modeline-mode
     display-time-mode)

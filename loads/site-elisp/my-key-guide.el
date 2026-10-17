@@ -7,6 +7,11 @@
 
 (require 'seq)
 (require 'help-mode)
+(require 'my-key-guide-ja)
+
+(declare-function marginalia-annotate-binding "marginalia" (candidate))
+(declare-function marginalia-annotate-command "marginalia" (candidate))
+(declare-function marginalia-annotate-function "marginalia" (candidate))
 
 (defvar my/key-guide-commands
   '(("ファイルを開く" . find-file)
@@ -48,6 +53,50 @@
     ("移動前の場所へ戻る" . xref-go-back)
     ("移動先へ進む" . xref-go-forward))
   "C/C++ バッファで追加する操作。")
+
+(defun my/key-guide-description (command)
+  "COMMAND の日本語の説明を返す。未登録の操作なら nil。"
+  (or (car (rassq command my/key-guide-commands))
+      (car (rassq command my/key-guide--cpp-commands))
+      (car (rassq command my/key-guide--extra-descriptions))))
+
+(defun my/key-guide-annotate-command (candidate)
+  "M-x の CANDIDATE に、キーと日本語の説明を添える。"
+  (if-let* ((description (my/key-guide-description (intern-soft candidate))))
+      (concat (marginalia-annotate-binding candidate)
+              " " (propertize description 'face 'marginalia-documentation))
+    (marginalia-annotate-command candidate)))
+
+(defun my/key-guide-annotate-function (candidate)
+  "関数検索の CANDIDATE に日本語の説明を添える。"
+  (let ((original (marginalia-annotate-function candidate)))
+    ;; 種別・引数リスト・原文概要を保持し、日本語の要約を先頭へ補足する。
+    (if-let* ((description (my/key-guide-description (intern-soft candidate))))
+        (concat (propertize description 'face 'marginalia-documentation)
+                " " original)
+      original)))
+
+(defun my/key-guide-annotate-key-list ()
+  "標準ヘルプのキー一覧に、日本語の説明を追記する。"
+  (when (and (derived-mode-p 'help-mode)
+             (memq (car help-xref-stack-item) '(describe-bindings describe-mode)))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        ;; 標準の一覧にある「キー、空白、コマンド名」だけを対象にする。
+        ;; 名前とリンクを残し、未登録の操作や既に説明を付けた行は変更しない。
+        (while (re-search-forward "^[^\n]+[ \t]+\\([^ \t\n]+\\)$" nil t)
+          (when-let* ((command (intern-soft (match-string-no-properties 1)))
+                      (description (my/key-guide-description command)))
+            (insert "  — " description)))))))
+
+(defun my/key-guide-help-summary (command)
+  "標準の COMMAND ヘルプの先頭に日本語の要約を添える。"
+  (when-let* ((description (my/key-guide-description command)))
+    ;; 標準フックは原文の挿入後に呼ばれる。原文やリンクを残して冒頭へ補足する。
+    (save-excursion
+      (goto-char (point-min))
+      (insert "日本語の説明: " description "\n\n原文・詳細:\n\n"))))
 
 (defun my/key-guide--binding (command)
   "今のバッファで COMMAND に届くキー、または M-x の案内を返す。"

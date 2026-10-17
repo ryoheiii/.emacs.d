@@ -107,7 +107,7 @@ ALIST は xref の表示設定。複数件は Consult のプレビューを使�
                               (or (xref-location-line loc) 0)
                               (xref-item-summary item))))
           ;; consult-xref 自身も 1 件なら入力を省略するため、ここで選択する。
-          (completing-read "Go to xref: " (list label) nil t)
+          (completing-read "移動先を選択: " (list label) nil t)
           (xref-pop-to-location item (alist-get 'display-action alist)))
       (consult-xref (lambda () xrefs) alist))))
 
@@ -146,23 +146,23 @@ PROMPT が non-nil なら GNU Global を使う。"
   "名前を補完して定義を検索する.
 カーソル位置の名前を初期入力にする。C-u 付きなら GNU Global を使う。"
   (interactive "P")
-  (my/gtags--find "-d" prompt "Find definition: "))
+  (my/gtags--find "-d" prompt "定義を探す名前: "))
 
 (defun my/gtags-find-references (&optional prompt)
   "名前を補完して参照を検索する.
 カーソル位置の名前を初期入力にする。C-u 付きなら GNU Global を使う。"
   (interactive "P")
-  (my/gtags--find "-r" prompt "Find references: "))
+  (my/gtags--find "-r" prompt "使用箇所を探す名前: "))
 
 (defun my/gtags-find-symbol ()
   "名前を補完し、定義のないシンボルの出現箇所を検索する."
   (interactive)
-  (my/gtags--find "-s" nil "Find symbol: "))
+  (my/gtags--find "-s" nil "出現箇所を探す名前: "))
 
 (defun my/gtags-find-file ()
   "ファイル名を補完して検索する."
   (interactive)
-  (my/gtags--find "-P" nil "Find file: "))
+  (my/gtags--find "-P" nil "探すファイル名: "))
 
 ;; global -uv でタグを差分更新する（既存データベースが対象）。
 (defun update-gtags ()

@@ -146,22 +146,10 @@ prog-mode のバッファを開くたびにエラーになる。導入は M-x co
     (add-to-list 'warning-suppress-log-types '(copilot copilot-no-mode-indent))
     (add-to-list 'warning-suppress-types '(copilot copilot-no-mode-indent))
 
-    ;; which-key 用のプレフィックス説明（C-c j を押すだけでサブキー一覧が表示される）
+    ;; 操作ごとの説明は my-key-guide の共通辞書から表示する。
     (with-eval-after-load 'which-key
-      (which-key-add-keymap-based-replacements copilot-mode-map
-        "C-c j"   "Copilot"
-        "C-c j j" "accept"
-        "C-c j w" "accept-word"
-        "C-c j l" "accept-line"
-        "C-c j n" "next"
-        "C-c j p" "previous"
-        "C-c j c" "complete"
-        "C-c j s" "panel"
-        "C-c j d" "diagnose"
-        "C-c j e" "select-model")
       (which-key-add-key-based-replacements
-        "C-c j"   "Copilot"
-        "C-c j m" "toggle-mode")))
+        "C-c j" "Copilot 補完")))
 
 ;;; チャット
 ;;;; request - copilot-chat の依存パッケージ
@@ -243,39 +231,10 @@ Don't forget the most important rule when you are formatting your response: use 
 
 Always respond in Japanese.")
     :config
-    ;; which-key 用のプレフィックス説明
+    ;; キーだけに依存する説明はグループ名に限定する。
     (with-eval-after-load 'which-key
       (which-key-add-key-based-replacements
-        "C-c J"   "Copilot Chat"
-        "C-c J J" "open-chat"
-        "C-c J h" "hide-chat"
-        "C-c J t" "transient-menu"
-        ;; コード分析（リージョン選択）
-        "C-c J e" "explain"
-        "C-c J r" "review"
-        "C-c J f" "fix"
-        "C-c J o" "optimize"
-        "C-c J T" "test"
-        "C-c J d" "doc"
-        ;; コード分析（選択不要）
-        "C-c J E" "explain-defun"
-        "C-c J R" "review-buffer"
-        ;; プロンプト・挿入
-        "C-c J p" "custom-prompt"
-        "C-c J P" "prompt-mini"
-        "C-c J i" "ask+insert"
-        "C-c J s" "send-to-buf"
-        "C-c J w" "copy-code"
-        ;; コンテキスト管理
-        "C-c J a" "add-buffer"
-        "C-c J A" "add-workspace"
-        "C-c J x" "del-buffer"
-        "C-c J l" "list-buffers"
-        ;; その他
-        "C-c J g" "commit-msg"
-        "C-c J m" "set-model"
-        "C-c J c" "cancel"
-        "C-c J q" "reset"))))
+        "C-c J" "Copilot チャット"))))
 
 (provide '35-copilot)
 ;;; 35-copilot.el ends here

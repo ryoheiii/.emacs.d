@@ -12,7 +12,7 @@
   "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
 `t` なら `straight t`、`nil` なら `straight nil` を追加すべき。"
   (interactive
-   (list (intern (completing-read "Package name: " obarray))))
+   (list (intern (completing-read "パッケージ名: " obarray))))
   (require 'package)
   (let* ((library (locate-library (symbol-name package)))
          ;; lisp-directory はコアライブラリの配置先を指す組み込み変数。
@@ -20,10 +20,10 @@
                           (and library (file-in-directory-p library lisp-directory)))))
     (if is-built-in
         (progn
-          (message "Package '%s' is built-in. `straight nil` is recommended." package)
+          (message "%s は Emacs に組み込み済みです。`:straight nil` を指定してください。" package)
           nil)
       (progn
-        (message "Package '%s' is NOT built-in. `straight t` is recommended." package)
+        (message "%s は外部パッケージです。`:straight t` を指定してください。" package)
         t))))
 
 ;;; ファイル関連
@@ -38,7 +38,7 @@
   (interactive)
   (when buffer-file-name
     (my/copy-to-clipboard-and-message (file-truename buffer-file-name)
-                                      (format "Copied file path: %s" buffer-file-name))))
+                                      (format "ファイルの絶対パスをコピーしました: %s" buffer-file-name))))
 
 (defun my/copy-file-name ()
   "現在のファイル名をキルリングへ保存し、ミニバッファに表示する。"
@@ -46,7 +46,7 @@
   (when buffer-file-name
     (let ((file-name (file-name-nondirectory buffer-file-name)))
       (my/copy-to-clipboard-and-message file-name
-                                        (format "Copied file name: %s" file-name)))))
+                                        (format "ファイル名をコピーしました: %s" file-name)))))
 
 ;;; ウィンドウ管理
 ;; 上下に分割
@@ -97,11 +97,11 @@
         c)
     (catch 'end-flag
       (while t
-        (setq c (read-key "Resize: [f]→ [b]← [n]↓ [p]↑, any other key to exit"))
+        (setq c (read-key "サイズ調整: f→ b← n↓ p↑ / 他のキーで終了"))
         (cond
          ;; ウィンドウが1つだけならリサイズしない
          ((one-window-p)
-          (message "Cannot resize: only one window exists.")
+          (message "ウィンドウが一つだけなので、大きさを変更できません。")
           (throw 'end-flag t))
          ;; 横幅変更
          ((eq c ?f) (ignore-errors (enlarge-window-horizontally dx)))
@@ -111,7 +111,7 @@
          ((eq c ?p) (ignore-errors (enlarge-window dy)))
          ;; それ以外のキーなら終了
          (t
-          (message "Quit")
+          (message "サイズ調整を終了しました")
           (throw 'end-flag t)))))))
 
 (provide '10-functions)
