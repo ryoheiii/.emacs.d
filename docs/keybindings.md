@@ -155,7 +155,7 @@ eglot（clangd）の管理下では LSP で検索し、それ以外では GNU Gl
 | `C-x M-g` | `magit-dispatch` | Magit のコマンドメニュー |
 | `q`（magit-status） | `mu-magit-kill-buffers` | 現在のリポジトリの Magit バッファをすべて閉じ、ウィンドウ構成を戻す |
 | `D` / `S`（magit-blame） | `difftastic-magit-show` | 構文差分（difftastic）で表示 |
-| `D` / `S`（diff メニュー） | `difftastic-magit-diff` / `difftastic-magit-show` | 構文差分。difftastic を一度使った後（上の magit-blame のキーなど）にメニューへ現れる |
+| `D` / `S`（diff メニュー） | `difftastic-magit-diff` / `difftastic-magit-show` | 構文差分。Magit の diff メニューを初めて開いたときから利用できる |
 
 ## Markdown（markdown-mode）
 

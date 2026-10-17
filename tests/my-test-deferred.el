@@ -28,6 +28,25 @@
     (require (car entry))
     (should (default-value (cdr entry)))))
 
+;;;;; [Group] Deferred - Difftastic の Magit メニュー ;;;;;
+(ert-deftest my-test-deferred-difftastic-magit-menu-before-load ()
+  :tags '(:deferred)
+  (should-not (featurep 'magit))
+  (should-not (featurep 'difftastic))
+  (require 'magit)
+  (should-not (featurep 'difftastic))
+  ;; メニュー項目の登録と定義の取得だけでは、本体をロードしない。
+  (dolist (entry '(("D" . difftastic-magit-diff)
+                   ("S" . difftastic-magit-show)))
+    (let ((suffix (transient-get-suffix 'magit-diff (car entry))))
+      (should (eq (plist-get (cdr suffix) :command) (cdr entry))))
+    (should (commandp (cdr entry)))
+    (should (autoloadp (symbol-function (cdr entry)))))
+  (should-not (featurep 'difftastic))
+  (dolist (key '("D" "S"))
+    (should (eq (lookup-key magit-blame-read-only-mode-map (kbd key))
+                'difftastic-magit-show))))
+
 ;;;;; [Group] Deferred - yasnippet のスニペットディレクトリ ;;;;;
 ;; 31-editing.el の :init は 'yasnippet-snippets-dir を yas-snippet-dirs へ
 ;; あらかじめ入れる。yasnippet-snippets-initialize (autoload の eval-after-load) は
