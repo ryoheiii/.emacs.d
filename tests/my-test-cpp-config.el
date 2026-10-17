@@ -1487,9 +1487,9 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
 (ert-deftest my-test-cpp-config-lsp-workspace-symbol ()
   "横断シンボル検索は LSP なら workspace/symbol を自前で送り、無ければ GTAGS、それも無ければエラー."
   :tags '(:cpp-config)
-  (let (apropos-calls)
-    (cl-letf (((symbol-function 'xref-backend-apropos)
-               (lambda (backend pattern) (push (list backend pattern) apropos-calls) nil))
+  (let (global-calls)
+    (cl-letf (((symbol-function 'my/gtags--run)
+               (lambda (flag pattern) (push (list flag pattern) global-calls) nil))
               ((symbol-function 'ggtags-find-project) (lambda () t)))
       ;; LSP: eglot の xref バックエンド (タイムアウト無期限) ではなく有限タイムアウトの要求
       (my-test-cpp-config--with-lsp-stubs t
@@ -1500,7 +1500,7 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
                 ;; range の無い要素 (WorkspaceSymbol の簡略形) は読み飛ばす
                 (:name "nowhere" :kind 12 :location (:uri ,uri))]))
         (my/lsp-find-workspace-symbol "callee")
-        (should-not apropos-calls)
+        (should-not global-calls)
         (should (equal requests `((:workspace/symbol (:query "callee")
                                                      ,jsonrpc-default-request-timeout))))
         (should (= (length shown) 1))
@@ -1508,19 +1508,79 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
         (should (= (xref-location-line (xref-item-location (car shown))) 1))
         (should (zerop (hash-table-count eglot--temp-location-buffers))))
       (my-test-cpp-config--with-lsp-stubs nil nil
-        (my/lsp-find-workspace-symbol "alloc")
-        (should (equal apropos-calls '((ggtags "alloc"))))
+        (my/lsp-find-workspace-symbol "foo.*bar")
+        (should (equal global-calls '(("--grep" "foo.*bar"))))
         (should-not requests))
-      (setq apropos-calls nil)
+      (setq global-calls nil)
       (my-test-cpp-config--with-lsp-stubs nil nil
         (should-error (my/lsp-find-workspace-symbol " ") :type 'user-error)
-        (should-not apropos-calls)))
-    (cl-letf (((symbol-function 'xref-backend-apropos)
-               (lambda (backend pattern) (push (list backend pattern) apropos-calls) nil))
+        (should-not global-calls)))
+    (cl-letf (((symbol-function 'my/gtags--run)
+               (lambda (flag pattern) (push (list flag pattern) global-calls) nil))
               ((symbol-function 'ggtags-find-project) (lambda () nil)))
       (my-test-cpp-config--with-lsp-stubs nil nil
         (should-error (my/lsp-find-workspace-symbol "alloc") :type 'user-error)
-        (should-not apropos-calls)))))
+        (should-not global-calls)))))
+
+(ert-deftest my-test-cpp-config-lsp-workspace-symbol-real-gtags-regexp ()
+  "非 eglot の横断検索は Global の正規表現を保持し、xref と 0 件表示を返す."
+  :tags '(:cpp-config :gtags-integration)
+  (skip-unless (and (executable-find "global") (executable-find "gtags")))
+  (let ((root (make-temp-file "my-test-lsp-global-regexp-" t))
+        (process-environment (copy-sequence process-environment))
+        (real-call (symbol-function 'my/gtags--call))
+        shown message-text global-args)
+    (unwind-protect
+        (let* ((default-directory (file-name-as-directory root))
+               (source (expand-file-name "sample.c" root)))
+          (dolist (name '("GTAGSROOT" "GTAGSDBPATH" "GTAGSCONF" "GTAGSLABEL"))
+            (setenv name nil))
+          (with-temp-file source
+            (insert "int foo12bar(void) { return 1; }\n"
+                    "int fooXXbar(void) { return 2; }\n"
+                    "/* fooABbar */\n"
+                    "const char *text = \"fooZZbar\";\n"))
+          (should (zerop (call-process "gtags" nil nil nil)))
+          (cl-letf (((symbol-function 'my/gtags--lsp-p) (lambda () nil))
+                    ((symbol-function 'my/gtags--call)
+                     (lambda (&rest args)
+                       (push args global-args)
+                       (apply real-call args)))
+                    ((symbol-function 'xref-show-xrefs)
+                     (lambda (fetcher _action) (setq shown (funcall fetcher))))
+                    ((symbol-function 'message)
+                     (lambda (format-string &rest args)
+                       (setq message-text (apply #'format format-string args)))))
+            (my/lsp-find-workspace-symbol "foo.*bar")
+            (should (= (length shown) 4))
+            (should (equal (mapcar (lambda (item)
+                                     (xref-location-line (xref-item-location item)))
+                                   shown)
+                           '(1 2 3 4)))
+            (should (seq-every-p
+                     (lambda (item)
+                       (equal (xref-location-group (xref-item-location item)) source))
+                     shown))
+            (should (equal (xref-item-summary (car shown))
+                           "int foo12bar(void) { return 1; }"))
+            (setq shown nil)
+            (my/lsp-find-workspace-symbol "^int foo[[:digit:]]*bar.*}$")
+            (should (= (length shown) 1))
+            (should (= (xref-location-line (xref-item-location (car shown))) 1))
+            (setq shown nil)
+            (my/lsp-find-workspace-symbol "foo12bar")
+            (should (= (length shown) 1))
+            (setq shown nil message-text nil)
+            (my/lsp-find-workspace-symbol "no_such_symbol_22")
+            (should-not shown)
+            (should (equal message-text "シンボル no_such_symbol_22 は見つかりません"))
+            (should (equal (nreverse global-args)
+                           (mapcar (lambda (pattern)
+                                     (list "--result=grep" "--encode-path=:%"
+                                           "--grep" "--" pattern))
+                                   '("foo.*bar" "^int foo[[:digit:]]*bar.*}$"
+                                     "foo12bar" "no_such_symbol_22"))))))
+      (delete-directory root t))))
 
 ;;;;; [Group] C++ Config - 実 clangd との結合 ;;;;;
 ;; clangd がある環境でだけ、要求層をスタブせずに実 JSON-RPC で LSP 経路を通す
