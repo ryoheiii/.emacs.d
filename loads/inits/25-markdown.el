@@ -29,6 +29,7 @@
   ;; 画像を表示する設定
   (markdown-image-use-cache t) ; キャッシュして表示
   :bind (:map markdown-mode-map
+              ("C-c C-c e" . my-markdown-export)             ; mdh 優先で HTML を出力
               ("C-c C-v h" . markdown-insert-header-dwim)     ; 見出しを挿入
               ("C-c C-v l" . markdown-insert-link)            ; リンクを挿入
               ("C-c C-v c" . markdown-insert-gfm-code-block)  ; コードブロックを挿入

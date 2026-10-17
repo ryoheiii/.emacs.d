@@ -145,6 +145,8 @@ GNU Global を使うプロジェクトでは、初回だけ `M-x ggtags-create-t
 
 ### Markdown / Org
 
+- Markdown の HTML 出力は `C-c C-c e`。[mdh](https://github.com/ryoheiii/markdown-to-html) が PATH 上にあれば、保存してから同じフォルダーへ単一 HTML を生成する。mdh の導入はリンク先の手順を参照。
+  mdh 未導入時は従来の Pandoc へフォールバックする。`C-u C-c C-c e` でも Pandoc を選べる。mdh の実行失敗は `*mdh*` に表示する。
 - Markdown のプレビューは `C-c C-c p`（pandoc で HTML を生成。見た目は [custom/README.md](custom/README.md#css-と-js) の CSS / JS で変える）。
 - Org の TODO は `TODO` / `IN-PROGRESS` / `WAITING` / `DONE` / `CANCELLED` の 5 段階で、完了時に `CLOSED:` の時刻が付く。
 

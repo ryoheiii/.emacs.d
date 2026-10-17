@@ -172,12 +172,19 @@ eglot（clangd）が接続しているバッファでは、コードの解析結
 
 | キー | コマンド | 説明 |
 |---|---|---|
+| `C-c C-c e` | `my-markdown-export` | mdh で HTML を出力。mdh 未導入時は従来の Pandoc へフォールバック |
+| `C-u C-c C-c e` | `my-markdown-export` | 従来の Pandoc で HTML を出力 |
 | `C-c C-v h` | `markdown-insert-header-dwim` | 見出しを挿入 |
 | `C-c C-v l` | `markdown-insert-link` | リンクを挿入 |
 | `C-c C-v c` | `markdown-insert-gfm-code-block` | コードブロックを挿入 |
 | `C-c C-v d` | `markdown-insert-details` | 折りたたみ式の `<details>` を挿入 |
 | `C-c C-v t` | `markdown-toc-generate-toc` | 目次を生成 |
 | `C-c TAB` | `my-markdown-insert-tab` | 4 スペースを挿入。`C-c C-i` と同じキーのため、Markdown では `hippie-expand` より優先される |
+
+mdh は未保存の変更を保存してから、Markdown と同じ場所へ同名の `.html` を出力する。
+ファイル未指定のバッファは先に保存する。TRAMP のファイルは従来の変換を使用する。
+mdh 自体が失敗した場合は `*mdh*` にログを表示する。必要なら `C-u C-c C-c e` で再実行する。
+これらのキーは gfm-mode でも使用できる。
 
 markdown-mode では `M-p` / `M-n` がリンク間の移動になり、ウィンドウ移動の `M-p` は使えない。
 
