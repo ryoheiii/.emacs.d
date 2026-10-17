@@ -198,12 +198,10 @@ cc-mode に戻す方法は [C/C++ 開発環境](docs/cpp.md#文法の導入と-c
 - パッケージの更新と lockfile、アーカイブからの復元は [パッケージ管理](docs/packages.md)。
 - 設定を変更した後の検証は [テスト](docs/testing.md)。変更するときの規約は [AGENTS.md](AGENTS.md)。
 
-### 保存先の整理
+### データの保存先
 
-実行時データは `var/state/`、`var/cache/`、`var/backup/`、`var/packages/`、`var/tmp/` に分ける。
-旧配置から更新するときは、同じ設定を使う Emacs をすべて終了してから新しい設定を起動する。
-起動時に旧履歴やサーバーを移し、直下の `.cache/copilot/` と `eln-cache/` も `var/` 配下へ収める。
-同名ファイルの衝突は自動で上書きしない。詳しくは [保存先と移行手順](docs/architecture.md#実行時データと旧配置からの移行)。
+実行時データは `var/state/`（履歴・設定値）、`var/cache/`（キャッシュ）、`var/backup/`（復旧用）、
+`var/packages/`（導入物）、`var/tmp/`（一時ファイル）に分ける。詳細は [ファイル構成](docs/architecture.md#ディレクトリ構成)。
 
 ### クリーンアップ
 

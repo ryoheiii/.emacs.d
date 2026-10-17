@@ -46,7 +46,7 @@ make test-startup   # 起動確認だけ
 | ターゲット | 検証内容 |
 |---|---|
 | `make lint` | `lint-sh`（shellcheck）と `lint-el`（Elisp の構文と byte compile。警告も失敗） |
-| `make test-unit` | `early-init.el` のパスヘルパー、保存先の移行・衝突時のデータ保全、自動保存先の作成、端末専用ビルドの load-path キャッシュ |
+| `make test-unit` | `early-init.el` のパスヘルパー、保存先とデータ保全、自動保存先の作成、端末専用ビルドの load-path キャッシュ |
 | `make test-startup` | フル起動、init-loader のエラーログ、起動時の警告 |
 | `make test-keybinding` | 基本操作・ウィンドウ操作・IME と `C-h` 変換、操作ガイド・検索の文脈と中止、`C-t`、折りたたみ、`C-z` のタブ操作、パッケージ固有のキーマップ |
 | `make test-cpp-config` | C/C++ のスタイル、eglot 起動条件、検索経路、cc-mode と ts モードの切替、irony ゲート、読解補助。`clangd`、GNU Global、tree-sitter 文法が無い環境では、それを使う検査を skip する |
