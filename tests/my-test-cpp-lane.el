@@ -23,7 +23,8 @@
                           (unless (and (fboundp 'treesit-available-p) (treesit-available-p))
                             '(my-test-cpp-config-treesit-grammar-dir-isolated))
                           (unless (and (executable-find "global") (executable-find "gtags"))
-                            '(my-test-cpp-config-gtags-real-candidates))
+                            '(my-test-cpp-config-gtags-real-candidates
+                              my-test-cpp-config-lsp-workspace-symbol-real-gtags-regexp))
                           (unless (executable-find "clangd")
                             '(my-test-cpp-config-lsp-live-clangd)))))
     (unless (member lane '("auto" "with" "without")) (error "不正な文法レーン"))
