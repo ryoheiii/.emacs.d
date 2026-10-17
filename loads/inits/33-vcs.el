@@ -41,8 +41,8 @@
 ;;; Difftastic
 (use-package difftastic
   :straight t
-  :after magit
   :bind (:map magit-blame-read-only-mode-map
+              :package magit-blame
               ("D" . difftastic-magit-show)
               ("S" . difftastic-magit-show))
   :init
