@@ -27,12 +27,15 @@
   (defvar my/flx-cache (make-hash-table :test 'equal :size 1000))
 
   (defun my/get-flx-score (str query)
-    (or (gethash (cons str query) my/flx-cache)
-        (let ((score (condition-case nil
-                         (car (flx-score str query flx-file-cache))
-                       (error nil))))
-          (puthash (cons str query) score my/flx-cache)
-          score)))
+    "STR と QUERY のスコアを返し、一致なしの nil もキャッシュする。"
+    (let* ((key (cons str query))
+           (cached (gethash key my/flx-cache 'missing)))
+      (if (eq cached 'missing)
+          ;; 一時エラーは記録せず、次回の補完で従来どおり再試行する。
+          (condition-case nil
+              (puthash key (car (flx-score str query flx-file-cache)) my/flx-cache)
+            (error nil))
+        cached)))
 
   (defun my/flx-tiebreaker (c1 c2)
     (let ((total (or (bound-and-true-p vertico--total)

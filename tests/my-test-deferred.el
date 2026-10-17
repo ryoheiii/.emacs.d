@@ -9,6 +9,75 @@
 ;;; Code:
 
 (require 'ert)
+(require 'cl-lib)
+
+;;;;; [Group] Deferred - 組み込みコマンドの初回ロード ;;;;;
+(ert-deftest my-test-deferred-ediff-settings ()
+  :tags '(:deferred)
+  ;; 標準のコマンド入口からロードした後もウィンドウ配置を保つ。
+  (should (commandp 'ediff-buffers))
+  (autoload-do-load (symbol-function 'ediff-buffers) 'ediff-buffers)
+  (should (eq ediff-window-setup-function 'ediff-setup-windows-plain))
+  (should (eq ediff-split-window-function 'split-window-horizontally)))
+
+(ert-deftest my-test-deferred-ispell-settings ()
+  :tags '(:deferred)
+  (should (commandp 'ispell-buffer))
+  (autoload-do-load (symbol-function 'ispell-buffer) 'ispell-buffer)
+  (should (equal ispell-dictionary "en_US"))
+  (should ispell-silently-savep)
+  (should (equal ispell-skip-region-alist '(("[^\000-\377]+"))))
+  (cond
+   ((executable-find "hunspell")
+    (should (equal ispell-program-name "hunspell"))
+    (should (equal ispell-extra-args '("-d" "en_US"))))
+   ((executable-find "aspell")
+    (should (equal ispell-program-name "aspell"))
+    (should (equal ispell-extra-args '("--sug-mode=ultra")))))
+  (should (advice-member-p #'my/safe-ispell-completion-at-point
+                           'ispell-completion-at-point))
+  (let ((my/ispell-capf-warned nil)
+        (messages 0))
+    (cl-letf (((symbol-function 'message)
+               (lambda (&rest _) (cl-incf messages))))
+      (dotimes (_ 2)
+        (should-not
+         (my/safe-ispell-completion-at-point
+          (lambda () (error "テスト用の辞書エラー")))))
+      (should (= messages 1)))))
+
+;;;;; [Group] Scoring - 一致なしのキャッシュと一時エラーの再試行 ;;;;;
+(ert-deftest my-test-deferred-flx-cache-results ()
+  :tags '(:deferred)
+  (require 'flx)
+  (let ((my/flx-cache (make-hash-table :test 'equal))
+        (calls 0))
+    (cl-letf (((symbol-function 'flx-score)
+               (lambda (_str query &rest _)
+                 (cl-incf calls)
+                 (when (equal query "match") '(42)))))
+      (dolist (query '("missing" "match"))
+        (dotimes (_ 2)
+          (should (equal (my/get-flx-score "candidate" query)
+                         (if (equal query "match") 42 nil)))))
+      (should (= calls 2))
+      (my/clear-flx-cache)
+      (should-not (my/get-flx-score "candidate" "missing"))
+      (should (= calls 3)))))
+
+(ert-deftest my-test-deferred-flx-cache-retries-errors ()
+  :tags '(:deferred)
+  (require 'flx)
+  (let ((my/flx-cache (make-hash-table :test 'equal))
+        (calls 0))
+    (cl-letf (((symbol-function 'flx-score)
+               (lambda (&rest _)
+                 (cl-incf calls)
+                 (if (= calls 1) (error "テスト用の一時エラー") '(42)))))
+      (should-not (my/get-flx-score "candidate" "query"))
+      (should (= (my/get-flx-score "candidate" "query") 42))
+      (should (= (my/get-flx-score "candidate" "query") 42))
+      (should (= calls 2)))))
 
 ;;;;; [Group] Deferred - 遅延ロード後のグローバルモード有効化 ;;;;;
 ;; :if ガードが環境依存のもの (xclip, migemo) と GUI 限定のもの

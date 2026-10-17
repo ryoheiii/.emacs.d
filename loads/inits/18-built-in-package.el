@@ -14,6 +14,7 @@
 ;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
 (use-package ediff
   :straight nil
+  :defer t ; 組み込みコマンドの autoload で初回利用時に読み込む
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain) ;; コントロールバッファを同一フレームに表示
   (ediff-split-window-function 'split-window-horizontally) ;; diff のバッファを左右に配置

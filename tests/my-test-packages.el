@@ -22,6 +22,8 @@
 ;;;;; [Group] Packages - eager-load 回帰検知 ;;;;;
 (defconst my-test-packages--deferred-features
   '(irony
+    ediff
+    ispell
     yasnippet
     magit
     difftastic
