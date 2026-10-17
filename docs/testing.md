@@ -64,7 +64,7 @@ make test-startup   # 起動確認だけ
 
 | ターゲット | 内容 |
 |---|---|
-| `make test-gui` | Linux の実 GUI 起動とクリップボード |
+| `make test-gui` | Linux の実 GUI 起動・補完・クリップボード、日本語の操作案内、ヘルプのリンクと戻る操作、Git メニュー終了後の通常入力 |
 | `make check-lockfile` | 導入済み repo と lockfile の照合。照合先は `STRAIGHT_DIR`、導入しないことがある repo は `LOCK_ALLOW_MISSING` で指定する（[パッケージ管理](packages.md#更新と-lockfile)） |
 | `make install-test-grammars` | `TEST_TREESIT_DIR` に固定タグの C/C++ 文法を導入 |
 | `make clean-test` | `tests/` 配下の byte compile 生成物を削除 |
@@ -83,6 +83,18 @@ make test-startup   # 起動確認だけ
 - `make test-gui` はクリップボードへ固定文字列を書き込むため、日常のディスプレイと分離して実行する。
   専用の straight を `make test-startup STRAIGHT_DIR=<専用の straight>` で準備してから、
   `xvfb-run -a make test-gui STRAIGHT_DIR=<専用の straight>` を実行する（`xvfb-run` が `DISPLAY` を用意する）。
+- 日本語の視認性を確認するときは、`MY_TEST_GUI_CAPTURE_DIR` にリポジトリ外の絶対パスを指定する。
+  撮影時だけ `python3` と Pillow の `ImageGrab`（X11 対応）が必要になる。指定しない通常の検証には不要。
+  100列×35行のフレームで which-key、M-x、キー説明、キー一覧、モード一覧、Git 入口の6枚を保存する。
+  画像の比較は自動化せず、原寸で欠字・重なり・読めない切詰めがないことを確認する。
+
+  ```sh
+  MY_TEST_GUI_CAPTURE_DIR="$(mktemp -d /tmp/emacs-gui-capture.XXXXXX)" \
+    xvfb-run -a -s '-screen 0 1440x1000x24 -nolisten tcp' \
+    make test-gui STRAIGHT_DIR=<専用の straight>
+  ```
+
+  実施例と結果は [Issue #27 の検証記録](eval/27-gui-help/README.md) を参照する。
 - macOS / Windows の batch 起動は `.github/workflows/platform.yml` が検証する。このワークフローは手動実行のほか、起動経路を変更する PR で動く。
 
 ## 起動コストの計測
