@@ -57,6 +57,7 @@ loads/inits/NN-*.el   init-loader が番号順に読み込む設定モジュー�
 | `var/package/` | `var/packages/`（中の `eln-cache/` は `var/cache/eln-cache/`） |
 | `var/database/` | `var/state/database/` |
 | 直下の `projects.eld` / `projects`、`transient/`、`url/`、`request/`、`copilot-chat/` | `var/state/` 内の同名項目 |
+| 旧 `url/cache/`（親の移行後は `var/state/url/cache/`） | `var/cache/url/`（Cookie と履歴は `var/state/url/` に保持） |
 | 直下の `.cache/copilot/` | `var/packages/copilot/` |
 | 直下の `eln-cache/` | `var/cache/legacy-eln-cache/`（現用キャッシュとは混ぜず保全） |
 | 直下の `.bench/` | `var/cache/bench/` |

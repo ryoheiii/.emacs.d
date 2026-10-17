@@ -41,6 +41,7 @@
                    ("projects" . "var/state/projects")
                    ("transient" . "var/state/transient")
                    ("url" . "var/state/url")
+                   ("var/state/url/cache" . "var/cache/url")
                    ("request" . "var/state/request")
                    ("copilot-chat" . "var/state/copilot-chat")
                    (".cache/copilot" . "var/packages/copilot")
