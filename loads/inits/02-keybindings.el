@@ -37,5 +37,23 @@
 (keymap-global-set "C-c C-r" #'my/window-resizer)           ; ウィンドウサイズ調整
 (keymap-global-set "M-p" #'my/other-window-or-split)        ; 次のウィンドウへ移動（1 枚なら先に分割）
 
+;;; 操作を探しながら覚える共通の入口
+(use-package my-key-guide
+  :straight nil
+  :demand t
+  :bind (:prefix "C-c h"
+         :prefix-map my/key-help-map
+         ("h" . my/key-guide)
+         ("s" . my/command-palette)
+         ("k" . describe-key)
+         ("b" . describe-bindings)
+         ("m" . describe-mode)
+         ("t" . help-with-tutorial)))
+
+(use-package simple
+  :straight nil
+  :custom
+  (suggest-key-bindings 3)) ; M-x で実行した操作のキーを 3 秒案内する
+
 (provide '02-keybindings)
 ;;; 02-keybindings.el ends here

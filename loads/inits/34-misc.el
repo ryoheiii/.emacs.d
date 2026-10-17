@@ -8,10 +8,20 @@
 (use-package which-key
   :straight nil
   :custom
+  (which-key-idle-delay 0.5)             ; キーの続きに迷ったら早めに案内
+  (which-key-idle-secondary-delay 0.1)
   (which-key-max-description-length 40) ; 説明の最大長
-  (which-key-use-C-h-commands t)        ; C-h コマンドを使用
+  (which-key-use-C-h-commands nil)      ; DEL に変換される C-h をページ操作として案内しない
   :hook
-  (after-init . which-key-mode))         ; Emacs 起動後に which-key モードを有効化
+  (after-init . which-key-mode)          ; Emacs 起動後に which-key モードを有効化
+  :config
+  ;; コマンド名に対する表示の置換なので、モード側がキーを上書きしても誤案内しない。
+  (dolist (entry (append my/key-guide-commands my/key-guide--cpp-commands))
+    (add-to-list 'which-key-replacement-alist
+                 (cons (cons nil (concat "\\`" (regexp-quote (symbol-name (cdr entry)))
+                                         "\\'"))
+                       (cons nil (car entry)))))
+  (which-key-add-key-based-replacements "C-c h" "操作ヘルプ"))
 
 ;;; Free-keys - 未使用のキーバインドを表示
 (use-package free-keys
