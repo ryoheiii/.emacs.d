@@ -1,6 +1,9 @@
 <!-- -*- gfm -*- -->
 # テスト
 
+設定変更で既存の動作が壊れていないかを確認する。「ターゲット」は `make` に渡す検証メニューの名前。
+以下のコマンドは、検証したいチェックアウトのルートで実行する。
+
 ```sh
 make test           # フルスイート。lint から test-platform までを順に実行し、最初の失敗で止まる
 make test-startup   # 起動確認だけ
@@ -49,8 +52,8 @@ make test-startup   # 起動確認だけ
 | `make test-cpp-config` | C/C++ のスタイル、eglot 起動条件、検索経路、cc-mode と ts モードの切替、irony ゲート、読解補助。`clangd`、GNU Global、tree-sitter 文法が無い環境では、それを使う検査を skip する |
 | `make test-deferred` | `:defer` 付きパッケージの遅延ロード後の設定と、グローバルモードの有効化 |
 | `make test-invariants` | グローバルモードのフック登録、feature のロード状態、ts モードと cc-mode のフック登録の一致、組み込みパッケージの固定 |
-| `make test-tty` | 端末（非 GUI）向け分岐のロード条件（batch） |
-| `make test-tty-live` | 実 pty での `emacs -nw` 起動（モードライン、端末初期化、`C-t`、補完ポップアップ） |
+| `make test-tty` | 対話画面を開かない batch 実行で、端末向け設定が読み込まれる条件を検証 |
+| `make test-tty-live` | 擬似端末（pty）で実際に `emacs -nw` を起動し、モードライン、端末初期化、`C-t`、補完ポップアップを検証 |
 | `make test-setup` | 隔離した HOME での `emacs-setup.sh`（引数、ダウンロードの原子性、パッケージ復元、clangd の導入と削除） |
 | `make test-guards` | テスト基盤と lint 基盤の fail-closed ガードを故障注入で検査 |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |
@@ -93,6 +96,7 @@ tests/my-bench-summarize.sh .bench/out      # 中央値と IQR で集計
 
 ## CI
 
-GitHub Actions は push と PR で、Emacs 31.1 の安定レーンと snapshot のカナリアレーン（失敗を許容）を実行する。
+GitHub Actions は push と PR で、Emacs 31.1 の安定版と開発途中の snapshot 版を別々に検証する。
+snapshot 版は次の Emacs で起きそうな問題を早めに見つけるための検証で、失敗しても CI 全体を失敗にはしない。
 実際の Mozc、クリップボード、irony-server、Copilot との連携は `make test` でも CI でも検証しない。clangd だけは、PATH にあれば
 `make test-cpp-config` が実際に起動して検証する。各ツールの導入と無いときの挙動は README の [外部ツール](../README.md#外部ツール) を参照する。

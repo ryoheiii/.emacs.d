@@ -1,11 +1,15 @@
 <!-- -*- gfm -*- -->
 # C/C++ 開発環境
 
-C/C++ 関連の機能は、上の段から順に使えるものを自動で選ぶ。必要なツールが無ければ 1 段下へフォールバックする。
-`C-t` のキー操作と補完 UI（Corfu）はどの段でも同じ。ただし GNU Global が無いと、`C-t v` / `C-t f` と eglot 管理外での検索は使えない。
+C/C++ の入力補完は、導入済みのツールとプロジェクトの設定に応じて候補を作る仕組みを選ぶ。
+候補を表示・選択する操作は共通で、Corfu が担当する。コードを読むための `C-t` の検索は、キーごとに検索対象と必要なツールが異なる。
+GNU Global が無いと、`C-t v` / `C-t f` と各検索の GNU Global を使う経路は使えない。
 clangd、GNU Global、irony-server の導入は README の [外部ツール](../README.md#外部ツール) を参照。
 
 ## メジャーモードの選択
+
+メジャーモードは、言語に応じた色付けやインデントなどを決める編集モード。
+tree-sitter の「文法」は C/C++ の構文を読み取るためのライブラリで、導入すると構文解析を使う ts モードを選べる。
 
 | 条件 | モード |
 |---|---|
@@ -17,7 +21,7 @@ clangd、GNU Global、irony-server の導入は README の [外部ツール](../
 - `.log` / `.cfg`（この設定ではログ閲覧用に `c-mode` を割り当てている）と `.nut`（Squirrel）は、文法があっても cc-mode のまま開く。
 - cc-mode と同様に、ts モードでも google-c-style 相当のインデント（offset 4）、`{` `}` `;` と `public:` などの後の自動改行、
   `DEL` の hungry delete（直前の空白をまとめて削除）が効く。cc-mode との差分は次の 2 点。
-  - ブレース初期化リストの `{` は、次行へ送らず同じ行に置く（意図的な差分）。
+  - `Widget w{...}` のような波括弧による初期化の `{` は、次行へ送らず同じ行に置く（意図的な差分）。
   - `{` を閉じていない入力途中は、一部の行が cc-mode より 1 段浅くなることがある。
 
 ### 文法の導入と cc-mode への固定
@@ -34,16 +38,20 @@ cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-fo
 
 ## 補完バックエンドの選択
 
+バックエンドは補完候補を作る仕組み。clangd がコードを解析し、eglot が LSP という通信方式で Emacs とつなぐ。
+この接続が有効なバッファを、以下では「eglot 管理下」と呼ぶ。
+
 | 段 | 条件 | 補完 |
 |---|---|---|
 | 1 | `clangd` があり、プロジェクトに `compile_commands.json` または `.clangd` がある | eglot（LSP） |
 | 2 | 1 が不成立で、irony-server が導入済み（`M-x irony-install-server`） | irony |
-| 3 | どちらも無い | cape（dabbrev / keyword / file）+ GNU Global |
+| 3 | どちらも無い | cape（バッファ内の単語・言語のキーワード・ファイル名）+ GNU Global のタグ補完 |
 
 - 段 1 の条件を満たすプロジェクトでは、`.c` `.cc` `.C` `.cpp` `.cxx` `.h` `.hh` `.hpp` `.hxx` を開いた時点で eglot が自動起動する。
-  `compile_commands.json` は上位ディレクトリと `build/` 配下から探す。この設定では生成しないので、CMake などのビルド系で作る。
+  `compile_commands.json` は各ソースのコンパイルコマンドを記録したファイルで、解析時のインクルード先やマクロを clangd に伝える。
+  上位ディレクトリと `build/` 配下から探す。この設定では生成しないので、CMake などのビルド系で作る。`.clangd` は clangd 用の設定ファイル。
 - 補完を確定しても `#include` は自動挿入しない。
-- 診断（flymake）は既定で無効。有効にするには `loads/inits/99-private.el` で `eglot-stay-out-of` から `flymake` を外す。
+- 解析によるエラー・警告の表示（flymake）は既定で無効。有効にするには `loads/inits/99-private.el` で `eglot-stay-out-of` から `flymake` を外す。
   inlay hints も既定で無効（[inlay hints](#inlay-hints)）。
 - `C-t d` などで移動した先のプロジェクト外のファイル（`/usr/include` など）も同じ clangd の管理下に入り、移動先でも LSP で検索できる。
 - irony-server の導入先は `var/hist/irony/`。導入後に C/C++ バッファを開き直すと irony が有効になる。eglot 管理下のバッファでは irony を自動的に止める。
@@ -54,13 +62,42 @@ cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-fo
 
 ### GTAGS の作成と更新
 
-GNU Global を使うには GTAGS が必要で、初回だけ手で作る。`M-x update-gtags` は既存の GTAGS を更新するだけで新しく作らない。
+GTAGS は、関数名などとソース内の位置を GNU Global が検索するための索引。
+初回だけ、検索したいプロジェクトのルートを指定して作る（シェルで `gtags` を使う場合は、そのディレクトリで実行する）。
+`M-x update-gtags` は既存の GTAGS を更新するだけで新しく作らない。
 
 | 状況 | 操作 |
 |---|---|
 | GTAGS 未作成 | C/C++ バッファで `M-x ggtags-create-tags`（またはシェルで `gtags`） |
 | 作成済み・全体を更新 | C/C++ バッファで `M-x update-gtags` |
 | 作成済み・保存時 | 自動更新 |
+
+### 4 つの検索の使い分け
+
+`d` / `u` は関数・変数・型などが対象。`c` / `e` の呼び出し階層検索は関数（メンバー関数を含む）が対象。
+`parse` という関数に注目して読む場合、4 つの検索は次のように使い分ける。
+
+```cpp
+void read_data() {}
+void validate() {}
+void parse() { read_data(); validate(); }
+void run() { parse(); }
+```
+
+| キー | 知りたいこと | この例で探す場所 |
+|---|---|---|
+| `C-t d` 定義 | `parse` 自体はどこに実装されているか | `void parse() { ... }` の定義 |
+| `C-t u` 参照 | `parse` という名前はどこで使われているか | `run` 内の `parse();` |
+| `C-t c` 関数の呼び出し元 | どの関数が `parse` を呼ぶか | `run` 内の `parse();`。LSP では呼ぶ側の関数名 `run` も結果に付く |
+| `C-t e` 関数の呼び出し先 | `parse` は中でどの関数を呼ぶか | `read_data` と `validate` の定義 |
+
+この例では `u` と `c` の移動先は同じ。`u` は変数・型の使用箇所や、関数のアドレスを渡す
+`&parse` のような使い方も調べるための検索で、`c` は関数同士の呼び出し関係を調べるための検索。
+`d` は注目している関数そのもの、`e` はその関数が処理を委譲する関数を探す。
+
+LSP で上の例を試すときは、`void parse()` の `parse` にカーソルを置いて実行する。
+`d` / `u` は入力された名前をそのまま確定する。`c` は LSP 管理外や `C-u` 付きでは `u` と同じ参照検索になり、
+`e` は eglot 管理下で対応サーバー（clangd 20 以降）が必要。
 
 ### 検索の操作
 
@@ -84,8 +121,8 @@ eglot 管理下では clangd に問い合わせる。`C-t c` / `C-t e` / `C-t t`
 
 | キー | eglot 管理下 | eglot 管理外 |
 |---|---|---|
-| `C-t c` 呼び出し元 | 呼び出し箇所ごとに 1 件 | `C-t u` と同じ参照検索 |
-| `C-t e` 呼び出し先 | 呼び出し先の定義へ移動（clangd 20 以降） | エラー |
+| `C-t c` 関数の呼び出し元 | 呼び出す関数名付きで、呼び出し箇所ごとに 1 件 | `C-t u` と同じ参照検索 |
+| `C-t e` 関数の呼び出し先 | 呼び出している関数の定義へ移動（clangd 20 以降） | エラー |
 | `C-t t` 型階層 | 直接の基底クラス `[基底]` と派生クラス `[派生]` を一覧 | エラー |
 | `C-t o` ヘッダ/ソース | clangd が判定した対のファイル（`src/` と `include/` のような別ディレクトリの対も見つかる）。無ければ `ff-find-other-file` | `ff-find-other-file`（新規ファイルは作らない） |
 | `C-t s` シンボル検索 | 名前のあいまい一致 | GTAGS があれば GNU Global の正規表現でソースの全行を検索（コメント・文字列も対象）。無ければエラー |
@@ -102,9 +139,12 @@ ts モードでは `<f9>` でカーソル位置の関数を折りたたみ、`C-
 
 ### inlay hints
 
-`C-t l` で引数名・推論型のヒントをバッファ単位に ON / OFF する。既定は OFF。eglot 管理下のみ。
+inlay hints は、コードに書かれていない引数名や、`auto` から推論された型を横に表示するヒント。
+`set_enabled(true)` の `true` が何を指定するのかを読む助けになる。ソース自体には書き込まない。
+`C-t l` で現在のバッファだけ ON / OFF する。既定は OFF。eglot 管理下のみ。
 
 ### header-line のパス表示
 
-C/C++ バッファの header-line に、プロジェクト内のパスとシンボルのパス（`namespace > Class > method`）を表示する。
+C/C++ の各ウィンドウ上端（header-line）に、プロジェクト内のファイルの場所と、カーソル位置が属する名前空間・クラス・メソッド
+（`namespace > Class > method`）を表示する。長いファイルで「今どのクラスの関数を読んでいるか」を確認できる。
 パスは eglot 管理下で最も正確になる。表示は文字だけなので、端末でもそのまま使える。
