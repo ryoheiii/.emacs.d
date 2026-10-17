@@ -102,19 +102,8 @@
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
   :straight nil
-  :custom
-  (ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
-  (ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
-  (ispell-dictionary "en_US")
-  :config
-  (cond
-   ((executable-find "hunspell")
-    (setq ispell-program-name "hunspell"
-          ispell-extra-args '("-d" "en_US"))) ;; hunspell に適したオプション
-   ((executable-find "aspell")
-    (setq ispell-program-name "aspell"
-          ispell-extra-args '("--sug-mode=ultra"))))
-
+  :defer t ; スペルチェック・補完の初回利用時に設定も適用する
+  :preface
   ;; ispell 辞書未整備時に CAPF エラーを抑制する
   (defvar my/ispell-capf-warned nil
     "Non-nil なら ispell CAPF エラー警告は表示済み.")
@@ -128,6 +117,18 @@
          (setq my/ispell-capf-warned t)
          (message "ispell: completion error (%s)" (error-message-string err)))
        nil)))
+  :custom
+  (ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
+  (ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
+  (ispell-dictionary "en_US")
+  :config
+  (cond
+   ((executable-find "hunspell")
+    (setq ispell-program-name "hunspell"
+          ispell-extra-args '("-d" "en_US"))) ;; hunspell に適したオプション
+   ((executable-find "aspell")
+    (setq ispell-program-name "aspell"
+          ispell-extra-args '("--sug-mode=ultra"))))
   (unless (advice-member-p #'my/safe-ispell-completion-at-point 'ispell-completion-at-point)
     (advice-add 'ispell-completion-at-point :around #'my/safe-ispell-completion-at-point))
   )
