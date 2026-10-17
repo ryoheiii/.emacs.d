@@ -8,6 +8,7 @@
 (use-package which-key
   :straight nil
   :preface
+  (declare-function which-key--popup-max-dimensions "which-key")
   (defvar my/which-key--keymap nil
     "which-key の候補を取得しているキーマップ。")
   (defun my/which-key-with-keymap (function &optional prefix keymap filter recursive)
@@ -19,9 +20,11 @@
                         (mapcar #'symbol-value which-key-extra-keymaps))))))
       (funcall function prefix keymap filter recursive)))
   (defun my/which-key-group-bindings (format-function bindings &optional full-key)
-    "BINDINGS の同一コマンドのキーをまとめ、説明を一度だけ表示する。
+    "BINDINGS の同一コマンドのキーを、端末幅に収まる単位でまとめる。
 FORMAT-FUNCTION と FULL-KEY による標準の翻訳・装飾・非表示を維持する。"
     (let ((groups (make-hash-table :test #'eq))
+          ;; 説明欄を確保し、多数の別名キーも全て読める幅で小分けにする。
+          (key-width-limit (max 1 (/ (cdr (which-key--popup-max-dimensions)) 4)))
           rows)
       (dolist (binding bindings)
         ;; 表示用の文字列から型は復元できないため、元のキーで実体を取得する。
@@ -35,10 +38,11 @@ FORMAT-FUNCTION と FULL-KEY による標準の翻訳・装飾・非表示を維
                                       (command-remapping command))
                                  command)))
                (row (car (funcall format-function (list binding) full-key)))
-               (group (and command (gethash command groups))))
+               (group (and command (gethash command groups)))
+               (keys (and group row (concat (car group) "/" (car row)))))
           (when row
-            (if group
-                (setcar group (concat (car group) "/" (car row)))
+            (if (and keys (<= (string-width keys) key-width-limit))
+                (setcar group keys)
               (push row rows)
               (when command
                 (puthash command row groups))))))

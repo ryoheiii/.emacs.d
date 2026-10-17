@@ -57,7 +57,7 @@
         (set-frame-size (selected-frame) width height)))))
 
 (ert-deftest my-test-tty-live-which-key-cpp-grouped ()
-  "C++ の C-t 案内で両キーと一つの説明を端末に表示すること。"
+  "C-t の重複をまとめ、多数の同一コマンドがある ESC も端末幅に収まること。"
   :tags '(:tty-live)
   (let ((width (frame-width))
         (height (frame-height)))
@@ -69,17 +69,21 @@
             (set-frame-size (selected-frame) 80 24)
             (should (eq (key-binding (kbd "C-t e")) 'my/lsp-find-callees))
             (should (eq (key-binding (kbd "C-t C-e")) 'my/lsp-find-callees))
-            (which-key--show-keymap "C-t" (key-binding (kbd "C-t")) nil nil t)
-            (should (get-buffer-window which-key--buffer))
-            (let ((text ""))
-              (dotimes (page (which-key--pages-num-pages which-key--pages-obj))
-                (which-key--show-page page)
-                (with-current-buffer which-key--buffer
-                  (setq text (concat text (buffer-string)))
-                  (dolist (line (split-string (buffer-string) "\n"))
-                    (should (<= (string-width line) 80)))))
-              (should (string-match-p "e/C-e +: +呼び出し先を探す" text))
-              (should (= (length (split-string text "呼び出し先を探す")) 2))))
+            (dolist (prefix '("C-t" "ESC"))
+              (which-key--create-buffer-and-show (kbd prefix))
+              (should (get-buffer-window which-key--buffer))
+              (let ((text ""))
+                (dotimes (page (which-key--pages-num-pages which-key--pages-obj))
+                  (which-key--show-page page)
+                  (with-current-buffer which-key--buffer
+                    (setq text (concat text (buffer-string)))
+                    (dolist (line (split-string (buffer-string) "\n"))
+                      (should (<= (string-width line) 80)))))
+                (if (equal prefix "C-t")
+                    (progn
+                      (should (string-match-p "e/C-e +: +呼び出し先を探す" text))
+                      (should (= (length (split-string text "呼び出し先を探す")) 2)))
+                  (should (string-match-p "次の操作の数値引数を入力" text))))))
         (which-key--hide-popup)
         (set-frame-size (selected-frame) width height)))))
 
