@@ -1,10 +1,13 @@
 <!-- -*- gfm -*- -->
 # ファイル構成
 
+共通の設定を変更するときは下の設定モジュール一覧から対象を探す。この PC だけの設定を書く場所は
+README の [環境ごとの設定](../README.md#環境ごとの設定) を参照。
+
 ## 起動シーケンス
 
 ```text
-early-init.el         OS 判定、パス変数、custom/custom.el の読み込み、straight.el のブートストラップ、UI 抑制
+early-init.el         OS 判定、パス変数、custom/custom.el の読み込み、straight.el の準備、起動中の画面表示の抑制
     ↓
 init.el               loads/site-elisp/ を load-path へ追加、use-package の導入、init-loader の起動
     ↓
@@ -12,8 +15,11 @@ loads/inits/NN-*.el   init-loader が番号順に読み込む設定モジュー�
 ```
 
 読み込みエラーがあったときだけ `*init log*` バッファが表示される（手動で見るには `M-x init-loader-show-log`）。
+`load-path` は、Emacs が Elisp ライブラリを読み込むときに探すディレクトリの一覧。
 
 ## ディレクトリ構成
+
+表の「gitignored」は Git の追跡対象外という意味で、他の環境へ clone してもコピーされない。
 
 | パス | 用途 | Git |
 |---|---|---|

@@ -5,11 +5,14 @@
 各パッケージの Git リポジトリ（以下 repo）は `loads/straight/repos/`、ビルド成果物は `loads/straight/build/` にあり、
 `loads/straight/` のうち Git で管理するのは lockfile（`loads/straight/versions/default.el`）だけ。
 
+lockfile は、各パッケージで使う Git コミットを記録した一覧。別の環境や CI でも同じ版を使うために保存する。
+「更新」は新しいソースを取得すること、「リビルド」は取得済みのソースから Emacs が使うファイルを作り直すことを指す。
+
 ## 更新と lockfile
 
-1. `M-x straight-pull-all` で全パッケージを更新する。
+1. `M-x straight-pull-all` で全パッケージの新しいソースを取得する。
 2. `make test` を実行する。
-3. `M-x straight-freeze-versions` で lockfile を更新する。
+3. `M-x straight-freeze-versions` で現在使っている版を lockfile に記録する。
 4. 更新した lockfile をコミットする。更新に合わせて設定を直したときは、同じコミットに含める。
 
 - パッケージを追加・削除したときも手順 3〜4 で lockfile を更新する。依存に組み込みパッケージが含まれるときは
@@ -59,7 +62,8 @@ Emacs 内からは `M-x straight-rebuild-all`。リビルドで新たに生成�
 
 ## 組み込みパッケージの固定
 
-straight は、組み込みで足りるパッケージでもレシピがあれば repo をクローンし、クローン版が組み込み版を覆い隠す。
+組み込みパッケージは Emacs 本体に同梱されているもの。straight は、組み込みで足りるパッケージでも取得方法の指定（レシピ）があれば
+repo をクローンし、Emacs はそのクローン版を組み込み版より優先して読み込む。
 次の依存は `straight-override-recipe` で組み込み版（`:type built-in`）に固定している。固定したパッケージは lockfile に載らない。
 
 | パッケージ | 配置 | 依存元 |

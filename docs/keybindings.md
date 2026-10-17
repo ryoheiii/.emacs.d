@@ -4,7 +4,9 @@
 この設定で追加・変更したキーバインドをまとめる。Emacs 標準のままのものは載せない。
 端末（`emacs -nw`）での利用を前提にする。端末で届かないキーの条件は README の [端末での制約](../README.md#端末での制約) を参照。
 
-プレフィックスまで押せば which-key が候補を表示する。未使用のキーを探すときは `M-x free-keys`。
+`C-` は Ctrl、`M-` は Alt（端末では `ESC` を押して離してから次のキーでも可）。`C-t d` は Ctrl+t の後に d を押す。
+`C-t` のような後続キーを待つキーをプレフィックスと呼ぶ。そこまで押せば which-key が続きの候補を表示する。
+`C-u` は次のコマンドの動作を変える前置操作で、効果は各説明を参照。未使用のキーを探すときは `M-x free-keys`。
 
 ## プレフィックス
 
@@ -24,13 +26,13 @@
 | `C-h` | `DEL` | バックスペースに変換。ヘルプは `M-?` |
 | `M-?` | `help-for-help` | ヘルプ |
 | `C-m` | `smart-newline` | 改行してインデントと位置を自動調整（C/C++・Emacs Lisp・Lisp） |
-| `C-c a` | `align` | 文字列の揃え |
-| `C-c M-a` | `align-regexp` | 正規表現での整列 |
-| `C-c d` | `delete-indentation` | 行連結 |
+| `C-c a` | `align` | 選択範囲の代入記号などを、言語ごとの規則に従って縦にそろえる |
+| `C-c M-a` | `align-regexp` | 選択範囲で、入力した正規表現に一致する記号などの位置を縦にそろえる |
+| `C-c d` | `delete-indentation` | 現在行を前の行につなぎ、境目の空白を調整する。範囲を選択していれば範囲内の行を連結 |
 | `C-c ;` | `comment-or-uncomment-region` | コメントアウトの切り替え |
-| `C-c C-i` | `hippie-expand` | 単純補完 |
-| `C-c 0` | `my/copy-file-name` | ファイル名をクリップボードへ |
-| `M-f` | `forward-symbol` | シンボル単位で前進 |
+| `C-c C-i` | `hippie-expand` | 入力途中の単語やファイル名などを補う。続けて押すと次の候補へ切り替える |
+| `C-c 0` | `my/copy-file-name` | 現在のファイル名（ディレクトリを除く）をコピー履歴へ入れる。OS のクリップボードとの共有条件は [端末での制約](../README.md#端末での制約) を参照 |
+| `M-f` | `forward-symbol` | 関数名・変数名など、ひとまとまりの名前単位で前進 |
 | `C-\` / `<f5>` | `hs-toggle-hiding` | ブロックの折りたたみ（C/C++・Emacs Lisp・Lisp） |
 | `<f9>` | `my/outline-cycle-dwim` | カーソル位置の見出しの折りたたみを切り替える。C/C++ の ts モード（`c-ts-mode` / `c++-ts-mode`）では関数単位、Markdown では見出し単位。outline が無効なバッファでは `hs-toggle-hiding` |
 | `C-u <f9>` | `my/outline-cycle-dwim` | outline が有効なバッファでは、バッファ全体の折りたたみを切り替える（無効なら `hs-toggle-hiding`） |
@@ -39,15 +41,18 @@
 
 ## 選択・シンボル操作
 
+ここでいうシンボルは、`read_data` のようなひとまとまりの名前。
+以下の置換は、指定範囲内で同じ綴りの名前を置き換える。別の関数・クラスに属する同名変数も、範囲内にあれば置換対象になる。
+
 | キー | コマンド | 説明 |
 |---|---|---|
 | `C-,` | `er/expand-region` | 選択範囲を段階的に広げる |
 | `C-M-p` / `C-M-n` | `move-text-up` / `move-text-down` | 行を上下へ移動 |
-| `<f3>` | `symbol-overlay-put` | カーソル位置のシンボルをハイライト |
+| `<f3>` | `symbol-overlay-put` | カーソル位置と同じ名前を強調表示する。同じ名前で再実行すると解除 |
 | `<f4>` | `symbol-overlay-remove-all` | ハイライトを全解除 |
-| `C-x C-a` | `my-symbol-overlay-rename-visible` | 画面内のシンボルを置換 |
-| `C-x a` | `my-symbol-overlay-rename-in-function` | 関数内のシンボルを置換（C/C++・Python。ほかのモードではバッファ全体） |
-| `C-x C-g` | `symbol-overlay-rename` | バッファ全体のシンボルを置換 |
+| `C-x C-a` | `my-symbol-overlay-rename-visible` | 現在のウィンドウに表示している範囲で、カーソル位置と同じ名前を置換 |
+| `C-x a` | `my-symbol-overlay-rename-in-function` | カーソルがある関数・メソッド内で同じ名前を置換（C/C++・Python。ほかのモードではバッファ全体） |
+| `C-x C-g` | `symbol-overlay-rename` | 現在のバッファ全体で、カーソル位置と同じ名前を置換 |
 
 ## 複数カーソル（`C-q`）
 
@@ -72,13 +77,16 @@
 
 ## ウィンドウ・タブ・ファイルツリー
 
+バッファは Emacs が保持する編集中の内容で、未保存の変更も含む。ウィンドウはバッファを表示する画面の分割領域。
+タブはウィンドウの分割配置を切り替えるもので、1 ファイルにつき 1 タブではない。
+
 | キー | コマンド | 説明 |
 |---|---|---|
 | `M-p` | `my/other-window-or-split` | 他ウィンドウへ移動。1 枚なら分割（幅 270 桁以上なら 3 分割） |
 | `C-c C-r` | `my/window-resizer` | ウィンドウサイズ調整（`f` / `b` / `n` / `p`、他のキーで終了） |
 | `S-<left>` / `S-<right>` / `S-<up>` / `S-<down>` | `windmove-left` / `windmove-right` / `windmove-up` / `windmove-down` | 矢印方向のウィンドウへ移動 |
 | `<f8>` | `my/neotree-project-toggle` | ファイルツリーをプロジェクトルートで開閉 |
-| `C-c i` | `imenu-list-smart-toggle` | バッファ内シンボル一覧 |
+| `C-c i` | `imenu-list-smart-toggle` | 現在のバッファの関数・クラスなどの一覧を別ウィンドウで開閉する |
 | `C-z n` / `C-z C-n` | `tab-next` | 次のタブ |
 | `C-z p` / `C-z C-p` | `tab-previous` | 前のタブ |
 | `C-z f` / `C-z C-f` | `tab-new` | タブを新規作成 |
@@ -89,21 +97,21 @@
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-s` | `consult-line` | 現在のバッファ内を検索 |
-| `M-s l` | `my/consult-line-multi` | プロジェクト内のバッファを横断検索（1 文字から開始。`C-u` で全バッファ） |
+| `C-s` | `consult-line` | 現在のバッファの本文から、一致する行を探す（未保存の編集も対象） |
+| `M-s l` | `my/consult-line-multi` | 同じプロジェクトで開いているバッファの本文をまとめて検索（1 文字から開始。`C-u` でプロジェクト外を含む全バッファ） |
 | `C-.` | `consult-goto-line` | 指定行へ移動 |
-| `C-x g` | `my/consult-ripgrep-or-grep` | プロジェクト検索（`rg` があれば ripgrep で `.gitignore` を尊重。無ければ `grep`） |
+| `C-x g` | `my/consult-ripgrep-or-grep` | プロジェクト内の保存済みファイルの本文を検索。開いていないファイルも対象（`rg` があれば `.gitignore` を尊重。無ければ `grep`） |
 | `C-c g` | `grep` | `grep -nr` をそのまま実行（`.gitignore` で除外したファイルも検索する） |
 | `C-x b` | `consult-buffer` | バッファ切り替え |
-| `C-x f` | `consult-find` | ファイル検索 |
+| `C-x f` | `consult-find` | ファイル名・パスを検索して開く。本文は検索しない |
 | `C-x C-r` | `consult-recent-file` | 最近使ったファイル |
-| `C-x C-y` | `consult-yank-pop` | kill-ring から貼り付け |
-| `C-x i` | `consult-imenu` | バッファ内シンボルへジャンプ |
+| `C-x C-y` | `consult-yank-pop` | コピー・切り取りの履歴（kill-ring）から選んで貼り付け |
+| `C-x i` | `consult-imenu` | 現在のバッファの関数・クラスなどを名前で絞り込み、その場所へ移動 |
 | `M-g o` | `consult-outline` | 見出しへジャンプ（C/C++ の ts モードでは関数定義） |
-| `M-a` | `embark-act` | 補完候補・カーソル位置に対するアクション |
+| `M-a` | `embark-act` | 補完候補やカーソル位置の対象に対して実行できる操作を選ぶ |
 | `C-M-i` | `completion-at-point` | 手動で補完を起動 |
 | `C-l` | `vertico-directory-delete-char` | ファイル名補完で直前が `/` のとき、ディレクトリを 1 階層戻る（それ以外は 1 文字削除） |
-| `C-c y` | `consult-yasnippet` | スニペットを一覧から挿入 |
+| `C-c y` | `consult-yasnippet` | コードや文章のひな型（スニペット）を一覧から選んで挿入 |
 
 Corfu の候補が出ている間は `C-n` / `C-p` で候補を選び、`TAB` か `RET` で確定する。候補を選ぶ前の `TAB` と `RET` は
 候補を閉じるだけで、改行には `RET` を 2 回押す。この間の `C-v` / `M-v` は候補一覧のページ送り（`C-s` は前のページ）、
@@ -116,11 +124,12 @@ Migemo はミニバッファの絞り込みと `C-s` で効く。ファイル名
 
 C/C++ バッファで使う。バックエンドが eglot でも GNU Global でもキー操作は同じ。
 2 段階の検索操作と GTAGS の作成は [C/C++ 開発環境のタグナビゲーション](cpp.md#タグナビゲーション) を参照。
+`d` / `u` / `c` / `e` の違いは [4 つの検索の使い分け](cpp.md#4-つの検索の使い分け) を参照。
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-t d` / `C-t C-d` | `my/gtags-find-definition` | 定義を検索。呼び出している関数の実装や、使われているクラスの定義を読む |
-| `C-t u` / `C-t C-u` | `my/gtags-find-references` | 参照を検索。メンバー変数を読み書きする箇所や、関数がコールバックとして渡される箇所を調べる |
+| `C-t d` / `C-t C-d` | `my/gtags-find-definition` | 関数・変数・型などの定義場所を探す。関数の実装やクラスの構造を読む |
+| `C-t u` / `C-t C-u` | `my/gtags-find-references` | 関数・変数・型などの名前を使っている場所を探す（参照）。メンバー変数の読み書きや、関数をコールバックとして渡す箇所を調べる |
 | `C-t v` / `C-t C-v` | `my/gtags-find-symbol` | GTAGS に定義のないシンボルの出現箇所を検索。外部ライブラリの関数など、プロジェクト内に定義がない名前の利用例を探す |
 | `C-t f` / `C-t C-f` | `my/gtags-find-file` | ファイル名で検索。`#include` に書かれたヘッダや、名前が分かっている実装ファイルを開く |
 | `C-t p` / `C-t C-p` | `xref-go-back` | ジャンプ履歴を戻る。関数の実装を読み終えたら、調査を始めた呼び出し箇所へ戻る |
@@ -128,17 +137,19 @@ C/C++ バッファで使う。バックエンドが eglot でも GNU Global で�
 
 ### 読解補助（`C-t` 配下の追加キー）
 
-eglot（clangd）の管理下では LSP で検索し、それ以外では GNU Global や `ff-find-other-file` を使う。
+eglot（clangd）が接続しているバッファでは、コードの解析結果を使う。
+管理外では `c` は参照検索、`o` はファイル名などによるヘッダ/ソース切替、`s` は GNU Global のソース本文検索に切り替わる。
+`e` / `t` / `l` は eglot 管理下でのみ使える。
 キーごとの違いは [コードリーディング補助](cpp.md#コードリーディング補助) を参照。
 
 | キー | コマンド | 説明 |
 |---|---|---|
-| `C-t c` / `C-t C-c` | `my/lsp-find-callers` | 呼び出し元を検索。注目している関数が、どの上位処理から呼ばれるかを調べる |
-| `C-t e` / `C-t C-e` | `my/lsp-find-callees` | 呼び出し先を検索（eglot 管理下のみ）。長い関数が処理を委譲する関数を一覧し、読む先を選ぶ |
-| `C-t t` / `C-t C-t` | `my/lsp-find-type-hierarchy` | 直接の基底クラスと派生クラスを一覧（eglot 管理下のみ）。インターフェースの実装クラスや、共通処理を持つ基底クラスを探す |
+| `C-t c` / `C-t C-c` | `my/lsp-find-callers` | 対象の関数を呼び出す関数と、その呼び出し箇所を探す（関数の呼び出し元）。どの上位処理から呼ばれるかを調べる |
+| `C-t e` / `C-t C-e` | `my/lsp-find-callees` | 対象の関数の中で呼び出している関数を一覧する（関数の呼び出し先、eglot 管理下のみ）。処理の委譲先から、次に読む関数を選ぶ |
+| `C-t t` / `C-t C-t` | `my/lsp-find-type-hierarchy` | 対象のクラスが直接継承するクラス（基底）と、対象を直接継承するクラス（派生）を一覧（eglot 管理下のみ）。インターフェースの実装や共通処理を探す |
 | `C-t o` / `C-t C-o` | `my/lsp-find-other-file` | ヘッダ/ソースの切り替え。クラスの宣言・コメントとメソッドの実装を見比べる |
-| `C-t s` / `C-t C-s` | `my/lsp-find-workspace-symbol` | 文字列でプロジェクト横断のシンボル検索。名前の一部だけ分かるクラスや関数を探し、読む入口にする |
-| `C-t l` / `C-t C-l` | `my/eglot-inlay-hints-toggle` | inlay hints（引数名・推論型）のバッファ単位の ON / OFF（eglot 管理下のみ）。`true` や数値を渡す引数の意味、`auto` 変数の型を確認する |
+| `C-t s` / `C-t C-s` | `my/lsp-find-workspace-symbol` | プロジェクト内の関数・クラスなどを名前の一部から探す。読む入口を見つける（非 LSP 時はソース本文を正規表現で検索） |
+| `C-t l` / `C-t C-l` | `my/eglot-inlay-hints-toggle` | コードの横に引数名・推論された型を表示するヒント（inlay hints）を、現在のバッファで ON / OFF（eglot 管理下のみ）。`true` や数値の引数の意味、`auto` 変数の型を確認する |
 
 ### C/C++ バッファのその他のキー
 
