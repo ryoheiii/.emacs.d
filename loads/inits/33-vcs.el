@@ -41,11 +41,11 @@
 ;;; Difftastic
 (use-package difftastic
   :straight t
-  :after magit
   :bind (:map magit-blame-read-only-mode-map
+              :package magit-blame
               ("D" . difftastic-magit-show)
               ("S" . difftastic-magit-show))
-  :config
+  :init
   (with-eval-after-load 'magit-diff
     (transient-append-suffix 'magit-diff '(-1 -1)
       [("D" "Difftastic diff (dwim)" difftastic-magit-diff)
