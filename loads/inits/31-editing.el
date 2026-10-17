@@ -13,8 +13,8 @@
 (declare-function symbol-overlay-get-symbol "symbol-overlay")
 (declare-function my/safe-irony-completion-at-point "31-editing")
 
-;;;;; [Group] コード編集関連 ;;;;;
-;;; Google C Style - Google の C スタイルガイドを適用
+;;; コード編集関連
+;;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style
   :straight t
   :hook (c-mode-common . my/google-c-style-setup)
@@ -26,12 +26,12 @@
     (google-make-newline-indent)
     (setq c-basic-offset 4)))
 
-;;; Aggressive Indent - コード編集時の自動インデント調整
+;;;; Aggressive Indent - コード編集時の自動インデント調整
 (use-package aggressive-indent
   :straight t
   :hook (emacs-lisp-mode . aggressive-indent-mode))
 
-;;; Smart Newline - 改行時の自動インデントと位置調整
+;;;; Smart Newline - 改行時の自動インデントと位置調整
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
 (use-package smart-newline
   :straight t
@@ -41,13 +41,13 @@
   :hook ((c++-mode c-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
          . smart-newline-mode))
 
-;;; move-text - テキスト行の移動機能
+;;;; move-text - テキスト行の移動機能
 (use-package move-text
   :straight t
   :bind (("C-M-p" . move-text-up)
          ("C-M-n" . move-text-down)))
 
-;;; Irony - C/C++ のコード補完とシンボル情報の提供
+;;;; Irony - C/C++ のコード補完とシンボル情報の提供
 ;; C/C++ 補完の三段フォールバックの 2 段目。
 ;;   1. clangd + compile_commands.json/.clangd あり → eglot (18-built-in-package.el)
 ;;   2. irony-server 実体あり                        → irony (ここ)
@@ -114,7 +114,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   (unless (advice-member-p #'my/safe-irony-completion-at-point 'irony-completion-at-point)
     (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point)))
 
-;;; Yasnippet Snippets - 追加スニペット集
+;;;; Yasnippet Snippets - 追加スニペット集
 ;; yasnippet の :config 内で宣言すると straight の登録とビルドが :defer 1 まで遅れ、
 ;; フレーム表示後に同期処理が走って入力がブロックされる。トップレベルへ出して起動中に済ませる。
 ;; ロード自体は :after で yasnippet に追随させる。yasnippet-snippets.el は冒頭で
@@ -125,7 +125,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   :after yasnippet
   :demand t)
 
-;;; Yasnippet - コードスニペットの管理と挿入
+;;;; Yasnippet - コードスニペットの管理と挿入
 (require 'my-snippets)
 
 (use-package yasnippet
@@ -148,8 +148,8 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   :config
   (my/yas-setup))
 
-;;;;; [Group] タグナビゲーション ;;;;;
-;;; Ggtags - GNU Global によるソースコード内のシンボル検索とナビゲーション
+;;; タグナビゲーション
+;;;; Ggtags - GNU Global によるソースコード内のシンボル検索とナビゲーション
 ;; ggtags の xref バックエンドを経由せず、global コマンドを call-process で直接実行し
 ;; 結果を consult-xref → vertico で高速表示する
 (use-package ggtags
@@ -194,8 +194,8 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   (require 'my-gtags)
   (require 'my-lsp-nav))
 
-;;;;; [Group] 複数編集 ;;;;;
-;;; Multiple Cursors - 複数カーソルによる編集機能
+;;; 複数編集
+;;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :straight t
   ;; 遅延ロードする。本体を起動時にロードすると初回描画までに約 170ms を要し、
@@ -241,12 +241,12 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   (keymap-set my/mc-repeat-map "C-q" #'quoted-insert)
   (keymap-global-set "C-q" my/mc-repeat-map)) ; `C-q` をプレフィックスキーとして設定
 
-;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
+;;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :straight t
   :bind (("C-," . er/expand-region)))
 
-;;; symbol-overlay - シンボルのハイライトと置換
+;;;; symbol-overlay - シンボルのハイライトと置換
 ;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
 (use-package symbol-overlay
   :straight t

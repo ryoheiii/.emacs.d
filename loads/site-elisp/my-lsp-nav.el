@@ -33,7 +33,7 @@
 ;; let で動的束縛するには special 宣言が要る (無いと lexical 束縛になり ff に効かない)
 (defvar ff-always-try-to-create)
 
-;;;;; [Group] LSP 要求 ;;;;;
+;;; LSP 要求
 
 (defun my/lsp-nav--protect (what thunk)
   "THUNK を実行し、`jsonrpc-error' を WHAT 付きの `user-error' にする."
@@ -86,7 +86,7 @@ WHAT は利用者向けの機能名、CAPABILITY はサーバーに要る capabi
   (or (append (my/lsp-nav--request method (eglot--TextDocumentPositionParams)) nil)
       (user-error "カーソル位置に %s の対象がありません" what)))
 
-;;;;; [Group] xref 変換 ;;;;;
+;;; xref 変換
 
 (defun my/lsp-nav--xref (label item range)
   "階層アイテム ITEM の RANGE を指す xref を作り、要約に LABEL を前置する.
@@ -114,7 +114,7 @@ WHAT は利用者向けの機能名、CAPABILITY はサーバーに要る capabi
         (xref-show-xrefs (lambda () xrefs) nil))
     (message "%s は見つかりません" what)))
 
-;;;;; [Group] 呼び出し階層 ;;;;;
+;;; 呼び出し階層
 
 (defun my/lsp-find-callers (&optional prefix)
   "カーソル位置の関数の呼び出し元を検索する.
@@ -157,7 +157,7 @@ clangd は 20 以降で callHierarchy/outgoingCalls に対応する。それよ�
                                       to (plist-get to :selectionRange))))
                 calls))))))
 
-;;;;; [Group] 型階層 ;;;;;
+;;; 型階層
 
 (defun my/lsp-find-type-hierarchy ()
   "カーソル位置の型の直接の基底と派生を一覧する (LSP のみ).
@@ -176,7 +176,7 @@ clangd は 20 以降で callHierarchy/outgoingCalls に対応する。それよ�
                                                     (plist-get type :selectionRange)))
                                 (my/lsp-nav--request method (list :item item)))))))))
 
-;;;;; [Group] ヘッダ/ソース切替 ;;;;;
+;;; ヘッダ/ソース切替
 
 (defun my/lsp-nav--switch-source-header ()
   "clangd 拡張 switchSourceHeader で対になるファイルのパスを返す.
@@ -206,7 +206,7 @@ LSP 管理下なら clangd の switchSourceHeader を使う (src/ と include/ �
       (let ((ff-always-try-to-create nil))
         (ff-find-other-file)))))
 
-;;;;; [Group] 横断シンボル検索 ;;;;;
+;;; 横断シンボル検索
 
 (defun my/lsp-nav--workspace-symbols (pattern)
   "workspace/symbol で PATTERN に一致するシンボルの xref を返す (LSP のみ).

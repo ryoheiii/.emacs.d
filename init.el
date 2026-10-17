@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-;;;;; [Group] ロードパスの追加 ;;;;;
+;;; ロードパスの追加
 (defun add-to-load-path (&rest paths)
   "指定した PATHS を `load-path` に追加。"
   (dolist (path paths)
@@ -13,7 +13,7 @@
       (normal-top-level-add-subdirs-to-load-path))))
 (add-to-load-path "site-elisp/") ; my-loads-dir 内のディレクトリを指定
 
-;;;;; [Group] Use-package 設定 ;;;;;
+;;; Use-package 設定
 (eval-when-compile
   (require 'straight))
 
@@ -29,7 +29,7 @@
 (straight-use-package 'use-package)
 (setq straight-use-package-by-default t) ; 'use-package' で ':straight t' を省略可能に
 
-;;;;; [Group] Init-loader 設定 ;;;;;
+;;; Init-loader 設定
 (use-package init-loader
   :straight t
   :custom

@@ -8,7 +8,7 @@
 (require 'seq)
 (require 'subr-x)
 
-;;;;; [Group] init-loader エラー検査 ;;;;;
+;;; init-loader エラー検査
 (defun my-test-startup--format-error (entry)
   "init-loader の ENTRY をファイル名とエラー要約だけに整形する。"
   (if (string-match "\\`\\(.+\\.elc?\\)\\. \\(.*\\)\\'" entry)
@@ -27,7 +27,7 @@
       (message "起動設定エラー: %s" (my-test-startup--format-error entry)))
     (kill-emacs 1)))
 
-;;;;; [Group] 起動時警告検査 ;;;;;
+;;; 起動時警告検査
 ;; 警告の記録処理は EMACS_TEST_OPTIONS / tty 用の起動ラッパーが設定する。
 ;; 記録処理が欠けた状態を「警告なし」と誤判定しないよう、存在も検査する。
 (unless (and (boundp 'my-test--recorded-warnings)

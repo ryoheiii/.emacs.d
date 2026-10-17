@@ -8,8 +8,8 @@
 (declare-function color-saturate-name "color")
 (declare-function perfect-margin-mode "perfect-margin")
 
-;;;;; [Group] 視覚効果関連 ;;;;;
-;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
+;;; カーソルと編集箇所の強調
+;;;; pulsar - カーソルの位置を明確にするためにエフェクトを追加
 (use-package pulsar
   :straight t
   ;; tty ではパルスアニメーションが再描画のカクつきを生むため GUI 限定
@@ -18,14 +18,15 @@
   :config
   (pulsar-global-mode 1))
 
-;;; goggles - 編集箇所をハイライト
+;;;; goggles - 編集箇所をハイライト
 (use-package goggles
   :straight t
   :hook ((prog-mode text-mode) . goggles-mode)
   :config
   (setq-default goggles-pulse t))
 
-;;; spacious-padding - 画面に余白を付ける
+;;; 余白と本文の配置
+;;;; spacious-padding - 画面に余白を付ける
 (use-package spacious-padding
   :straight t
   :if (display-graphic-p)
@@ -45,7 +46,7 @@
            :mode-line-inactive vertical-border))
   (spacious-padding-mode 1))
 
-;;; perfect-margin - ウィンドウの左右の余白を調整して本文を中央へ寄せる
+;;;; perfect-margin - ウィンドウの左右の余白を調整して本文を中央へ寄せる
 (use-package perfect-margin
   :straight t
   :defer 0.5
@@ -53,7 +54,8 @@
   (setq perfect-margin-ignore-filters nil)
   (perfect-margin-mode 1))
 
-;;; Rainbow-delimiters - 括弧の色分けで対応関係を視覚化
+;;; 括弧の色分け
+;; rainbow-delimiters で括弧の深さと対応関係を表示する。
 (use-package rainbow-delimiters
   :straight t
   :hook (prog-mode . rainbow-delimiters-mode)
@@ -88,24 +90,26 @@
                       :inherit        'error
                       :strike-through t))
 
-;;; Nerd-icons - グラフィック環境向けのアイコン
+;;; GUI 用アイコン
+;;;; Nerd-icons - グラフィック環境向けのアイコン
 (use-package nerd-icons
   :straight t
   :if (display-graphic-p))
 
-;;; Nerd-icons-completion - vertico 等の補完パッケージでアイコンを表示
+;;;; Nerd-icons-completion - vertico 等の補完パッケージでアイコンを表示
 (use-package nerd-icons-completion
   :straight t
   :if (display-graphic-p)
   :hook (after-init . nerd-icons-completion-mode))
 
-;;; Nerd-icons-dired - dired でアイコンを表示
+;;;; Nerd-icons-dired - dired でアイコンを表示
 (use-package nerd-icons-dired
   :straight t
   :if (display-graphic-p)
   :hook (dired-mode . nerd-icons-dired-mode))
 
-;;; Nyan-mode バッファ上での位置をニャンキャットが教えてくれる
+;;; モードラインの補助表示
+;;;; nyan-mode - バッファ内の位置をキャラクターで表示
 (use-package nyan-mode
   :straight t
   :if (display-graphic-p)
@@ -115,7 +119,7 @@
   :config
   (nyan-mode 1))
 
-;;; Minions - マイナーモードをハンバーガーメニューで表示
+;;;; Minions - マイナーモードをハンバーガーメニューで表示
 (use-package minions
   :straight t
   :defer 0.5
@@ -129,12 +133,13 @@
   :config
   (global-page-break-lines-mode 1))
 
-;;; highlight-defined - 既知のシンボルに色を付ける
+;;; Emacs Lisp の色付け
+;;;; highlight-defined - 既知のシンボルに色を付ける
 (use-package highlight-defined
   :straight t
   :hook (emacs-lisp-mode . highlight-defined-mode))
 
-;;; highlight-quoted - 引用符と引用記号に色を付ける
+;;;; highlight-quoted - 引用符と引用記号に色を付ける
 (use-package highlight-quoted
   :straight t
   :hook (emacs-lisp-mode . highlight-quoted-mode))

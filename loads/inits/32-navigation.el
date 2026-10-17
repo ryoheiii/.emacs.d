@@ -12,8 +12,8 @@
 ;; (実行時は project-current の autoload が project.el をロードする)
 (declare-function project-root "project" (project))
 
-;;;;; [Group] ナビゲーションと検索関連 ;;;;;
-;;; Popwin - ポップアップウィンドウの管理
+;;; ナビゲーションと検索関連
+;;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
   :straight t
   :defer 0.5
@@ -22,7 +22,7 @@
   :config
   (popwin-mode 1))
 
-;;; Migemo - ローマ字入力で日本語を検索
+;;;; Migemo - ローマ字入力で日本語を検索
 (use-package migemo
   :straight t
   :if (executable-find "cmigemo")
@@ -37,7 +37,7 @@
   :config
   (migemo-init))
 
-;;; Neotree - ファイルツリー表示とナビゲーション
+;;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
   :straight t
   :bind ("<f8>" . my/neotree-project-toggle)
@@ -61,14 +61,14 @@
           (when project-dir (neotree-dir project-dir))
           (when file-name   (neotree-find file-name)))))))
 
-;;; Imenu List - バッファ内のシンボルリスト表示
+;;;; Imenu List - バッファ内のシンボルリスト表示
 (use-package imenu-list
   :straight t
   :bind ("C-c i" . imenu-list-smart-toggle)
   :custom
   (imenu-list-focus-after-activation t)) ; 開いたら自動でフォーカスを移動
 
-;;; Breadcrumb - header-line に imenu のパスとプロジェクト内パスを表示
+;;;; Breadcrumb - header-line に imenu のパスとプロジェクト内パスを表示
 ;; C/C++ の読解用に 4 モードへ限定して有効化し、他モードの既定の見た目 (header-line
 ;; なし) は変えない。which-function-mode (モードライン) は維持する。
 ;; 表示は文字と face だけで tty でも動く。更新は編集後 breadcrumb-idle-time (1 秒) の
@@ -92,8 +92,8 @@
          (c-ts-mode   . breadcrumb-local-mode)
          (c++-ts-mode . breadcrumb-local-mode)))
 
-;;;;; [Group] スペルチェック関連 ;;;;;
-;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
+;;; スペルチェック関連
+;;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
   :straight nil
   :defer t ; スペルチェック・補完の初回利用時に設定も適用する
@@ -126,7 +126,7 @@
   (unless (advice-member-p #'my/safe-ispell-completion-at-point 'ispell-completion-at-point)
     (advice-add 'ispell-completion-at-point :around #'my/safe-ispell-completion-at-point)))
 
-;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
+;;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
   :straight nil
   ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
@@ -155,7 +155,7 @@
   :custom
   (flyspell-issue-message-flag nil)) ; ミニバッファメッセージ抑制
 
-;;; flyspell-correct - スペルチェックの補助ツール
+;;;; flyspell-correct - スペルチェックの補助ツール
 (use-package flyspell-correct
   :straight t
   :after flyspell

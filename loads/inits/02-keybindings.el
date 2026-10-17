@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-;;;;; [Group] 基本キーバインド ;;;;;
+;;; 基本キーバインド
 ;; C-h をバックスペースへ変換(key-translation-map は全端末・全フレームで有効)
 (keymap-set key-translation-map "C-h" "DEL")
 
@@ -33,7 +33,7 @@
 (keymap-global-set "<muhenkan>" #'my/input-method-off)    ; IME を OFF
 (keymap-global-set "<henkan>" #'my/input-method-on)       ; IME を ON
 
-;;;;; [Group] ウィンドウ操作 ;;;;;
+;;; ウィンドウ操作
 (keymap-global-set "C-c C-r" #'my/window-resizer)           ; ウィンドウサイズ調整
 (keymap-global-set "M-p" #'my/other-window-or-split)        ; 次のウィンドウへ移動（1 枚なら先に分割）
 

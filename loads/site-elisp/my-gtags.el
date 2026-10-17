@@ -14,7 +14,7 @@
 (defvar my/gtags-history nil "タグ検索のシンボル名履歴。")
 (defvar my/gtags-file-history nil "タグ検索のファイル名履歴。")
 
-;;;;; [Group] global 直接実行エンジン ;;;;;
+;;; global 直接実行エンジン
 
 (defun my/gtags--project-root ()
   "GTAGS がある親ディレクトリを返す。見つからなければ現在のディレクトリ。"
@@ -123,7 +123,7 @@ ALIST は xref の表示設定。複数件は Consult のプレビューを使�
           (xref-show-xrefs (lambda () xrefs) nil))
       (message "見つかりません: %s" input))))
 
-;;;;; [Group] 検索コマンド ;;;;;
+;;; 検索コマンド
 
 (defun my/gtags--find (flag prompt label)
   "LABEL の入力欄で名前を補完し、FLAG の検索結果から選ぶ.

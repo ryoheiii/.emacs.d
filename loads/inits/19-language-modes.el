@@ -13,7 +13,7 @@
 (defvar c-ts-indent-offset)
 (defvar treesit-outline-predicate)
 
-;;;;; [Group] コード折りたたみ ;;;;;
+;;; コード折りたたみ
 (use-package hideshow
   :straight nil
   :bind (("C-\\" . hs-toggle-hiding)
@@ -28,7 +28,7 @@
          (emacs-lisp-mode . hs-minor-mode)
          (lisp-mode       . hs-minor-mode)))
 
-;;; Outline - 関数単位の折りたたみと一覧 (hideshow と併用)
+;;;; Outline - 関数単位の折りたたみと一覧 (hideshow と併用)
 ;; treesit 連動の見出し (関数定義。述語は my/c-ts-outline-predicate) が取れる ts モード
 ;; だけで有効にする。cc-mode の既定は outline-regexp "[^#\n\^M]" と c-outline-level
 ;; (インデント桁) で「# 以外の全行が見出し」になり、consult-outline が全行を列挙し
@@ -64,8 +64,8 @@
          (user-error "この位置より前に関数定義がありません")))
       (outline-cycle)))))
 
-;;;;; [Group] プログラミングモード ;;;;;
-;;; elisp-mode - 空白インデントと単語移動
+;;; プログラミングモード
+;;;; elisp-mode - 空白インデントと単語移動
 (use-package elisp-mode
   :straight nil
   :hook (emacs-lisp-mode . my/emacs-lisp-mode-setup)
@@ -75,7 +75,7 @@
     (setq indent-tabs-mode nil)  ; タブではなくスペースを使用
     (subword-mode 1)))            ; CamelCase の大文字境界で単語移動
 
-;;; cc-mode - 拡張子の割り当てと編集設定
+;;;; cc-mode - 拡張子の割り当てと編集設定
 (use-package cc-mode
   :straight nil
   :mode (("\\.C\\'"    . c-mode)
@@ -97,7 +97,7 @@
     (setq indent-tabs-mode nil
           c-basic-offset 4)))
 
-;;; C-ts-mode - tree-sitter 版 C/C++ モード (段階移行)
+;;;; C-ts-mode - tree-sitter 版 C/C++ モード (段階移行)
 ;; 文法が導入済みなら c-ts-mode / c++-ts-mode、無ければ従来の cc-mode を使う。
 ;; 文法をビルドできない環境では何も起きず cc-mode のまま動作する（フォールバック）。
 ;; 文法の導入は 18-built-in-package.el の M-x my/treesit-install-c-grammars で行う。
@@ -188,7 +188,7 @@ cc-mode に留まる。c-ts-mode.el はロード時に `treesit-major-mode-remap
   ;; 入力処理の定義を hook の登録より先に読み込む。モード本体は遅延したまま。
   (require 'my-c-ts-edit))
 
-;;;;; [Group] テキスト編集 ;;;;;
+;;; テキスト編集
 (use-package text-mode
   :straight nil
   :mode (("\\.txt\\'" . text-mode)

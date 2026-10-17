@@ -4,7 +4,6 @@
 
 ;;; Code:
 
-;;;;; [Group] ミニバッファ補完 UI ;;;;;
 ;;; Vertico - ミニバッファ補完 UI
 (use-package vertico
   :straight t

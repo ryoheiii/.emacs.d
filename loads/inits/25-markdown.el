@@ -9,7 +9,6 @@
 (declare-function my-markdown-load-css "my-markdown")
 (declare-function my-markdown-pandoc-command "my-markdown")
 
-;;;;; [Group] Markdown 関連 ;;;;;
 ;;; markdown-mode - 編集、表示、HTML 出力
 (use-package markdown-mode
   :straight t

@@ -7,7 +7,6 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function migemo-get-pattern "migemo")
 
-;;;;; [Group] 検索・絞り込み ;;;;;
 ;;; Consult - 多機能ミニバッファ補完
 (use-package consult
   :straight t

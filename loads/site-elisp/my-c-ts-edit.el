@@ -17,7 +17,7 @@
 (defvar treesit-outline-predicate)
 (defvar treesit-simple-indent-override-rules)
 
-;;;;; [Group] 空白の一括削除 ;;;;;
+;;; 空白の一括削除
 ;; ts モードには cc-mode の auto-newline / hungry delete が無い。
 ;; cc-mode + google-c-style の実挙動に合わせて組み込み機能で再現する
 ;; （外部パッケージを増やさず tty でもそのまま動く）。
@@ -38,7 +38,7 @@ cc-mode の `c-backspace-function' と同じ通常削除へ戻す（kill-ring �
    (t (let ((backward-delete-char-untabify-method 'all))
         (backward-delete-char-untabify 1)))))
 
-;;;;; [Group] 自動改行の条件 ;;;;;
+;;; 自動改行の条件
 ;; electric-layout は挿入位置の文脈を見ないため、規則側で判定する。
 (defun my/c-ts-before-nonblank-p ()
   "point の後ろに空白以外が残っているなら non-nil.
@@ -83,7 +83,7 @@ case ラベル・三項演算子・スコープ解決演算子では改行しな
       (when (looking-at "[ \t]*\\(public\\|private\\|protected\\)[ \t]*:[ \t]*$")
         'after))))
 
-;;;;; [Group] 自動改行後の整形 ;;;;;
+;;; 自動改行後の整形
 (defconst my/c-ts-close-brace-followers-regexp
   "\\`[ \t]*\\(;\\|,\\|else\\|while\\|catch\\)\\'"
   "`}' の直後の改行を取り消す語。
@@ -144,6 +144,8 @@ point の後ろに空白以外が残る行では何もしない。cc-mode の cl
     (?\: . my/c-ts-layout-colon))
   "ts モードの自動改行規則。cc-mode + google-c-style の実挙動に対応させる。")
 
+;;; モードへの適用と関数見出し
+
 (defun my/c-ts-outline-predicate (node)
   "NODE が関数定義なら non-nil (outline の見出し判定).
 c-ts-mode 既定の `c-ts-mode--outline-predicate' は function_declarator (名前と
@@ -170,7 +172,7 @@ c-ts-mode 既定の `c-ts-mode--outline-predicate' は function_declarator (名�
   (electric-layout-local-mode 1)                  ; auto-newline 相当
   (setq indent-tabs-mode nil))
 
-;;;;; [Group] 入力途中のインデント ;;;;;
+;;; 入力途中のインデント
 ;; 波括弧が 2 段以上開いていると、tree-sitter は木全体を ERROR へ落とす
 ;; （1 段なら MISSING "}" で復旧する）。既定の規則はこのとき桁 0 へ倒すため、
 ;; 改行するたびに行頭へ張り付く。括弧の深さから桁を算出して代替する。

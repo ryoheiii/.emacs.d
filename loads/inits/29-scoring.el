@@ -7,7 +7,6 @@
 (defvar-local my/input-query nil
   "補完候補のスコアリングに使う入力文字列。")
 
-;;;;; [Group] スコアリング・履歴 ;;;;;
 ;;; Flx - 柔軟なスコアリング
 (use-package flx
   :straight t

@@ -10,7 +10,7 @@
 (defvar w32-pipe-buffer-size)
 (defvar w32-use-native-image-API)
 
-;;;;; [Group] 文字コード設定 ;;;;;
+;;; 文字コード設定
 (set-language-environment "Japanese")
 (prefer-coding-system 'utf-8)
 (cond
@@ -21,7 +21,7 @@
  (IS-WINDOWS
   (setq-default default-process-coding-system '(utf-8-unix . japanese-cp932-dos))))
 
-;;;;; [Group] ファイル操作関連 ;;;;;
+;;; ファイル操作関連
 ;; backup と auto-save は var/backup/ へ隔離して有効化(保存先は early-init.el で設定済み)
 (setq make-backup-files t
       version-control t        ; 番号付きバックアップ
@@ -67,7 +67,7 @@ idle 自動保存では入力途中の末尾空白を消さないよう何もし
     (delete-trailing-whitespace)))
 (add-hook 'before-save-hook #'my/delete-trailing-whitespace-except-markdown)
 
-;;; 全フレームのフォーカスアウト時に全バッファを保存して GC
+;;;; 全フレームのフォーカスアウト時に全バッファを保存して GC
 ;; after-focus-change-function は短時間の状態揺れを伴い反復呼び出しされ得る上、
 ;; read-event 内など任意のコンテキストから呼ばれる (同変数の docstring のとおり)。
 ;; 短時間に続く通知をアイドルタイマーでまとめ、全フレームがフォーカスを
@@ -93,11 +93,11 @@ idle 自動保存では入力途中の末尾空白を消さないよう何もし
 
 (add-function :after after-focus-change-function #'my/after-focus-change)
 
-;;;;; [Group] 補完設定 ;;;;;
+;;; 補完設定
 (setq completion-ignore-case t
       read-file-name-completion-ignore-case t)
 
-;;;;; [Group] 編集コマンドと関数名表示 ;;;;;
+;;; 編集コマンドと関数名表示
 ;; narrowing を有効化
 (put 'narrow-to-region 'disabled nil)
 ;; `upcase-region` / `downcase-region` を有効化
@@ -106,12 +106,12 @@ idle 自動保存では入力途中の末尾空白を消さないよう何もし
 ;; 現在の関数名をモードラインに表示する。
 (which-function-mode 1)
 
-;;;;; [Group] スクロール設定 ;;;;;
+;;; スクロール設定
 (setq scroll-conservatively 101
       scroll-margin 0
       comint-scroll-show-maximum-output t)
 
-;;;;; [Group] 起動後の GC と警告 ;;;;;
+;;; 起動後の GC と警告
 ;; early-init.el で most-positive-fixnum に設定した GC 閾値を起動完了後に復元
 (add-hook 'emacs-startup-hook
           (lambda ()
@@ -119,13 +119,13 @@ idle 自動保存では入力途中の末尾空白を消さないよう何もし
                   gc-cons-percentage 0.2)))
 (add-to-list 'warning-suppress-types '(undo discard-info))
 
-;;;;; [Group] 起動時の表示・確認と競合回避 ;;;;;
+;;; 起動時の表示・確認と競合回避
 (setq vc-follow-symlinks t
       inhibit-startup-message t
       flyspell-use-meta-tab nil
       native-comp-async-report-warnings-errors 'silent)
 
-;;;;; [Group] プロセス通信と表示負荷 ;;;;;
+;;; プロセス通信と表示負荷
 ;; 外部プロセスの出力を 1 回に最大 1 MiB 読み取る。
 ;; 参考: https://ayatakesi.github.io/lispref/25.2/html/Output-from-Processes.html
 (setq read-process-output-max (* 1024 1024))
@@ -148,7 +148,7 @@ idle 自動保存では入力途中の末尾空白を消さないよう何もし
 (setq which-func-update-delay 1.0)
 ;; 入力待ちがある間は、再描画時の色付け処理を後回しにする。
 (setq redisplay-skip-fontification-on-input t)
-;;;;; [Group] OS 固有の最適化 ;;;;;
+;;; OS 固有の最適化
 ;; Windows のファイル情報取得とプロセス通信を調整する。
 (when IS-WINDOWS
   (setq w32-get-true-file-attributes nil

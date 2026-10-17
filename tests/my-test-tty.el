@@ -16,7 +16,7 @@
 
 (require 'ert)
 
-;;;;; [Group] 端末向け Corfu ;;;;;
+;;; 端末向け Corfu
 (ert-deftest my-test-tty-corfu-terminal-enabled ()
   :tags '(:tty)
   (if (featurep 'tty-child-frames)
@@ -24,7 +24,7 @@
     (should (featurep 'corfu-terminal))
     (should (default-value 'corfu-terminal-mode))))
 
-;;;;; [Group] GUI 限定 feature ;;;;;
+;;; GUI 限定 feature
 (defconst my-test-tty--gui-only-features
   '(pulsar
     spacious-padding
@@ -40,7 +40,7 @@ corfu-popupinfo は tty 子フレームで有効にするため対象外とす�
   (dolist (feature my-test-tty--gui-only-features)
     (should-not (featurep feature))))
 
-;;;;; [Group] xclip の遅延ロード ;;;;;
+;;; xclip の遅延ロード
 (ert-deftest my-test-tty-xclip-deferred ()
   :tags '(:tty)
   ;; 条件が成立する環境でも :defer 0.5 の idle timer 前は未ロードが正しい。

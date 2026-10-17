@@ -19,7 +19,7 @@
 (when noninteractive
   (error "my-test-tty-live は実 pty 専用"))
 
-;;;;; [Group] 起動ライフサイクル ;;;;;
+;;; 起動ライフサイクル
 (ert-deftest my-test-tty-live-init-loader-errors-empty ()
   :tags '(:tty-live)
   (should (string-empty-p (init-loader-error-log))))
@@ -82,7 +82,7 @@
       (corfu-mode 1)
       (should (bound-and-true-p corfu-popupinfo-mode)))))
 
-;;;;; [Group] モードライン ;;;;;
+;;; モードライン
 ;; doom-modeline-icon の :custom (display-graphic-p) は doom-modeline ロード後に
 ;; 初めて値へ反映されるため、ロード済みの実 tty でのみ検証できる
 ;; (バッチでは unbound のままで revert しても緑になることを実証済み)。
@@ -118,7 +118,7 @@
   (should-not (eq (face-attribute 'mode-line :background nil t)
                   'unspecified)))
 
-;;;;; [Group] 端末初期化 ;;;;;
+;;; 端末初期化
 (ert-deftest my-test-tty-live-display-color-cells ()
   :tags '(:tty-live)
   (should (>= (display-color-cells) 256)))
@@ -135,7 +135,7 @@
   (should (equal (lookup-key input-decode-map "\e[20~")
                  [f9])))
 
-;;;;; [Group] 宣言とモード活性化 ;;;;;
+;;; 宣言とモード活性化
 (ert-deftest my-test-tty-live-ct-bindings ()
   :tags '(:tty-live)
   (dolist (binding (append my-test-keybindings--bindings
@@ -143,7 +143,7 @@
     (should (eq (lookup-key ggtags-mode-map (kbd (car binding)))
                 (cdr binding)))))
 
-;;;;; [Group] タグ検索の入力と結果選択 ;;;;;
+;;; タグ検索の入力と結果選択
 (defmacro my-test-tty-live--with-gtags (result-lines &rest body)
   "RESULT-LINES に対応する検索結果を供給し、実ミニバッファで BODY を検査する。
 BODY では source-buffer、target-buffer、source-point、requests、
@@ -304,7 +304,7 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
       (should (eq (current-buffer) source-buffer))
       (should (= (point) source-point)))))
 
-;;;;; [Group] LSP 階層ナビゲーションのフォールバック ;;;;;
+;;; LSP 階層ナビゲーションのフォールバック
 ;; LSP 管理下でない実 tty では、呼び出し元検索が C-t u と同じ Global 経路へ倒れ、
 ;; 呼び出し先検索は何もせずに失敗する。
 (ert-deftest my-test-tty-live-lsp-callers-fallback ()
@@ -359,7 +359,7 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
           (kill-buffer buffer)))
       (delete-directory directory t))))
 
-;;;;; [Group] 読解補助 (breadcrumb / outline / inlay hints) ;;;;;
+;;; 読解補助 (breadcrumb / outline / inlay hints)
 ;; C バッファを実 tty で開き、header-line のパス表示と読解補助キーが有効なことを検査する。
 ;; TEST_TREESIT_DIR 未指定なら文法を複製しないため、通常は cc-mode になる。
 ;; 文法を指定して ts モードが選ばれた場合は、outline の有効化も検査する。
@@ -531,7 +531,7 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
         (call-interactively #'toggle-input-method)
         (should-not current-input-method)))))
 
-;;;;; [Group] window-setup ランナー ;;;;;
+;;; window-setup ランナー
 (defun my-test-tty-live--deferred-ready-p ()
   "遅延ロード対象と条件付き xclip が有効なら non-nil を返す。"
   (let ((ready t))

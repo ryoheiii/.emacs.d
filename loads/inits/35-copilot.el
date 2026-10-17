@@ -16,7 +16,7 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function my/copilot--extend-jsonrpc-timeout "35-copilot")
 
-;;;;; [Group] 設定グループとトグル ;;;;;
+;;; 設定グループとトグル
 (defgroup my/copilot nil
   "GitHub Copilot の設定."
   :prefix "my/copilot-"
@@ -39,11 +39,11 @@ nil にする。`my/copilot-toggle' から切り替えると custom.el へ保存
   "copilot language server の導入先。`copilot-install-dir' と一致させる。
 既定の .emacs.d/.cache/ はリポジトリ直下に自動生成物を作るため使わない。")
 
-;;;;; [Group] パス検出 ;;;;;
+;;; パス検出
 ;; Node.js の検出処理は my-node-path.el にまとめる。実行は可用性判定の直前。
 (require 'my-node-path)
 
-;;;;; [Group] 可用性判定と切り替え ;;;;;
+;;; 可用性判定と切り替え
 ;; PATH の整備は可用性判定より前に行う
 ;; (nvm/fnm 配下の node を executable-find が拾えるようにするため)。
 (when my/copilot-enabled
@@ -94,8 +94,8 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
   (dolist (pkg '(org jsonrpc track-changes))
     (straight-override-recipe (list pkg :type 'built-in)))
 
-  ;;;;; [Group] インライン補完 ;;;;;
-  ;;; Copilot - GitHub Copilot によるインライン補完
+;;; インライン補完
+;;;; Copilot - GitHub Copilot によるインライン補完
   ;; copilot.el リポジトリは独自の copilot-chat.el を同梱しており、そのまま
   ;; ビルドすると chep/copilot-chat.el と同名 feature (copilot-chat) が二重になる。
   ;; どちらがロードされるかは load-path 順に依存し、非互換な実装が選ばれ得るため
@@ -163,15 +163,15 @@ prog-mode のバッファを開くたびにエラーになる。導入は M-x co
         "C-c j"   "Copilot"
         "C-c j m" "toggle-mode")))
 
-  ;;;;; [Group] チャット ;;;;;
-  ;;; request — copilot-chat の依存パッケージ
+;;; チャット
+;;;; request - copilot-chat の依存パッケージ
   (use-package request
     :straight t
     :defer t
     :custom
     (request-storage-directory (my-set-history "request/")))
 
-  ;;; Copilot Chat - GitHub Copilot Chat によるコード分析・対話
+;;;; Copilot Chat - GitHub Copilot Chat によるコード分析・対話
   (use-package copilot-chat
     :straight (:host github :repo "chep/copilot-chat.el" :files ("*.el"))
     :commands (copilot-chat-display copilot-chat-transient

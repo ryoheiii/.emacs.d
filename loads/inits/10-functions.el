@@ -7,7 +7,7 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function package-built-in-p "package")
 
-;;;;; [Group] `straight.el` 判定 ;;;;;
+;;; `straight.el` 判定
 (defun my/should-use-straight (package)
   "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
 `t` なら `straight t`、`nil` なら `straight nil` を追加すべき。"
@@ -26,8 +26,8 @@
         (message "Package '%s' is NOT built-in. `straight t` is recommended." package)
         t))))
 
-;;;;; [Group] ファイル関連 ;;;;;
-;;; ファイルパス・ファイル名をキルリングへ保存
+;;; ファイル関連
+;;;; ファイルパス・ファイル名をキルリングへ保存
 (defun my/copy-to-clipboard-and-message (text message)
   "TEXT をキルリングへ保存し、ミニバッファに MESSAGE を表示する。"
   (kill-new text)
@@ -48,7 +48,7 @@
       (my/copy-to-clipboard-and-message file-name
                                         (format "Copied file name: %s" file-name)))))
 
-;;;;; [Group] ウィンドウ管理 ;;;;;
+;;; ウィンドウ管理
 ;; 上下に分割
 (defun my/split-window-vertically-n (num_wins)
   "現在のウィンドウを上下に NUM_WINS 個へ分割する。"

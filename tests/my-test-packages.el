@@ -6,7 +6,7 @@
 
 (require 'ert)
 
-;;;;; [Group] 削除済み feature ;;;;;
+;;; 削除済み feature
 ;; 廃止したパッケージが起動経路へ戻らないよう、この一覧で検査する。
 (defconst my-test-packages--banned-features
   '(paradox amx smooth-scroll affe
@@ -19,7 +19,7 @@
   (dolist (feature my-test-packages--banned-features)
     (should-not (featurep feature))))
 
-;;;;; [Group] 意図しない即時ロードの検知 ;;;;;
+;;; 意図しない即時ロードの検知
 (defconst my-test-packages--deferred-features
   '(irony
     ediff
@@ -47,7 +47,7 @@
   (dolist (feature my-test-packages--deferred-features)
     (should-not (featurep feature))))
 
-;;;;; [Group] ts モードのフック登録 ;;;;;
+;;; ts モードのフック登録
 ;; c-ts-mode / c++-ts-mode は derived-mode-p 上は c-mode / c++-mode の派生だが、
 ;; 親モードのフックは実行されない。ts モードへ切り替わった環境でも C-t タグ
 ;; ナビゲーション・LSP 自動起動・補完フォールバックを失わないよう、cc-mode 側と
@@ -72,7 +72,7 @@
     (dolist (fn my-test-packages--ts-mode-hook-entries)
       (should (memq fn (default-value hook))))))
 
-;;;;; [Group] Copilot のロードゲート ;;;;;
+;;; Copilot のロードゲート
 ;; straight.el の use-package 統合は :straight を :if より先に処理する
 ;; (use-package-keywords 上で :ensure/:straight は 2 番目、:if は 9 番目)。
 ;; そのため :if で無効化しても straight-use-package は実行され、GitHub からの
@@ -127,7 +127,7 @@
   (should (memq 'my/copilot-maybe-enable (default-value 'prog-mode-hook)))
   (should-not (memq 'copilot-mode (default-value 'prog-mode-hook))))
 
-;;;;; [Group] 起動時ブロッキング ;;;;;
+;;; 起動時ブロッキング
 ;; find-at-startup は loads/straight/repos 配下を同期走査するため、起動が
 ;; リポジトリ規模とページキャッシュの温度に比例してブロックする。
 ;; 代替の検出経路まで含めて固定しないと、find-at-startup を外しただけで
@@ -150,7 +150,7 @@
   (should (memq #'straight-register-file-modification
                 (default-value 'before-save-hook))))
 
-;;;;; [Group] ライブラリ解決先 ;;;;;
+;;; ライブラリ解決先
 (defun my-test-packages--straight-build-p (library)
   "LIBRARY の解決先が straight のビルドディレクトリ配下なら non-nil を返す。
 ディレクトリ名は公開変数 `straight-build-dir' から取る。既定値 \"build\" を

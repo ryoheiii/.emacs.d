@@ -8,7 +8,6 @@
 (declare-function magit-restore-window-configuration "magit-mode")
 (declare-function magit-mode-get-buffers "magit-mode")
 
-;;;;; [Group] バージョン管理関連 ;;;;;
 ;;; Magit - Git の状態確認と操作
 (use-package magit
   :straight t

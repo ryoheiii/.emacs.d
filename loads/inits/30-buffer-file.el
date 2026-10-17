@@ -10,7 +10,6 @@
 (declare-function dashboard-initialize "dashboard")
 (declare-function dashboard-resize-on-hook "dashboard")
 
-;;;;; [Group] バッファとファイル管理関連 ;;;;;
 ;;; xclip - クリップボードとの共有
 (use-package xclip
   :if (and (not (display-graphic-p)) ; GUIではない

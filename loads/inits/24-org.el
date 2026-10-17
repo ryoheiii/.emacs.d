@@ -4,7 +4,6 @@
 
 ;;; Code:
 
-;;;;; [Group] Org 関係 ;;;;;
 ;;; Org の表示とタスク管理
 ;; org-mode は tab-width 8 を前提にする（構造化テキストの桁がずれる）。
 ;; 一方 19-language-modes.el の `my/text-mode-setup' は text-mode 派生へ

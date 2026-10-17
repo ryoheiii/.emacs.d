@@ -4,7 +4,6 @@
 
 ;;; Code:
 
-;;;;; [Group] 日本語入力の設定 ;;;;;
 ;;; tr-ime - Windows GUI の IME 連携
 (use-package tr-ime
   :straight t

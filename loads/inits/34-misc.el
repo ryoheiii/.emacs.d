@@ -4,7 +4,6 @@
 
 ;;; Code:
 
-;;;;; [Group] その他のユーティリティ ;;;;;
 ;;; Which-key - 使用可能なキーバインドの表示
 (use-package which-key
   :straight nil

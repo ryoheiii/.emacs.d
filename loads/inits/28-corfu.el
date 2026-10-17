@@ -4,7 +4,6 @@
 
 ;;; Code:
 
-;;;;; [Group] バッファ内補完 ;;;;;
 ;;; Corfu - 補完 UI
 (use-package corfu
   :straight t

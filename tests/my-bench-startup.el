@@ -11,13 +11,13 @@
 ;;
 ;; 前提: 呼び出し側の shim が early-init より前に use-package-compute-statistics を t にする。
 
-;;;;; [Group] 依存 ;;;;;
+;;; 依存
 (require 'my-test-deferred)
 
 (unless (boundp 'my-test-deferred--feature-modes)
   (error "my-test-deferred--feature-modes が未定義です"))
 
-;;;;; [Group] READY 述語 ;;;;;
+;;; READY 述語
 ;; 判定条件は tests/my-test-tty-live.el の my-test-tty-live--deferred-ready-p と同一に保つ。
 ;; 独自の READY 定義を増やさない（条件がずれると計測値の意味がずれるため）。
 (defun my-bench--xclip-expected-p ()
@@ -40,7 +40,7 @@
              (and (featurep 'xclip)
                   (bound-and-true-p xclip-mode))))))
 
-;;;;; [Group] パッケージ分類 ;;;;;
+;;; パッケージ分類
 (defun my-bench--package-class (package)
   "PACKAGE が外部管理か組み込みかを返す。
 
@@ -64,7 +64,7 @@
       'external)
      (t 'builtin))))
 
-;;;;; [Group] 集計と出力 ;;;;;
+;;; 集計と出力
 (defun my-bench--emit (format-string &rest args)
   "計測結果を機械可読な 1 行として標準エラーへ出す。"
   (princ (concat "MY_BENCH " (apply #'format format-string args) "\n")
@@ -135,7 +135,7 @@
           (my-bench--emit "total class=%s count=%d eager=%.6f config=%.6f"
                           class (nth 2 cell) (nth 0 cell) (nth 1 cell)))))))
 
-;;;;; [Group] ランナー ;;;;;
+;;; ランナー
 (defvar my-bench--t1 nil
   "window-setup-hook 到達時点の経過秒。")
 

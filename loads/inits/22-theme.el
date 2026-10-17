@@ -4,8 +4,8 @@
 
 ;;; Code:
 
-;;;;; [Group] テーマ関連 ;;;;;
-;;; doom-themes - テーマ設定
+;;; カラーテーマ
+;;;; doom-themes - テーマ設定
 (use-package doom-themes
   :straight t
   :custom
@@ -17,7 +17,7 @@
   (font-lock-doc-face ((t (:foreground "#b0b0b0"))))                   ;; 薄めのグレー
   (region ((t (:background "#44475a"))))
   :config
-  ;;; 起動時のテーマ
+  ;; 起動時のテーマ
   (load-theme 'doom-dracula t)
   ;; Gnus の標準 face と doom の逆向き継承が、遅延ロード中に循環するのを防ぐ。
   ;; user テーマで設定し、F6 によるテーマ切替後も同じ空グループの色を継承する。
@@ -39,7 +39,8 @@
     (mapc #'disable-theme custom-enabled-themes)
     (load-theme next-theme t)))
 
-;;; doom-modeline - モードラインのテーマ設定
+;;; モードライン
+;;;; doom-modeline - モードラインのテーマ設定
 (use-package doom-modeline
   :straight t
   :custom
@@ -53,13 +54,13 @@
   :hook
   (after-init . doom-modeline-mode))
 
-;;; mode-line-invisible-mode - 特定のモードでモードラインを非表示
+;;;; mode-line-invisible-mode - 特定のモードでモードラインを非表示
 ;; Emacs 31.1 組み込み (simple.el)。旧 hide-mode-line パッケージを置き換える
 (use-package simple
   :straight nil
   :hook ((neotree-mode imenu-list-minor-mode minimap-mode) . mode-line-invisible-mode))
 
-;;; mode-line-bell - 警告音の代わりにモードラインで知らせる
+;;;; mode-line-bell - 警告音の代わりにモードラインで知らせる
 (use-package mode-line-bell
   :straight t
   :hook (after-init . mode-line-bell-mode))
