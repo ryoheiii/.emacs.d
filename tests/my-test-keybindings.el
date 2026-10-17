@@ -97,6 +97,117 @@
           (should (string-match-p "C-c v" (buffer-string)))
           (should (string-match-p "C-g" (buffer-string))))))))
 
+;;; 日本語の説明
+(ert-deftest my-test-keybindings-japanese-global-coverage ()
+  "標準を含む文字キーの割り当てに説明漏れがないこと。"
+  :tags '(:keybinding)
+  (let (missing seen)
+    (dolist (entry (append my/key-guide-commands my/key-guide--cpp-commands
+                          my/key-guide--extra-descriptions))
+      (should-not (memq (cdr entry) seen))
+      (push (cdr entry) seen))
+    (dolist (pair (accessible-keymaps (current-global-map)))
+      (when (seq-every-p #'integerp (car pair))
+        (map-keymap
+         (lambda (key binding)
+           (when (and (integerp key) (symbolp binding) (commandp binding)
+                      (not (my/key-guide-description binding)))
+             (cl-pushnew binding missing)))
+         (cdr pair))))
+    (should-not missing)))
+
+(ert-deftest my-test-keybindings-japanese-key-list ()
+  "既存キー一覧の日本語が上書きされたコマンドにも追従すること。"
+  :tags '(:keybinding)
+  (save-window-excursion
+    (with-temp-buffer
+      (let ((map (make-sparse-keymap)))
+        (keymap-set map "C-c z" #'save-buffer)
+        (use-local-map map)
+        (describe-bindings)
+        (with-current-buffer (help-buffer)
+          (goto-char (point-min))
+          (should (re-search-forward "C-c z[ \t]+save-buffer.*ファイルを保存" nil t))
+          (goto-char (point-min))
+          (should (search-forward "save-buffer" nil t))
+          ;; コマンド名のリンクと原文を残し、再表示で説明を重ねない。
+          (should (button-at (1- (point))))
+          (let ((before (buffer-string)))
+            (my/key-guide-annotate-key-list)
+            (should (equal before (buffer-string)))))
+        (should (eq (key-binding (kbd "C-c z")) 'save-buffer))))))
+
+(ert-deftest my-test-keybindings-japanese-which-key ()
+  "日本語の説明がコマンドに追従し、未知の操作を誤訳しないこと。"
+  :tags '(:keybinding)
+  (require 'which-key)
+  (dolist (entry '(("C-z n" "tab-next" "次のタブへ移動")
+                   ("C-q n" "mc/mark-next-like-this" "次の一致箇所にカーソルを追加")
+                   ("C-t e" "my/lsp-find-callees" "呼び出し先を探す")
+                   ("C-c j j" "copilot-accept-completion" "補完を確定")
+                   ("C-c J e" "copilot-chat-explain" "選択したコードを説明")))
+    (should (equal (cdr (which-key--maybe-replace (cons (nth 0 entry) (nth 1 entry))))
+                   (nth 2 entry))))
+  ;; 同じキーに別の操作が割り当てられても、キーだけを見て誤訳しない。
+  (should (equal (cdr (which-key--maybe-replace '("C-c J e" . "save-buffer")))
+                 "ファイルを保存"))
+  (should (equal (which-key--maybe-replace '("C-c z" . "unknown-operation"))
+                 '("C-c z" . "unknown-operation"))))
+
+(ert-deftest my-test-keybindings-japanese-mode-help ()
+  "モード固有のキー一覧にも日本語の説明を添えること。"
+  :tags '(:keybinding)
+  (save-window-excursion
+    (with-temp-buffer
+      (org-mode)
+      (describe-mode)
+      (with-current-buffer (help-buffer)
+        (goto-char (point-min))
+        (should (re-search-forward "org-todo.*タスクの状態を変更" nil t))))))
+
+(ert-deftest my-test-keybindings-japanese-marginalia ()
+  "M-x の説明を日本語にしつつキー表示と未翻訳時の説明を保つこと。"
+  :tags '(:keybinding)
+  (require 'marginalia)
+  (should (eq (cadr (assq 'command marginalia-annotators))
+              'my/key-guide-annotate-command))
+  (should (eq (cadr (assq 'function marginalia-annotators))
+              'my/key-guide-annotate-function))
+  (should (string-match-p "タブを新規作成"
+                          (my/key-guide-annotate-function "tab-new")))
+  (let ((annotation (my/key-guide-annotate-command "tab-new")))
+    (should (string-match-p "タブを新規作成" annotation))
+    (should (string-prefix-p (marginalia-annotate-binding "tab-new") annotation)))
+  (cl-letf (((symbol-function 'marginalia-annotate-command)
+             (lambda (candidate) (concat "元の説明: " candidate))))
+    (should (equal (my/key-guide-annotate-command "unknown-operation")
+                   "元の説明: unknown-operation"))))
+
+(ert-deftest my-test-keybindings-japanese-magit-menu ()
+  "Git の入口を日本語にしても、実行先とキーを維持すること。"
+  :tags '(:keybinding)
+  (require 'magit)
+  (let ((suffix (transient-get-suffix 'magit-dispatch "c")))
+    (should (eq (plist-get (cdr suffix) :command) 'magit-commit))
+    (should (equal (plist-get (cdr suffix) :description) "コミット"))))
+
+(ert-deftest my-test-keybindings-japanese-help-summary ()
+  "標準ヘルプの先頭に日本語を加え、原文とキーの動作を残すこと。"
+  :tags '(:keybinding)
+  (let ((original (documentation 'save-buffer)))
+    (save-window-excursion
+      (describe-key (kbd "C-x C-s"))
+      (with-current-buffer (help-buffer)
+        (should (string-prefix-p "日本語の説明: ファイルを保存" (buffer-string)))
+        (should (string-match-p "save-buffer" (buffer-string))))
+      (describe-function 'save-buffer)
+      (with-current-buffer (help-buffer)
+        (should (string-prefix-p "日本語の説明: ファイルを保存" (buffer-string)))
+        (should (string-match-p (regexp-quote (car (split-string original "\n")))
+                                (buffer-string)))))
+    (should (equal (documentation 'save-buffer) original))
+    (should (eq (keymap-lookup global-map "C-x C-s") 'save-buffer))))
+
 ;;; 基本操作と日本語入力
 (ert-deftest my-test-keybindings-basic-bindings ()
   "設定の配置を変えても、日常の基本操作を同じキーで呼べること。"

@@ -139,13 +139,13 @@ eglot 未管理のバッファでは `user-error'。"
         (progn
           (eglot-inlay-hints-mode -1)
           (kill-local-variable 'eglot-ignored-server-capabilities)
-          (message "inlay hints: off"))
+          (message "引数名・型のヒントを非表示にしました"))
       (setq-local eglot-ignored-server-capabilities
                   (remq :inlayHintProvider eglot-ignored-server-capabilities))
       (eglot-inlay-hints-mode 1)
       ;; 非対応サーバーではモードが自分を切る (eglot-inlay-hints-mode の定義を参照)
       (if eglot-inlay-hints-mode
-          (message "inlay hints: on")
+          (message "引数名・型のヒントを表示しました")
         (kill-local-variable 'eglot-ignored-server-capabilities)
         (user-error "サーバーが inlay hints に対応していません"))))
   ;; eglot 管理バッファでは irony を止める (CAPF 競合防止)。

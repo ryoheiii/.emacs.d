@@ -51,7 +51,13 @@
 (use-package marginalia
   :straight t
   :after vertico
-  :init (marginalia-mode))
+  :init (marginalia-mode)
+  :config
+  ;; 他カテゴリと標準の切り替え候補を保ち、コマンドの日本語説明を優先する。
+  (cl-pushnew #'my/key-guide-annotate-command
+              (alist-get 'command marginalia-annotators))
+  (cl-pushnew #'my/key-guide-annotate-function
+              (alist-get 'function marginalia-annotators)))
 
 (provide '26-vertico)
 ;;; 26-vertico.el ends here

@@ -109,7 +109,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
       (error
        (unless my/irony-capf-warned
          (setq my/irony-capf-warned t)
-         (message "irony: completion error (%s)" (error-message-string err)))
+         (message "irony: 補完に失敗しました（%s）" (error-message-string err)))
        nil)))
   (unless (advice-member-p #'my/safe-irony-completion-at-point 'irony-completion-at-point)
     (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point)))
@@ -284,7 +284,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
     "現在のウィンドウ内に表示されているシンボルのみをリネームする."
     (interactive)
     (let* ((symbol (symbol-overlay-get-symbol))
-           (new-name (read-string (format "Rename '%s' to: " symbol)))
+           (new-name (read-string (format "「%s」の置換後の名前: " symbol)))
            (start (window-start))
            (end (window-end)))
       (my/symbol-overlay-replace-region symbol new-name start end)))
@@ -295,7 +295,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
 関数の境界を扱わないモードでは、現在の編集可能範囲全体を対象にする。"
     (interactive)
     (let* ((symbol (symbol-overlay-get-symbol))
-           (new-name (read-string (format "Rename '%s' to: " symbol)))
+           (new-name (read-string (format "「%s」の置換後の名前: " symbol)))
            ;; ts モードは derived-mode-p 上は c-mode/c++-mode の派生だが cc-mode の
            ;; 内部状態を持たない。c-beginning-of-defun が使えないため先に振り分け、
            ;; treesit が設定する beginning-of-defun-function 経由の汎用関数を使う。

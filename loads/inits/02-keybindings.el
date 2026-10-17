@@ -55,5 +55,19 @@
   :custom
   (suggest-key-bindings 3)) ; M-x で実行した操作のキーを 3 秒案内する
 
+(use-package help-fns
+  :straight nil
+  :defer t
+  :config
+  ;; 名前が -hook ではない標準の拡張フック。describe-key からも呼ばれる。
+  (add-hook 'help-fns-describe-function-functions #'my/key-guide-help-summary))
+
+(use-package help-mode
+  :straight nil
+  :custom
+  (help-back-label "[前の説明へ]")
+  (help-forward-label "[次の説明へ]")
+  :hook (temp-buffer-window-setup . my/key-guide-annotate-key-list))
+
 (provide '02-keybindings)
 ;;; 02-keybindings.el ends here

@@ -234,7 +234,7 @@ GNU Global の grep 検索 (正規表現) を使う。`xref-find-apropos' を経
 ggtags バックエンドがカーソル位置の語が GTAGS に無いと選ばれず、Global へ
 届かないため。ggtags の引用処理を避け、検索式を Global へそのまま渡す。"
   (interactive
-   (list (read-string "Find symbol (pattern): " (thing-at-point 'symbol t)
+   (list (read-string "プロジェクト内で探す名前（パターン）: " (thing-at-point 'symbol t)
                       'my/gtags-history)))
   (when (string-blank-p pattern)
     (user-error "検索する名前を入力してください"))
