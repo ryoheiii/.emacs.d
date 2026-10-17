@@ -24,6 +24,7 @@
   '(irony
     yasnippet
     magit
+    difftastic
     org
     tramp
     consult
