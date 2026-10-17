@@ -69,9 +69,12 @@
 
 (defun my/key-guide-annotate-function (candidate)
   "関数検索の CANDIDATE に日本語の説明を添える。"
-  (if (my/key-guide-description (intern-soft candidate))
-      (my/key-guide-annotate-command candidate)
-    (marginalia-annotate-function candidate)))
+  (let ((original (marginalia-annotate-function candidate)))
+    ;; 種別・引数リスト・原文概要を保持し、日本語の要約を先頭へ補足する。
+    (if-let* ((description (my/key-guide-description (intern-soft candidate))))
+        (concat (propertize description 'face 'marginalia-documentation)
+                " " original)
+      original)))
 
 (defun my/key-guide-annotate-key-list ()
   "標準ヘルプのキー一覧に、日本語の説明を追記する。"

@@ -175,6 +175,12 @@
               'my/key-guide-annotate-function))
   (should (string-match-p "タブを新規作成"
                           (my/key-guide-annotate-function "tab-new")))
+  (let* ((original (marginalia-annotate-function "save-buffer"))
+         (translated (my/key-guide-annotate-function "save-buffer")))
+    ;; 元の種別・引数・原文概要と装飾をそのまま保持する。
+    (should (string-prefix-p "ファイルを保存" translated))
+    (should (equal-including-properties
+             original (substring translated (- (length original))))))
   (let ((annotation (my/key-guide-annotate-command "tab-new")))
     (should (string-match-p "タブを新規作成" annotation))
     (should (string-prefix-p (marginalia-annotate-binding "tab-new") annotation)))
@@ -189,7 +195,11 @@
   (require 'magit)
   (let ((suffix (transient-get-suffix 'magit-dispatch "c")))
     (should (eq (plist-get (cdr suffix) :command) 'magit-commit))
-    (should (equal (plist-get (cdr suffix) :description) "コミット"))))
+    (should (equal (plist-get (cdr suffix) :description) "コミット")))
+  (let ((suffix (transient-get-suffix 'magit-dispatch "S")))
+    (should (eq (plist-get (cdr suffix) :command) 'magit-stage-modified))
+    (should (string-match-p "追跡中" (plist-get (cdr suffix) :description)))
+    (should (string-match-p "追跡中" (my/key-guide-description 'magit-stage-modified)))))
 
 (ert-deftest my-test-keybindings-japanese-help-summary ()
   "標準ヘルプの先頭に日本語を加え、原文とキーの動作を残すこと。"

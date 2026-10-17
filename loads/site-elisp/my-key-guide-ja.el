@@ -688,7 +688,7 @@
     ("選んだ変更を破棄" . magit-discard)
     ("コミット対象に追加（stage）" . magit-stage)
     ("コミット対象から外す（unstage）" . magit-unstage)
-    ("全変更をコミット対象に追加" . magit-stage-modified)
+    ("追跡中の全変更をコミット対象に追加" . magit-stage-modified)
     ("すべてコミット対象から外す" . magit-unstage-all)
     ("Git の表示を更新" . magit-refresh)
     ("Git の全画面を更新" . magit-refresh-all)

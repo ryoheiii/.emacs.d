@@ -68,7 +68,7 @@
                    (magit-discard . "変更を破棄")
                    (magit-stage . "確定対象へ追加")
                    (magit-unstage . "確定対象を解除")
-                   (magit-stage-modified . "全変更を対象へ")
+                   (magit-stage-modified . "追跡中を全追加")
                    (magit-unstage-all . "全対象を解除")
                    (magit-refresh . "表示を更新")
                    (magit-mode-bury-buffer . "画面を隠す")
