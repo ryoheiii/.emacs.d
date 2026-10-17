@@ -185,7 +185,8 @@
   '((vundo vundo-mode-map ("C-f" . vundo-forward) ("C-b" . vundo-backward)
            ("C-n" . vundo-next) ("C-p" . vundo-previous))
     (magit magit-status-mode-map ("q" . mu-magit-kill-buffers))
-    (markdown-mode markdown-mode-map ("C-c TAB" . my-markdown-insert-tab)))
+    (markdown-mode markdown-mode-map ("C-c TAB" . my-markdown-insert-tab)
+                   ("C-c C-c e" . my-markdown-export)))
   "(FEATURE KEYMAP (KEY . COMMAND)...) の形で固定するパッケージ固有の束縛。")
 
 (ert-deftest my-test-keybindings-package-map-bindings ()
@@ -202,7 +203,8 @@
   (require 'markdown-mode)
   (with-temp-buffer
     (gfm-mode)
-    (should (eq (keymap-lookup nil "C-c TAB") 'my-markdown-insert-tab))))
+    (should (eq (keymap-lookup nil "C-c TAB") 'my-markdown-insert-tab))
+    (should (eq (keymap-lookup nil "C-c C-c e") 'my-markdown-export))))
 
 (provide 'my-test-keybindings)
 ;;; my-test-keybindings.el ends here
