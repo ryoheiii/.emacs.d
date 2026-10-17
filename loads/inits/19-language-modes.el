@@ -1,6 +1,7 @@
 ;;; 19-language-modes.el --- 各種モード設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; 主要なメジャーモードの設定を行う
+;; 言語モードの選択、フック、折りたたみのキーを設定する。
+;; C/C++ ts モードの編集処理は my-c-ts-edit.el にまとめる。
 
 ;;; Code:
 
@@ -12,7 +13,7 @@
 (defvar c-ts-indent-offset)
 (defvar treesit-outline-predicate)
 
-;;;;;; [Group] Code Folding - コード折りたたみ ;;;;;;
+;;;;; [Group] コード折りたたみ ;;;;;
 (use-package hideshow
   :straight nil
   :bind (("C-\\" . hs-toggle-hiding)
@@ -25,8 +26,7 @@
          (c-ts-mode       . hs-minor-mode)
          (c++-ts-mode     . hs-minor-mode)
          (emacs-lisp-mode . hs-minor-mode)
-         (lisp-mode       . hs-minor-mode))
-  )
+         (lisp-mode       . hs-minor-mode)))
 
 ;;; Outline - 関数単位の折りたたみと一覧 (hideshow と併用)
 ;; treesit 連動の見出し (関数定義。述語は my/c-ts-outline-predicate) が取れる ts モード
@@ -62,11 +62,10 @@
           (outline-back-to-heading t)
         (outline-before-first-heading
          (user-error "この位置より前に関数定義がありません")))
-      (outline-cycle))))
-  )
+      (outline-cycle)))))
 
-;;;;;; [Group] Programming Modes - プログラミングモード ;;;;;;
-;;; Elisp-mode - elisp-mode の設定
+;;;;; [Group] プログラミングモード ;;;;;
+;;; elisp-mode - 空白インデントと単語移動
 (use-package elisp-mode
   :straight nil
   :hook (emacs-lisp-mode . my/emacs-lisp-mode-setup)
@@ -74,10 +73,9 @@
   (defun my/emacs-lisp-mode-setup ()
     "Emacs Lisp モード用の設定。"
     (setq indent-tabs-mode nil)  ; タブではなくスペースを使用
-    (subword-mode 1))            ; CamelCase も単語として移動
-  )
+    (subword-mode 1)))            ; CamelCase の大文字境界で単語移動
 
-;;; Cc-mode - cc-mode の設定
+;;; cc-mode - 拡張子の割り当てと編集設定
 (use-package cc-mode
   :straight nil
   :mode (("\\.C\\'"    . c-mode)
@@ -97,8 +95,7 @@
     (keymap-local-set "C-c c" 'compile)    ; コンパイル
     (c-toggle-auto-hungry-state 1)         ; 自動改行 & 連続スペース一括削除
     (setq indent-tabs-mode nil
-          c-basic-offset 4))
-  )
+          c-basic-offset 4)))
 
 ;;; C-ts-mode - tree-sitter 版 C/C++ モード (段階移行)
 ;; 文法が導入済みなら c-ts-mode / c++-ts-mode、無ければ従来の cc-mode を使う。
@@ -139,14 +136,14 @@ treesit-language-available-p は treesit.el をロードせず警告も出さな
 ;; auto-mode から呼ばれる振り分け関数（組み込みの c-or-c++-mode と同じ形）。
 ;; 可用性はここで毎回判定するため、`my/use-treesit-for-cc' を後から nil にしても効く。
 (defun my/c-mode-dispatch ()
-  "実 C ソースなら `c-ts-mode'、流用ファイルなら `c-mode' を有効にする."
+  "文法が使える実 C ソースなら `c-ts-mode'、それ以外は `c-mode' にする。"
   (interactive)
   (if (and (my/treesit-cc-ready-p 'c) (my/cc-real-source-p))
       (c-ts-mode)
     (c-mode)))
 
 (defun my/c++-mode-dispatch ()
-  "実 C++ ソースなら `c++-ts-mode'、流用ファイルなら `c++-mode' を有効にする."
+  "文法が使える実 C++ ソースなら `c++-ts-mode'、それ以外は `c++-mode' にする。"
   (interactive)
   (if (and (my/treesit-cc-ready-p 'cpp) (my/cc-real-source-p))
       (c++-ts-mode)
@@ -178,8 +175,8 @@ cc-mode に留まる。c-ts-mode.el はロード時に `treesit-major-mode-remap
   :straight nil
   ;; 起動経路で require しない（treesit.el まで読み込まれ起動が重くなるため）
   :defer t
-  ;; use-package はバイトコンパイル時にパッケージを先読みする。参照は先頭の defvar と
-  ;; declare-function で足りるため、treesit.el を含む先読みも止める。
+  ;; use-package はバイトコンパイル時にパッケージを先読みする。参照は my-c-ts-edit.el の
+  ;; 宣言で解決できるため、treesit.el を含む先読みも止める。
   :no-require t
   :hook ((c-ts-mode   . my/c-ts-mode-setup)
          (c++-ts-mode . my/c-ts-mode-setup))
@@ -188,10 +185,10 @@ cc-mode に留まる。c-ts-mode.el はロード時に `treesit-major-mode-remap
   (c-ts-mode-indent-style 'k&r)
   ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
   :preface
-  (require 'my-c-ts-edit)
-  )
+  ;; 入力処理の定義を hook の登録より先に読み込む。モード本体は遅延したまま。
+  (require 'my-c-ts-edit))
 
-;;;;;; [Group] Text Editing - テキスト編集 ;;;;;;
+;;;;; [Group] テキスト編集 ;;;;;
 (use-package text-mode
   :straight nil
   :mode (("\\.txt\\'" . text-mode)
@@ -200,11 +197,10 @@ cc-mode に留まる。c-ts-mode.el はロード時に `treesit-major-mode-remap
   :config
   (defun my/text-mode-setup ()
     "テキストモード用の設定。ただし markdown-mode では適用しない。"
-    (unless (derived-mode-p 'markdown-mode) ;; markdown-mode では適用しない
+    (unless (derived-mode-p 'markdown-mode)
       (setq indent-tabs-mode nil
             tab-width 2)
-      (subword-mode 1))) ; CamelCase も単語として移動
-  )
+      (subword-mode 1)))) ; CamelCase の大文字境界で単語移動
 
 (provide '19-language-modes)
 ;;; 19-language-modes.el ends here

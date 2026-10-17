@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# -E は現時点では no-op だが、将来 ERR トラップを足したときに
-# 関数・コマンド置換・サブシェル内で発火させるために必要になる。
+# 失敗・未定義変数・パイプ途中の失敗で停止する。
+# -E は ERR トラップを子の実行環境にも引き継ぐ（現在は ERR トラップなし）。
 set -Eeuo pipefail
 
 ##### 設定 #####
 readonly EMACS_DIR="$HOME/.emacs.d"
 readonly LOADS_DIR="$EMACS_DIR/loads"
 readonly PACKAGE_DIR="straight"
-# setup-treesit（文法の取得元・固定タグ・導入先は、このファイルが正本）
+# setup-treesit（文法の取得元・固定タグ・導入先は下記の Elisp で定義）
 readonly TREESIT_LIB="$LOADS_DIR/site-elisp/my-treesit.el"
-# install-emacs
+# Emacs のソース保存先とインストール先
 readonly DL_DIR="$HOME/.local/downloads"
 readonly EMACS_SRC_DIR="$DL_DIR/emacs"
 readonly EMACS_INSTALL_PREFIX="$HOME/.local"
-# setup-node (offline)
+# Node.js のオフライン導入先
 readonly NODE_DL_DIR="$DL_DIR/node"
 readonly NODE_INSTALL_BASE="$HOME/.local/share/nodejs"
 readonly NODE_ACTIVE_LINK="$HOME/.local/node"
@@ -24,12 +24,12 @@ readonly FNM_OWNED_MARKER=".installed-by-emacs-setup"
 readonly CLANGD_INSTALL_BASE="$HOME/.local/share/clangd"
 readonly CLANGD_BIN_DIR="$HOME/.local/bin"
 readonly CLANGD_OWNED_MARKER=".installed-by-emacs-setup"
-# clean
+# 実行時データとキャッシュの削除対象
 readonly VAR_DIR="$EMACS_DIR/var"
 # early-init.el を読まない emacs --batch が作る迷子の eln-cache。
 # 本設定での正規の保存先は var/package/eln-cache/ で、こちらは読み込み経路からも外れている。
 readonly STRAY_ELN_DIR="$EMACS_DIR/eln-cache"
-# packing/extract_package
+# パッケージのアーカイブと復元対象
 readonly PACKAGE_ARCHIVE="$EMACS_DIR/package.tar.gz"
 readonly PACKAGE_TARGET=("repos" "versions/default.el")
 # 取得元。環境変数で上書きできる。
@@ -130,7 +130,7 @@ EOF
 
 ##### 実行前チェック #####
 # 必要なコマンドはアクションごとに異なる。一律に確認すると、
-# --help や --clean のように何も要らないアクションまで環境依存で失敗する。
+# --help など、追加コマンドを使わないアクションまで環境依存で失敗する。
 require_commands() {
     local missing=() cmd
     for cmd in "$@"; do
@@ -746,7 +746,7 @@ setup_env() {
 
     echo "Setting up Emacs environment..."
 
-    export DEBIAN_FRONTEND=noninteractive # Set non-interactive mode for apt-get
+    export DEBIAN_FRONTEND=noninteractive # apt-get の対話的な質問を抑える
 
     sudo apt-get update
 
@@ -781,11 +781,9 @@ setup_env() {
     fi
 
     ## 推奨
-    # libm17n-dev              — 多言語テキスト処理（必要に応じて有効化）
-    # libsystemd-dev           — systemd の統合（必要に応じて有効化）
     local COMMON_PACKAGES=(
         pkg-config                      # C/C++ プロジェクトのライブラリ依存管理ツール
-        "libgccjit-${GCC_VERSION}-dev"  # ネイティブコンパイル用 (Emacs29以降)
+        "libgccjit-${GCC_VERSION}-dev"  # Emacs Lisp のネイティブコンパイル用
         libgnutls28-dev                 # TLS (HTTPS/SSL) サポート。GUI 非依存
         libsqlite3-dev                  # SQLite バックエンド (Org-roam など)
         libtree-sitter-dev              # Tree-sitter (シンタックスハイライト)
@@ -802,9 +800,9 @@ setup_env() {
         libgtk-3-dev                    # GTK3 ベースの GUI サポート
         libfreetype6-dev                # フォントサポート
         libotf-dev                      # Opentype フォント処理のサポート
-        adwaita-icon-theme              # Icon
-        hicolor-icon-theme              # Icon
-        gnome-icon-theme                # Icon
+        adwaita-icon-theme              # GUI のアイコンテーマ
+        hicolor-icon-theme              # GUI のアイコンテーマ
+        gnome-icon-theme                # GUI のアイコンテーマ
         # X11 関連
         libx11-dev                      # X Window System の基本ライブラリ
         libxmu-dev                      # X11 のユーティリティライブラリ
@@ -829,8 +827,8 @@ setup_env() {
         libcairo2-dev                   # 2D グラフィックス (cairo 描画)
         liblcms2-dev                    # カラーマネジメント
         libwebp-dev                     # WebP 画像サポート
-        # PGTK 用
-        libgtk-4-dev                    # PGTK 用
+        # GTK 開発ライブラリの追加分
+        libgtk-4-dev                    # GTK4（PGTK の指定自体は --with-pgtk）
     )
 
     ### ターミナル (TUI) で必要なもの
@@ -853,7 +851,7 @@ setup_env() {
         ripgrep                         # ripgrep (consult-ripgrep と xref の検索経路)
         hunspell hunspell-en-us         # Hunspell (スペルチェック)
         aspell aspell-en                # Aspell (スペルチェック)
-        cmake llvm                      # CMake and LLVM (irony-install-server 用)
+        cmake llvm                      # CMake と LLVM（irony-install-server 用）
         pandoc                          # Pandoc (Markdown 用)
     )
 
@@ -1287,13 +1285,11 @@ extract_rollback() {
 }
 
 ##### パッケージディレクトリの展開 #####
-# 展開はトランザクションとして扱う。旧実装は既存ツリーを消してから展開しており、
-# アーカイブが壊れていると tar の失敗時点でパッケージツリーだけが失われ、
-# 復元手段が無かった。
+# アーカイブが壊れていても既存パッケージを失わないよう、検証後に入れ替える。
 #
 #   フェーズ A: 一時ディレクトリへ展開し、内容を検証する（既存ツリーは無変更）
-#   フェーズ B: 退避 rename と本体 rename で入れ替える（失敗したら rollback）
-#   フェーズ C: ビルドする（失敗しても自動 rollback はせず .bak を残す）
+#   フェーズ B: 既存ツリーを退避して入れ替える（失敗したら復元を試みる）
+#   フェーズ C: ビルドする（失敗時は新ツリーと復旧用の .bak を残す）
 #
 # 一時ディレクトリは $LOADS_DIR 配下へ作る。別ファイルシステムだと
 # フェーズ B の rename が跨げないため。

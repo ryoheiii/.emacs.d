@@ -6,7 +6,7 @@
 
 (require 'ert)
 
-;;;;; [Group] Global Modes - after-init-hook ;;;;;
+;;;;; [Group] after-init-hook ;;;;;
 ;; GUI 限定ガード付きの宣言（pixel-scroll-precision-mode 等）は
 ;; バッチでは評価されないため対象外とする。
 (defconst my-test-global-modes--after-init-functions
@@ -36,7 +36,7 @@
   (dolist (function my-test-global-modes--after-init-functions)
     (should (memq function after-init-hook))))
 
-;;;;; [Group] Global Modes - デフォルト有効モード ;;;;;
+;;;;; [Group] デフォルト有効モード ;;;;;
 ;; Emacs 28+ でデフォルト有効のモードは hook 登録ではなく有効状態を検証する
 (ert-deftest my-test-global-modes-show-paren-enabled ()
   :tags '(:invariant)

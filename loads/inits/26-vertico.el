@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-;;;;; [Group] Vertico - ミニバッファ補完 UI ;;;;;
+;;;;; [Group] ミニバッファ補完 UI ;;;;;
 ;;; Vertico - ミニバッファ補完 UI
 (use-package vertico
   :straight t
@@ -26,38 +26,33 @@
 
   ;; `file` カテゴリに限定してソート適用
   (add-to-list 'vertico-multiform-categories
-               '(file (vertico-sort-override-function . my/vertico-sort-directories-first)))
-  )
+               '(file (vertico-sort-override-function . my/vertico-sort-directories-first))))
 
 ;;; Vertico-repeat - 直前の補完を再実施
 (use-package vertico-repeat
   :straight nil
   :after vertico
-  :hook (minibuffer-setup . vertico-repeat-save)
-  )
+  :hook (minibuffer-setup . vertico-repeat-save))
 
 ;;; Vertico-directory - ディレクトリ補完
 (use-package vertico-directory
   :straight nil
   :after vertico
   :bind (:map vertico-map
-              ("C-l" . vertico-directory-delete-char))
-  )
+              ("C-l" . vertico-directory-delete-char)))
 
 ;;; Vertico-truncate - vertico の補完候補を横方向に切り詰める
 (use-package vertico-truncate
   :straight (:host github :repo "jdtsmith/vertico-truncate")
   :after vertico
   :config
-  (vertico-truncate-mode +1)
-  )
+  (vertico-truncate-mode +1))
 
 ;;; Marginalia - 詳細な補完情報の表示
 (use-package marginalia
   :straight t
   :after vertico
-  :init (marginalia-mode)
-  )
+  :init (marginalia-mode))
 
 (provide '26-vertico)
 ;;; 26-vertico.el ends here

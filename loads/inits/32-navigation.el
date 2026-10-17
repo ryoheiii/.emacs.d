@@ -12,7 +12,7 @@
 ;; (実行時は project-current の autoload が project.el をロードする)
 (declare-function project-root "project" (project))
 
-;;;;; [Group] Navigation-and-Search - ナビゲーションと検索関連 ;;;;;
+;;;;; [Group] ナビゲーションと検索関連 ;;;;;
 ;;; Popwin - ポップアップウィンドウの管理
 (use-package popwin
   :straight t
@@ -20,10 +20,9 @@
   :custom
   (popwin:popup-window-position 'bottom) ;; ポップアップの位置を下部に設定
   :config
-  (popwin-mode 1)
-  )
+  (popwin-mode 1))
 
-;;; Migemo - 日本語を含む検索時の挙動改善
+;;; Migemo - ローマ字入力で日本語を検索
 (use-package migemo
   :straight t
   :if (executable-find "cmigemo")
@@ -36,8 +35,7 @@
   (migemo-regex-dictionary nil)
   (migemo-coding-system 'utf-8-unix)
   :config
-  (migemo-init)
-  )
+  (migemo-init))
 
 ;;; Neotree - ファイルツリー表示とナビゲーション
 (use-package neotree
@@ -51,7 +49,7 @@
   :config
   ;; プロジェクトルートまたは現在ファイルの位置で開くトグル
   (defun my/neotree-project-toggle ()
-    "Toggle NeoTree, opening at the project root or current file."
+    "プロジェクトルートまたは現在のファイル位置で NeoTree の表示を切り替える。"
     (interactive)
     (let ((project-dir (when-let* ((proj (project-current)))
                          (project-root proj)))
@@ -61,17 +59,14 @@
         (progn
           (neotree-show)
           (when project-dir (neotree-dir project-dir))
-          (when file-name   (neotree-find file-name))))))
-  )
+          (when file-name   (neotree-find file-name)))))))
 
 ;;; Imenu List - バッファ内のシンボルリスト表示
 (use-package imenu-list
   :straight t
   :bind ("C-c i" . imenu-list-smart-toggle)
   :custom
-  (imenu-list-focus-after-activation t) ; 開いたら自動でフォーカスを移動
-  ;; (imenu-list-auto-resize t)            ; サイズを自動調整
-  )
+  (imenu-list-focus-after-activation t)) ; 開いたら自動でフォーカスを移動
 
 ;;; Breadcrumb - header-line に imenu のパスとプロジェクト内パスを表示
 ;; C/C++ の読解用に 4 モードへ限定して有効化し、他モードの既定の見た目 (header-line
@@ -95,10 +90,9 @@
   :hook ((c-mode      . breadcrumb-local-mode)
          (c++-mode    . breadcrumb-local-mode)
          (c-ts-mode   . breadcrumb-local-mode)
-         (c++-ts-mode . breadcrumb-local-mode))
-  )
+         (c++-ts-mode . breadcrumb-local-mode)))
 
-;;;;; [Group] Spell-check - スペルチェック関連 ;;;;;
+;;;;; [Group] スペルチェック関連 ;;;;;
 ;;; ispell - スペルチェック機能の設定と辞書の指定（flyspell のバックエンド）
 (use-package ispell
   :straight nil
@@ -119,7 +113,7 @@
        nil)))
   :custom
   (ispell-silently-savep t) ;; ユーザー辞書の保存時に確認しない
-  (ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語無視
+  (ispell-skip-region-alist '(("[^\000-\377]+"))) ;; 日本語など 0〜255 の文字コード範囲外を除外
   (ispell-dictionary "en_US")
   :config
   (cond
@@ -130,8 +124,7 @@
     (setq ispell-program-name "aspell"
           ispell-extra-args '("--sug-mode=ultra"))))
   (unless (advice-member-p #'my/safe-ispell-completion-at-point 'ispell-completion-at-point)
-    (advice-add 'ispell-completion-at-point :around #'my/safe-ispell-completion-at-point))
-  )
+    (advice-add 'ispell-completion-at-point :around #'my/safe-ispell-completion-at-point)))
 
 ;;; flyspell - リアルタイムスペルチェック機能（フロントエンド）
 (use-package flyspell
@@ -141,7 +134,7 @@
   (defun my/flyspell-prog-setup ()
     "Emacs Lisp を除くプログラムモードで flyspell-prog-mode を有効化する。"
     (unless (derived-mode-p 'emacs-lisp-mode)
-      (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ; 日本語無視
+      (setq-local ispell-skip-region-alist '(("[^\000-\377]+"))) ; 日本語など 0〜255 の文字コード範囲外を除外
       (flyspell-prog-mode)))
   (defun my/flyspell-disable ()
     "Markdown 以外の text 系では flyspell を無効化する。"
@@ -152,7 +145,7 @@
     (when (> (buffer-size) 3000)
       (flyspell-mode -1)))
   :hook ((prog-mode . my/flyspell-prog-setup)
-         ((text-mode html-mode) . my/flyspell-disable) ; text 系では無効化
+         ((text-mode html-mode) . my/flyspell-disable) ; Markdown 以外の text 系では無効化
          (find-file . my/flyspell-disable-in-large-buffer))
   :bind (:map flyspell-mode-map
               ("C-," . nil)
@@ -160,16 +153,14 @@
               ("C-;" . nil)
               ("C-c $" . nil))
   :custom
-  (flyspell-issue-message-flag nil) ; ミニバッファメッセージ抑制
-  )
+  (flyspell-issue-message-flag nil)) ; ミニバッファメッセージ抑制
 
 ;;; flyspell-correct - スペルチェックの補助ツール
 (use-package flyspell-correct
   :straight t
   :after flyspell
   :bind (:map flyspell-mode-map
-              ("C-c C-/" . flyspell-correct-wrapper)) ; C-/ で補正メニューを開く
-  )
+              ("C-c C-/" . flyspell-correct-wrapper))) ; C-c C-/ で修正候補を開く
 
 (provide '32-navigation)
 ;;; 32-navigation.el ends here

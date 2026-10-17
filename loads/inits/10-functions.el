@@ -1,14 +1,13 @@
 ;;; 10-functions.el --- ユーティリティ関数集 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; 各種ユーティリティ関数を定義
+;; パッケージ判定、ファイル名のコピー、ウィンドウ操作の共通関数。
 
 ;;; Code:
 
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function package-built-in-p "package")
 
-;;;;;; [Group] Package Management - `straight.el` 判定 ;;;;;;
-;;; 指定した PACKAGE が `straight.el` で管理すべきかを判定する関数
+;;;;; [Group] `straight.el` 判定 ;;;;;
 (defun my/should-use-straight (package)
   "指定した PACKAGE が `straight.el` で管理すべきかを判定する関数。
 `t` なら `straight t`、`nil` なら `straight nil` を追加すべき。"
@@ -27,33 +26,32 @@
         (message "Package '%s' is NOT built-in. `straight t` is recommended." package)
         t))))
 
-;;;;;; [Group] File Operations - ファイル関連 ;;;;;;
-;;; ファイルパス/ファイル名をクリップボードに保存
+;;;;; [Group] ファイル関連 ;;;;;
+;;; ファイルパス・ファイル名をキルリングへ保存
 (defun my/copy-to-clipboard-and-message (text message)
-  "Copy TEXT to the kill ring and display MESSAGE in the minibuffer."
+  "TEXT をキルリングへ保存し、ミニバッファに MESSAGE を表示する。"
   (kill-new text)
   (message "%s" message))
 
 (defun my/copy-file-path ()
-  "Show the full path file name in the minibuffer and copy to kill ring."
+  "現在のファイルの絶対パスをキルリングへ保存し、ミニバッファに表示する。"
   (interactive)
   (when buffer-file-name
     (my/copy-to-clipboard-and-message (file-truename buffer-file-name)
                                       (format "Copied file path: %s" buffer-file-name))))
 
 (defun my/copy-file-name ()
-  "Show the file name in the minibuffer and copy it to the kill ring."
+  "現在のファイル名をキルリングへ保存し、ミニバッファに表示する。"
   (interactive)
   (when buffer-file-name
     (let ((file-name (file-name-nondirectory buffer-file-name)))
       (my/copy-to-clipboard-and-message file-name
                                         (format "Copied file name: %s" file-name)))))
 
-;;;;;; [Group] Window Management - ウィンドウ管理 ;;;;;;
-;;; ウィンドウ関連操作
-;; 垂直分割
+;;;;; [Group] ウィンドウ管理 ;;;;;
+;; 上下に分割
 (defun my/split-window-vertically-n (num_wins)
-  "ウィンドウを垂直方向に NUM_WINS 分割。"
+  "現在のウィンドウを上下に NUM_WINS 個へ分割する。"
   (interactive (list (if current-prefix-arg
                          (prefix-numeric-value current-prefix-arg) 2)))
   (unless (and (integerp num_wins) (>= num_wins 2))
@@ -65,9 +63,9 @@
        (- (window-height) (/ (window-height) num_wins)))
       (my/split-window-vertically-n (- num_wins 1)))))
 
-;; 水平分割
+;; 左右に分割
 (defun my/split-window-horizontally-n (num_wins)
-  "ウィンドウを水平方向に NUM_WINS 分割。"
+  "現在のウィンドウを左右に NUM_WINS 個へ分割する。"
   (interactive (list (if current-prefix-arg
                          (prefix-numeric-value current-prefix-arg) 2)))
   (unless (and (integerp num_wins) (>= num_wins 2))
@@ -81,7 +79,7 @@
 
 ;; 他のウィンドウへ移動、または新規分割
 (defun my/other-window-or-split ()
-  "他のウィンドウへ移動、または新規分割。"
+  "次のウィンドウへ移動する。1 枚しかない場合は先に左右へ分割する。"
   (interactive)
   (when (one-window-p)
     (if (>= (window-body-width) 270)
@@ -91,7 +89,7 @@
 
 ;; ウィンドウリサイズ機能
 (defun my/window-resizer ()
-  "Control window size and position.
+  "キー入力で現在のウィンドウの大きさを調整する。
 [f] → 増加, [b] ← 減少, [n] ↓ 増加, [p] ↑ 減少, 他のキーで終了。"
   (interactive)
   (let ((dx (if (= (nth 0 (window-edges)) 0) 1 -1))

@@ -6,9 +6,9 @@
 ;;   M-x my/copilot-toggle                  … 切り替えて custom.el へ保存
 ;;   M-x customize-variable my/copilot-enabled … 3 値から選ぶ
 ;; 環境が揃わない場合は段階的に縮退する (C/C++ の三段フォールバックと同じ方針)。
-;;   Node.js が無い          → 宣言自体をロードしない (straight のクローンも行わない)
+;;   auto で Node.js が無い  → 宣言をロードしない（クローンも行わない）
 ;;   language server が無い  → copilot-mode を有効化しない (M-x copilot-install-server)
-;; セッション単位の一時的な on/off は C-c j m (copilot-mode) を使う。
+;; パッケージが有効な環境では C-c j m (copilot-mode) で現在のバッファだけ切り替える。
 ;; Chat モデル変更: C-c J m (copilot-chat-set-model) で切り替え
 
 ;;; Code:
@@ -16,7 +16,7 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function my/copilot--extend-jsonrpc-timeout "35-copilot")
 
-;;;;; [Group] Copilot Config - 設定グループとトグル ;;;;;
+;;;;; [Group] 設定グループとトグル ;;;;;
 (defgroup my/copilot nil
   "GitHub Copilot の設定."
   :prefix "my/copilot-"
@@ -39,10 +39,11 @@ nil にする。`my/copilot-toggle' から切り替えると custom.el へ保存
   "copilot language server の導入先。`copilot-install-dir' と一致させる。
 既定の .emacs.d/.cache/ はリポジトリ直下に自動生成物を作るため使わない。")
 
-;;;;; [Group] Node.js Path - パス検出 ;;;;;
+;;;;; [Group] パス検出 ;;;;;
+;; Node.js の検出処理は my-node-path.el にまとめる。実行は可用性判定の直前。
 (require 'my-node-path)
 
-;;;;; [Group] Copilot Availability - 可用性判定と切り替え ;;;;;
+;;;;; [Group] 可用性判定と切り替え ;;;;;
 ;; PATH の整備は可用性判定より前に行う
 ;; (nvm/fnm 配下の node を executable-find が拾えるようにするため)。
 (when my/copilot-enabled
@@ -93,7 +94,7 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
   (dolist (pkg '(org jsonrpc track-changes))
     (straight-override-recipe (list pkg :type 'built-in)))
 
-  ;;;;; [Group] Copilot - インライン補完 ;;;;;
+  ;;;;; [Group] インライン補完 ;;;;;
   ;;; Copilot - GitHub Copilot によるインライン補完
   ;; copilot.el リポジトリは独自の copilot-chat.el を同梱しており、そのまま
   ;; ビルドすると chep/copilot-chat.el と同名 feature (copilot-chat) が二重になる。
@@ -160,10 +161,9 @@ prog-mode のバッファを開くたびにエラーになる。導入は M-x co
         "C-c j e" "select-model")
       (which-key-add-key-based-replacements
         "C-c j"   "Copilot"
-        "C-c j m" "toggle-mode"))
-    )
+        "C-c j m" "toggle-mode")))
 
-  ;;;;; [Group] Copilot Chat - チャット ;;;;;
+  ;;;;; [Group] チャット ;;;;;
   ;;; request — copilot-chat の依存パッケージ
   (use-package request
     :straight t
@@ -268,9 +268,7 @@ Always respond in Japanese.")
         "C-c J g" "commit-msg"
         "C-c J m" "set-model"
         "C-c J c" "cancel"
-        "C-c J q" "reset"))
-    )
-  )
+        "C-c J q" "reset"))))
 
 (provide '35-copilot)
 ;;; 35-copilot.el ends here

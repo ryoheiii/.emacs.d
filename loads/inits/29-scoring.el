@@ -7,7 +7,7 @@
 (defvar-local my/input-query nil
   "補完候補のスコアリングに使う入力文字列。")
 
-;;;;; [Group] Scoring - スコアリング・履歴 ;;;;;
+;;;;; [Group] スコアリング・履歴 ;;;;;
 ;;; Flx - 柔軟なスコアリング
 (use-package flx
   :straight t
@@ -15,11 +15,11 @@
   :config
   ;; 入力文字を抽出
   (defun my/store-input-query (string &rest _args)
-    "Store the current completion query in `my/input-query'."
+    "現在の補完入力から空白を除き、スコア計算用に保存する。"
     (setq my/input-query (replace-regexp-in-string " " "" string)))
   (advice-add 'completion-all-completions :before #'my/store-input-query)
 
-  ;; ローカル変数を使用できるように再定義
+  ;; 遅延ロード先の変数を宣言する。既に設定された候補数は上書きしない。
   (defvar vertico--total nil)
   (defvar corfu--total nil)
 
@@ -63,8 +63,7 @@
   ;; キャッシュを1時間ごとにクリア
   (defvar my/flx-cache-timer nil)
   (setq my/flx-cache-timer
-        (run-with-timer 3600 3600 #'my/clear-flx-cache))
-  )
+        (run-with-timer 3600 3600 #'my/clear-flx-cache)))
 
 ;;; Prescient - 補完履歴とスコアリング
 (use-package prescient
@@ -74,8 +73,7 @@
   (prescient-save-file (my-set-history "prescient-save.el"))
   :config
   ;; prescient-persist-mode は autoload なし → パッケージは即ロード、ファイル I/O のみ遅延
-  (run-with-idle-timer 1 nil #'prescient-persist-mode 1)
-  )
+  (run-with-idle-timer 1 nil #'prescient-persist-mode 1))
 
 ;;; Vertico-prescient - `vertico` 用のスコアリング
 (use-package vertico-prescient
@@ -83,8 +81,7 @@
   :after vertico
   :config
   (setq vertico-prescient-enable-filtering nil)
-  (vertico-prescient-mode +1)
-  )
+  (vertico-prescient-mode +1))
 
 ;;; Corfu-prescient - `corfu` 用のスコアリング
 (use-package corfu-prescient
@@ -93,8 +90,7 @@
   :config
   (with-eval-after-load 'orderless
     (setq corfu-prescient-enable-filtering nil))
-  (corfu-prescient-mode +1)
-  )
+  (corfu-prescient-mode +1))
 
 (provide '29-scoring)
 ;;; 29-scoring.el ends here

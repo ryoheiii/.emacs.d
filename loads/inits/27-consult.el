@@ -7,7 +7,7 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function migemo-get-pattern "migemo")
 
-;;;;; [Group] Consult - 検索・絞り込み ;;;;;
+;;;;; [Group] 検索・絞り込み ;;;;;
 ;;; Consult - 多機能ミニバッファ補完
 (use-package consult
   :straight t
@@ -27,8 +27,7 @@
    ("C-x g"   . my/consult-ripgrep-or-grep)
    ;; 見出し (C/C++ ts モードでは関数定義) へジャンプ。M-s o は Emacs 標準の occur
    ;; なので奪わず、consult 上流の推奨 M-g o を使う
-   ("M-g o"   . consult-outline)
-   )
+   ("M-g o"   . consult-outline))
   :init
   ;; consult は遅延ロードのため、起動直後から xref 検索へ反映されるよう
   ;; :config でなく :init で設定する (defcustom は setq 済みの値を上書きしない)
@@ -55,28 +54,24 @@
     (interactive "P")
     (if (executable-find "rg")
         (consult-ripgrep dir initial)
-      (consult-grep dir initial)))
-  )
+      (consult-grep dir initial))))
 
-;;; Consult-yasnippet - Yasnippet の `consult` インテグレーション
+;;; consult-yasnippet - スニペットを補完一覧から選んで挿入
 (use-package consult-yasnippet
   :straight t
-  :bind ("C-c y" . consult-yasnippet)
-  )
+  :bind ("C-c y" . consult-yasnippet))
 
 ;;; Embark - ミニバッファアクション
 (use-package embark
   :straight t
   :bind
-  (("M-a" . embark-act))
-  )
+  (("M-a" . embark-act)))
 
 ;;; Embark-consult - `embark` と `consult` の連携
 (use-package embark-consult
   :straight t
   ;; embark-collect でのプレビューは embark-consult 自身がフックへ登録する
-  :after (embark consult)
-  )
+  :after (embark consult))
 
 ;;; Orderless - 高度な補完フィルタ
 (use-package orderless
@@ -96,7 +91,7 @@
             (invalid-regexp nil)))))
     (add-to-list 'orderless-matching-styles 'orderless-migemo))
 
-  ;; corfuはorderless-flexで絞り込む
+  ;; Corfu は orderless-flex で絞り込む。4 文字未満の単一語は前方一致を使う。
   (with-eval-after-load 'corfu
     (defun orderless-fast-dispatch (word index total)
       (and (= index 0) (= total 1) (length< word 4)
@@ -111,8 +106,7 @@
                   corfu-auto-prefix 1
                   completion-styles '(orderless-fast basic)))
 
-    (add-hook 'corfu-mode-hook #'my/setup-corfu-for-orderless))
-  )
+    (add-hook 'corfu-mode-hook #'my/setup-corfu-for-orderless)))
 
 (provide '27-consult)
 ;;; 27-consult.el ends here

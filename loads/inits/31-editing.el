@@ -1,6 +1,7 @@
 ;;; 31-editing.el --- コード編集とタグナビゲーションの設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; コード編集、C/C++ スタイル、タグナビゲーション、スニペット関連パッケージの設定
+;; コード編集、C/C++ スタイル、タグナビゲーション、スニペットの設定。
+;; スニペットの配置解決は my-snippets.el にまとめる。
 ;; ggtags カスタム関数群は loads/site-elisp/my-gtags.el、
 ;; LSP 階層ナビゲーション (C-t c/e/t/o/s) は loads/site-elisp/my-lsp-nav.el に定義
 
@@ -12,7 +13,7 @@
 (declare-function symbol-overlay-get-symbol "symbol-overlay")
 (declare-function my/safe-irony-completion-at-point "31-editing")
 
-;;;;; [Group] Code-editing - コード編集関連 ;;;;;
+;;;;; [Group] コード編集関連 ;;;;;
 ;;; Google C Style - Google の C スタイルガイドを適用
 (use-package google-c-style
   :straight t
@@ -23,14 +24,12 @@
 19-language-modes.el の my/cc-mode-setup とのフック実行順に依存しないための再明示."
     (google-set-c-style)
     (google-make-newline-indent)
-    (setq c-basic-offset 4))
-  )
+    (setq c-basic-offset 4)))
 
 ;;; Aggressive Indent - コード編集時の自動インデント調整
 (use-package aggressive-indent
   :straight t
-  :hook (emacs-lisp-mode . aggressive-indent-mode)
-  )
+  :hook (emacs-lisp-mode . aggressive-indent-mode))
 
 ;;; Smart Newline - 改行時の自動インデントと位置調整
 ;; 参考: https://ainame.hateblo.jp/entry/2013/12/08/162032
@@ -40,15 +39,13 @@
   ;; C-m は smart-newline-mode-map が束縛するためグローバルには束縛しない
   ;; （グローバル束縛はフックで限定したモード以外の RET まで置き換えていた）。
   :hook ((c++-mode c-mode c-ts-mode c++-ts-mode emacs-lisp-mode lisp-mode)
-         . smart-newline-mode)
-  )
+         . smart-newline-mode))
 
 ;;; move-text - テキスト行の移動機能
 (use-package move-text
   :straight t
   :bind (("C-M-p" . move-text-up)
-         ("C-M-n" . move-text-down))
-  )
+         ("C-M-n" . move-text-down)))
 
 ;;; Irony - C/C++ のコード補完とシンボル情報の提供
 ;; C/C++ 補完の三段フォールバックの 2 段目。
@@ -115,8 +112,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
          (message "irony: completion error (%s)" (error-message-string err)))
        nil)))
   (unless (advice-member-p #'my/safe-irony-completion-at-point 'irony-completion-at-point)
-    (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point))
-  )
+    (advice-add 'irony-completion-at-point :around #'my/safe-irony-completion-at-point)))
 
 ;;; Yasnippet Snippets - 追加スニペット集
 ;; yasnippet の :config 内で宣言すると straight の登録とビルドが :defer 1 まで遅れ、
@@ -127,8 +123,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
 (use-package yasnippet-snippets
   :straight t
   :after yasnippet
-  :demand t
-  )
+  :demand t)
 
 ;;; Yasnippet - コードスニペットの管理と挿入
 (require 'my-snippets)
@@ -151,10 +146,9 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
         (append (my/yas-personal-snippet-dirs)
                 (list 'yasnippet-snippets-dir)))
   :config
-  (my/yas-setup)
-  )
+  (my/yas-setup))
 
-;;;;; [Group] Tags - タグナビゲーション ;;;;;
+;;;;; [Group] タグナビゲーション ;;;;;
 ;;; Ggtags - GNU Global によるソースコード内のシンボル検索とナビゲーション
 ;; ggtags の xref バックエンドを経由せず、global コマンドを call-process で直接実行し
 ;; 結果を consult-xref → vertico で高速表示する
@@ -198,10 +192,9 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   (ggtags-highlight-tag nil)          ; パフォーマンス: カーソル位置のタグハイライト無効化
   :config
   (require 'my-gtags)
-  (require 'my-lsp-nav)
-  )
+  (require 'my-lsp-nav))
 
-;;;;; [Group] Multi-editing - 複数編集 ;;;;;
+;;;;; [Group] 複数編集 ;;;;;
 ;;; Multiple Cursors - 複数カーソルによる編集機能
 (use-package multiple-cursors
   :straight t
@@ -217,7 +210,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   :init
   ;; `repeat-mode` 用の `repeat-map` を作成
   (defvar-keymap my/mc-repeat-map
-    :doc "Keymap for repeating multiple-cursors commands"
+    :doc "multiple-cursors の操作を続けて実行するためのキーマップ。"
     :repeat t
     "p"  'mc/mark-previous-like-this
     "C-p" 'mc/mark-previous-like-this
@@ -246,14 +239,12 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
   ;; C-q をプレフィックスにしたため、標準の quoted-insert は C-q C-q で呼ぶ。
   ;; defvar-keymap の後に足すので :repeat の対象にならず、repeat-mode は継続しない。
   (keymap-set my/mc-repeat-map "C-q" #'quoted-insert)
-  (keymap-global-set "C-q" my/mc-repeat-map) ; `C-q` をプレフィックスキーとして設定
-  )
+  (keymap-global-set "C-q" my/mc-repeat-map)) ; `C-q` をプレフィックスキーとして設定
 
 ;;; Expand Region - 選択範囲をインクリメンタルに拡大・縮小
 (use-package expand-region
   :straight t
-  :bind (("C-," . er/expand-region))
-  )
+  :bind (("C-," . er/expand-region)))
 
 ;;; symbol-overlay - シンボルのハイライトと置換
 ;; ※ Auto Highlight Symbol の ahs-edit-mode が Emacs 29 で正常に動作しないため置き換え
@@ -300,7 +291,8 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
 
   ;; 現在の関数・メソッド内のシンボルをリネーム
   (defun my-symbol-overlay-rename-in-function ()
-    "現在の関数やメソッド内に表示されているシンボルのみをリネームする."
+    "現在の関数・メソッド内で、カーソル位置のシンボルと同名の箇所を置換する。
+関数の境界を扱わないモードでは、現在の編集可能範囲全体を対象にする。"
     (interactive)
     (let* ((symbol (symbol-overlay-get-symbol))
            (new-name (read-string (format "Rename '%s' to: " symbol)))
@@ -323,8 +315,7 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
                  ((derived-mode-p 'python-mode)
                   (save-excursion (python-nav-end-of-defun) (point)))
                  (t (point-max))))) ;; その他のモードではファイル全体
-      (my/symbol-overlay-replace-region symbol new-name start end)))
-  )
+      (my/symbol-overlay-replace-region symbol new-name start end))))
 
 (provide '31-editing)
 ;;; 31-editing.el ends here

@@ -8,7 +8,7 @@
 (require 'ert)
 (require 'my-gtags)
 
-;;;;; [Group] C++ Config - 編集・検索設定 ;;;;;
+;;;;; [Group] 編集・検索設定 ;;;;;
 ;; cc-mode 側のスタイル固定。ts モードが有効な環境では c-basic-offset などが
 ;; 存在しないため、同等の検証は my-test-cpp-config-c-ts-indent-google-equivalent
 ;; が担当する（どちらか一方が必ず走る）。
@@ -60,7 +60,7 @@ cons 形式は組み込み grep-default-command が型エラーになるため�
   :tags '(:cpp-config)
   (should (= read-process-output-max 1048576)))
 
-;;;;; [Group] C++ Config - eglot 起動条件 ;;;;;
+;;;;; [Group] eglot 起動条件 ;;;;;
 (defun my-test-cpp-config--eglot-called-p (dir file &optional no-clangd)
   "DIR の FILE で my/eglot-cc-maybe-ensure が eglot-ensure を呼ぶか返す.
 NO-CLANGD が non-nil なら clangd 不在環境を模擬する。"
@@ -104,8 +104,8 @@ NO-CLANGD が non-nil なら clangd 不在環境を模擬する。"
           (should-not (my-test-cpp-config--eglot-called-p with-cdb nil)))
       (delete-directory root t))))
 
-;;;;; [Group] C++ Config - tree-sitter 段階移行 ;;;;;
-;; 文法が無い環境（会社環境・CI）では cc-mode へ自動フォールバックすることが
+;;;;; [Group] tree-sitter 段階移行 ;;;;;
+;; 文法が無い環境では cc-mode へ自動フォールバックすることが
 ;; この機能の前提であるため、フォールバック側を最優先で固定する。
 (ert-deftest my-test-cpp-config-treesit-fallback ()
   "cpp 文法が無い環境では c++-mode の remap を登録せず cc-mode のまま動作する.
@@ -299,7 +299,7 @@ C と C++ は独立に判定するため、ここでは cpp 側だけを検査�
       (should (equal (buffer-string)
                      "struct A {\n    int value;\n};\nint f(int x) {\n    switch (x) {\n        case 1:\n            return x;\n    }\n    return 0;\n}\n")))))
 
-;;;;; [Group] C++ Config - ts モードの入力途中（ERROR 状態）のインデント ;;;;;
+;;;;; [Group] ts モードの入力途中（ERROR 状態）のインデント ;;;;;
 ;; 波括弧が 2 段以上開いていると tree-sitter は木全体を ERROR へ落とし、既定の
 ;; 規則は桁 0 へ倒す。括弧の深さから算出する経路を固定する。
 
@@ -438,7 +438,7 @@ ERROR そのものの場合に限る。関数本体の中だけが壊れてい�
       (should (equal (cons (my/c-ts-error-offset nil nil (line-beginning-position)) text)
                      (cons expected text))))))
 
-;;;;; [Group] C++ Config - ts モードの自動改行と hungry delete ;;;;;
+;;;;; [Group] ts モードの自動改行と hungry delete ;;;;;
 ;; cc-mode の c-toggle-auto-hungry-state 相当を組み込み機能で再現している。
 ;; 判定は構文テーブルと行内容だけを見るため、文法が無い環境でも検証できる
 ;; （c++-mode バッファを使う）。
@@ -647,7 +647,7 @@ helper の直接呼び出しでは electric-layout / electric-indent との連�
       (should (equal (buffer-substring-no-properties (point-min) (point-max))
                      expected)))))
 
-;;;;; [Group] C++ Config - 補完フォールバック段 ;;;;;
+;;;;; [Group] 補完フォールバック段 ;;;;;
 (ert-deftest my-test-cpp-config-irony-install-server-reachable ()
   "irony 未導入の環境でも M-x irony-install-server へ到達できること.
 irony 本体の irony-install-server には autoload cookie が無く、かつ
@@ -704,7 +704,7 @@ my/irony-maybe-enable がサーバー未導入時のロードを止めるため�
         (my/irony-maybe-enable)
         (should enabled)))))
 
-;;;;; [Group] C++ Config - フォーカス・タグ検索 ;;;;;
+;;;;; [Group] フォーカス・タグ検索 ;;;;;
 (ert-deftest my-test-cpp-config-focus-change ()
   :tags '(:cpp-config)
   (should-not focus-out-hook)
@@ -1182,7 +1182,7 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
           (should (equal (my/gtags--candidates "-P") '("sample.c"))))
       (delete-directory root t))))
 
-;;;;; [Group] C++ Config - LSP 階層ナビゲーション ;;;;;
+;;;;; [Group] LSP 階層ナビゲーション ;;;;;
 ;; my-lsp-nav.el は eglot を require しない。ここでは eglot の実物
 ;; (eglot--xref-make-match / eglot-uri-to-path / eglot--temp-location-buffers) を使い、
 ;; サーバーとの通信だけをスタブする。テストは別プロセスなので、起動経路で eglot を
@@ -1582,9 +1582,9 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
                                      "foo12bar" "no_such_symbol_22"))))))
       (delete-directory root t))))
 
-;;;;; [Group] C++ Config - 実 clangd との結合 ;;;;;
+;;;;; [Group] 実 clangd との結合 ;;;;;
 ;; clangd がある環境でだけ、要求層をスタブせずに実 JSON-RPC で LSP 経路を通す
-;; (CI の runner には clangd が無いため skip。tests/my-test-cpp-lane.el が許容する)。
+;; （PATH に clangd が無い場合の skip は tests/my-test-cpp-lane.el が許容する）。
 (defun my-test-cpp-config--wait (pred secs)
   "PRED が真になるまで最大 SECS 秒待ち、最後の評価値を返す."
   (let ((deadline (+ (float-time) secs)))
@@ -1705,7 +1705,7 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
                           (cdr entry))))
   (should eglot-extend-to-xref))
 
-;;;;; [Group] C++ Config - 読解補助 (outline) ;;;;;
+;;;;; [Group] 読解補助 (outline) ;;;;;
 ;; outline-minor-mode は treesit 連動の見出しが取れる ts モードだけで有効化する。
 ;; cc-mode の既定 (全行が見出し) では実用にならないため、4 モード parity の意図的な例外。
 (ert-deftest my-test-cpp-config-outline-hook-ts-only ()
@@ -1784,7 +1784,7 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
         (kill-buffer buffer))
       (delete-file file))))
 
-;;;;; [Group] C++ Config - 読解補助 (inlay hints) ;;;;;
+;;;;; [Group] 読解補助 (inlay hints) ;;;;;
 ;; 既定 OFF のまま、C-t l でバッファ単位に ON/OFF できること。eglot 本体の
 ;; eglot-inlay-hints-mode を通し、サーバーの capability 判定だけをスタブする。
 (ert-deftest my-test-cpp-config-inlay-hints-default-off ()

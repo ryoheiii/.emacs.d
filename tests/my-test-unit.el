@@ -6,7 +6,7 @@
 
 (require 'ert)
 
-;;;;; [Group] Unit - パスヘルパー ;;;;;
+;;;;; [Group] パスヘルパー ;;;;;
 (defconst my-test-unit--path-cases
   '((my-set-emacs "" ("single.el") "single.el"
                   ("nested/" "multiple.el") "nested/multiple.el")
@@ -40,13 +40,13 @@
                      (directory-file-name
                       (expand-file-name base user-emacs-directory)))))))
 
-;;;;; [Group] Unit - バックアップディレクトリ ;;;;;
+;;;;; [Group] バックアップディレクトリ ;;;;;
 (ert-deftest my-test-unit-backup-directory-exists ()
   "auto-save の保存先は early-init.el が事前作成する (transforms は作成しない)."
   :tags '(:unit)
   (should (file-directory-p my-backup-dir)))
 
-;;;;; [Group] Unit - load-path キャッシュ ;;;;;
+;;;;; [Group] load-path キャッシュ ;;;;;
 ;; load-path-filter-cache-directory-files は regexp-opt を呼ぶ。regexp-opt を preload
 ;; するのは X 対応ビルドだけで、端末専用ビルド (CI の Emacs など) では autoload の load が
 ;; フィルタを再び呼び無限再帰になる。手元の GUI 対応ビルドでは再現しないため、

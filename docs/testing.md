@@ -46,18 +46,18 @@ make test-startup   # 起動確認だけ
 | ターゲット | 検証内容 |
 |---|---|
 | `make lint` | `lint-sh`（shellcheck）と `lint-el`（Elisp の構文と byte compile。警告も失敗） |
-| `make test-unit` | `early-init.el` のパスヘルパー |
+| `make test-unit` | `early-init.el` のパスヘルパー、自動保存先の作成、端末専用ビルドの load-path キャッシュ |
 | `make test-startup` | フル起動、init-loader のエラーログ、起動時の警告 |
-| `make test-keybinding` | `C-t` の固定キーと追加キー、折りたたみのキー、`C-z` のタブ操作、パッケージ固有のキーマップ |
+| `make test-keybinding` | 基本操作・ウィンドウ操作・IME と `C-h` 変換、`C-t`、折りたたみ、`C-z` のタブ操作、パッケージ固有のキーマップ |
 | `make test-cpp-config` | C/C++ のスタイル、eglot 起動条件、検索経路、cc-mode と ts モードの切替、irony ゲート、読解補助。`clangd`、GNU Global、tree-sitter 文法が無い環境では、それを使う検査を skip する |
 | `make test-deferred` | `:defer` 付きパッケージの遅延ロード後の設定と、グローバルモードの有効化 |
 | `make test-invariants` | グローバルモードのフック登録、feature のロード状態、ts モードと cc-mode のフック登録の一致、組み込みパッケージの固定 |
 | `make test-tty` | 対話画面を開かない batch 実行で、端末向け設定が読み込まれる条件を検証 |
 | `make test-tty-live` | 擬似端末（pty）で実際に `emacs -nw` を起動し、モードライン、端末初期化、`C-t`、補完ポップアップを検証 |
 | `make test-setup` | 隔離した HOME での `emacs-setup.sh`（引数、ダウンロードの原子性、パッケージ復元、clangd の導入と削除） |
-| `make test-guards` | テスト基盤と lint 基盤の fail-closed ガードを故障注入で検査 |
+| `make test-guards` | テスト基盤と lint が、失敗を成功と誤判定しないことを故障注入で検査 |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |
-| `make test-audit-shell` | セットアップ・ベンチ・lockfile 照合の故障注入 |
+| `make test-audit-shell` | セットアップ・ベンチ・lockfile 照合と、レビュー・マージ手順の失敗時の動作 |
 | `make test-platform` | 実 OS の入力メソッド分岐、生成物パス、PATH 区切り文字 |
 
 ### 個別に実行するターゲット
@@ -72,7 +72,9 @@ make test-startup   # 起動確認だけ
 
 ## `test-tty-live` の注意
 
-- straight のビルドキャッシュを日常使いの Emacs と共有するため、その Emacs を起動したまま実行しない。
+- `STRAIGHT_DIR` で日常使いのキャッシュを指定した場合は、そのキャッシュを使う Emacs を起動したまま実行しない。
+  起動中の Emacs を残したい場合や別バージョンで検証する場合は、専用の `straight` ディレクトリを指定する。
+  既存キャッシュを複製するときは、`build/` 内のリンクが元の `repos/` を指していないことも確認する。
 - コールドキャッシュ（未ビルド）のときは、先に `make test-startup` などの batch 系ターゲットでビルドを済ませる。
   `test-tty-live` は 1 プロセスを 180 秒で打ち切るため、ビルドが間に合わないと失敗する。
 
@@ -92,7 +94,8 @@ tests/my-bench-summarize.sh .bench/out      # 中央値と IQR で集計
 ```
 
 計測は専用の worktree で行う。変更前後を比べるときは `BENCH_REPO_ROOT=<比較する checkout>` で対象を切り替え、
-両方の計測で同じ `STRAIGHT_DIR` を使う。出力先の `.bench/` は gitignored。
+両方の計測で同じ `EMACS` と `STRAIGHT_DIR` を使う。出力先の `.bench/` は gitignored。
+完走時に作られる `*-manifest.tsv` が集計対象を確定するため、ログだけを抜き出して混ぜない。
 
 ## CI
 

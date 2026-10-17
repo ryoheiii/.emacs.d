@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-;;;;; [Group] Corfu - バッファ内補完 ;;;;;
+;;;;; [Group] バッファ内補完 ;;;;;
 ;;; Corfu - 補完 UI
 (use-package corfu
   :straight t
@@ -18,12 +18,11 @@
    ("C-p"   . corfu-previous)
    ("C-s"   . corfu-scroll-down)
    ("M-n"   . nil)
-   ("M-p"   . nil)
-   )
+   ("M-p"   . nil))
   :custom
   (corfu-auto t)                              ; 自動補完
   (corfu-auto-delay 0)                        ; 入力後すぐに補完を表示
-  (corfu-auto-prefix 2)                       ; プレフィックス長
+  (corfu-auto-prefix 2)                       ; 基本値は 2 文字（27-consult.el のフックでは 1 文字）
   (corfu-cycle t)                             ; 候補リストのループ
   (corfu-on-exact-match nil)
   (corfu-preview-current nil)                 ; 現在の候補をプレビューしない
@@ -49,8 +48,7 @@
     (keymap-global-set "<remap> <c-indent-line-or-region>" #'indent-for-tab-command))
   (add-hook 'c-mode-hook #'my/corfu-remap-tab-command)
   (add-hook 'c++-mode-hook #'my/corfu-remap-tab-command)
-  (add-hook 'java-mode-hook #'my/corfu-remap-tab-command)
-  )
+  (add-hook 'java-mode-hook #'my/corfu-remap-tab-command))
 
 ;;; Corfu-terminal - 標準の tty 子フレームがない Emacs で端末補完を有効化
 (use-package corfu-terminal
@@ -58,8 +56,7 @@
   :commands corfu-terminal-mode
   :init
   (unless (featurep 'tty-child-frames)
-    (corfu-terminal-mode +1))
-  )
+    (corfu-terminal-mode +1)))
 
 ;;; corfu-popupinfo - 補完候補の横に説明用のポップアップを表示
 ;; ポップアップは子フレームで描画する。Emacs 31.1 からは tty でも子フレームが使えるため
@@ -68,8 +65,7 @@
   :straight nil
   :after corfu
   :if (or (display-graphic-p) (featurep 'tty-child-frames))
-  :hook (corfu-mode . corfu-popupinfo-mode)
-  )
+  :hook (corfu-mode . corfu-popupinfo-mode))
 
 ;;; Cape - `corfu` の補完バックエンド
 (use-package cape
@@ -79,33 +75,31 @@
   :config
   ;; 全モード共通の補完関数
   (defun my/global-capf ()
-    "Set up global `completion-at-point-functions` for all modes."
+    "全モード共通の補完関数と Eglot の補完を設定する。"
     (unless (advice-member-p #'cape-wrap-buster 'eglot-completion-at-point)
       (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster))
     (unless (advice-member-p #'cape-wrap-nonexclusive 'eglot-completion-at-point)
       (advice-add 'eglot-completion-at-point :around #'cape-wrap-nonexclusive))
     (add-hook 'completion-at-point-functions #'cape-dabbrev)
     (add-hook 'completion-at-point-functions #'cape-keyword)
-    (add-hook 'completion-at-point-functions #'cape-file)
-    )
+    (add-hook 'completion-at-point-functions #'cape-file))
 
   ;; Emacs Lisp の補完
   (defun my/set-elisp-capf ()
-    "Set up `completion-at-point-functions` for `elisp-mode`."
+    "Emacs Lisp バッファの補完関数を設定する。"
     (setq-local completion-at-point-functions
                 (list (cape-capf-super
                        #'cape-elisp-symbol
                        #'cape-elisp-block))))
 
-  ;; `M-x eval-expression` (`C-x C-e` など) でも補完可能に
+  ;; M-:（eval-expression）の入力欄でも Emacs Lisp のシンボルを補完する
   (add-hook 'eval-expression-minibuffer-setup-hook
             (lambda ()
               (add-hook 'completion-at-point-functions #'cape-elisp-symbol nil t)))
 
-  ;; dabbrevのサイズを制限
+  ;; dabbrev が候補を探す他バッファを 1 MiB 未満に限定する。
   (setq dabbrev-friend-buffer-function (lambda (other-buffer)
-                                         (< (buffer-size other-buffer) (* 1024 1024))))
-  )
+                                         (< (buffer-size other-buffer) (* 1024 1024)))))
 
 (provide '28-corfu)
 ;;; 28-corfu.el ends here

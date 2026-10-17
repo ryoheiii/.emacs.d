@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""manifest をコミット点として、全指標に同じ有効試行集合を使う。"""
+"""完走時に確定した manifest の試行一覧を使い、全指標を同じログ集合から集計する。"""
 from pathlib import Path
 import re
 import statistics

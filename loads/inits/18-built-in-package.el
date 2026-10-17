@@ -1,6 +1,6 @@
 ;;; 18-built-in-package.el --- 組み込みパッケージの設定 -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; Emacs 組み込みパッケージの設定
+;; 表示・保存・検索などの組み込み機能と、C/C++ の言語サーバーを設定する。
 
 ;;; Code:
 
@@ -11,26 +11,24 @@
 (defvar eglot-ignored-server-capabilities)
 (defvar my/auto-save-visited-in-progress)
 
-;;;;;; [Group] Diff & Comparison - 差分・比較 ;;;;;;
+;;;;; [Group] 差分・比較 ;;;;;
 (use-package ediff
   :straight nil
   :defer t ; 組み込みコマンドの autoload で初回利用時に読み込む
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain) ;; コントロールバッファを同一フレームに表示
-  (ediff-split-window-function 'split-window-horizontally) ;; diff のバッファを左右に配置
-  )
+  (ediff-split-window-function 'split-window-horizontally)) ;; diff のバッファを左右に配置
 
-;;;;;; [Group] Visual Enhancements - 視覚的な補助 ;;;;;;
-;;; Paren - 括弧の対応関係を視覚化する設定。カーソル位置の括弧ペアを強調表示
+;;;;; [Group] 視覚的な補助 ;;;;;
+;;; paren - 対応する括弧を強調表示
 (use-package paren
   :straight nil
   ;; show-paren-mode は Emacs 28+ でデフォルト有効のため hook 不要
   :custom
   (show-paren-delay 0)      ;; 遅延なしで即時ハイライト
-  (show-paren-style 'mixed) ;; ウィンドウ内に収まらないときだけ括弧内も光らせる
+  (show-paren-style 'mixed) ;; 対応する括弧が見えないときは、括弧内の式も強調する
   :custom-face
-  (show-paren-match ((t (:background "#6b93b7" :foreground "#2e3440" :weight bold)))) ;; 薄めの青系
-  )
+  (show-paren-match ((t (:background "#6b93b7" :foreground "#2e3440" :weight bold))))) ;; 薄めの青系
 
 ;;; Whitespace - 空白文字の視覚化。スペース、タブ、行末の空白などを明確に表示
 (use-package whitespace
@@ -52,18 +50,16 @@
   (set-face-attribute 'whitespace-trailing nil :background "Black" :foreground "DeepPink" :underline t)
   (set-face-attribute 'whitespace-tab nil :background "Black" :foreground "DarkMagenta" :underline t)
   (set-face-attribute 'whitespace-space nil :background "Black" :foreground "GreenYellow" :weight 'bold)
-  (set-face-attribute 'whitespace-empty nil :background "Black")
-  )
+  (set-face-attribute 'whitespace-empty nil :background "Black"))
 
-;;; Display-fill-column-indicator - テキストの折り返し位置を視覚的に示す
+;;; display-fill-column-indicator - fill-column の桁に目安の線を表示
 (use-package display-fill-column-indicator
   :straight nil
   :hook ((prog-mode . display-fill-column-indicator-mode)
          (markdown-mode . display-fill-column-indicator-mode))
   :custom
   (display-fill-column-indicator-column 120)
-  (display-fill-column-indicator-character ?|)
-  )
+  (display-fill-column-indicator-character ?|))
 
 ;;; 表示設定
 (use-package time
@@ -72,10 +68,9 @@
   :custom
   (display-time-day-and-date t)
   (display-time-string-forms '((format "%s/%s (%s) %s:%s"
-                                       month day dayname 24-hours minutes)))
-  )
+                                       month day dayname 24-hours minutes))))
 
-;;;;;; [Group] Tree-sitter - 構文解析基盤 ;;;;;;
+;;;;; [Group] 構文解析基盤 ;;;;;
 ;;; Treesit - 文法ライブラリの配置先と導入経路
 ;; 配置先・取得元・導入コマンドは loads/site-elisp/my-treesit.el が持つ。
 ;; use-package と straight に依存しないライブラリにしてあり、emacs-setup.sh の
@@ -88,14 +83,12 @@
 (use-package treesit
   :straight nil
   ;; treesit.el のロードは grammar 導入時だけで足りる (起動経路では読まない)。
-  ;; 宣言自体は残す — use-package のバイトコンパイル時の先読みが無くなると、
-  ;; 19-language-modes.el の treesit-* 参照が未定義警告になる。
+  ;; 初期化では導入コマンドだけを用意し、構文解析の本体は必要になってから読む。
   :defer t
   :init
-  (require 'my-treesit)
-  )
+  (require 'my-treesit))
 
-;;;;;; [Group] LSP - Language Server ;;;;;;
+;;;;; [Group] 言語サーバー ;;;;;
 ;; C/C++ 補完の三段フォールバック (環境に応じて自動選択)
 ;;   1. clangd + compile_commands.json/.clangd あり → eglot
 ;;   2. irony-server 実体あり                        → irony (31-editing.el)
@@ -179,11 +172,10 @@ eglot 未管理のバッファでは `user-error'。"
   (add-to-list 'eglot-server-programs
                '((c-mode c-ts-mode c++-mode c++-ts-mode)
                  . ("clangd" "--background-index" "--header-insertion=never"
-                    "--header-insertion-decorators=0" "--limit-references=0")))
-  )
+                    "--header-insertion-decorators=0" "--limit-references=0"))))
 
-;;;;;; [Group] Search - 検索 ;;;;;;
-;;; Grep - ファイル内検索機能の設定。特定のパターンに基づいてファイルを検索
+;;;;; [Group] 検索 ;;;;;
+;;; grep - ファイルの内容を検索
 ;; consult-ripgrep (C-x g) が .gitignore を尊重するのに対し、C-c g は生 grep
 (use-package grep
   :straight nil
@@ -192,17 +184,15 @@ eglot 未管理のバッファでは `user-error'。"
   ;; 初期入力を "grep -nr -e  ." とし、カーソルを -e の直後へ置く
   ;; (cons 形式は組み込み grep-default-command が string-match で型エラーになるため不可)
   (grep-command "grep -nr -e  .")
-  (grep-command-position 13)
-  )
+  (grep-command-position 13))
 
-;;;;;; [Group] Editing - 編集補助 ;;;;;;
+;;;;; [Group] 編集補助 ;;;;;
 ;; Elec-pair - 括弧の自動補完設定。入力中の括弧を自動的にペアで補完
 (use-package elec-pair
   :straight nil
-  :hook (after-init . electric-pair-mode)
-  )
+  :hook (after-init . electric-pair-mode))
 
-;;; Savehist - 履歴の保存設定。検索履歴やコマンド履歴をファイルに保存
+;;; savehist - ミニバッファ入力と検索語の履歴を保存
 (use-package savehist
   :straight nil
   :hook (after-init . savehist-mode)
@@ -210,24 +200,21 @@ eglot 未管理のバッファでは `user-error'。"
   (history-length 3000)
   (savehist-additional-variables '(search-ring regexp-search-ring))
   (savehist-autosave-interval 60)
-  (savehist-file (my-set-history "savehist")) ;; my-set-history @early-init.el
-  )
+  (savehist-file (my-set-history "savehist")))
 
-;;; Saveplace - カーソル位置の保存。ファイルを再度開いた時に前回のカーソル位置を保持
+;;; saveplace - ファイルを開き直したときにカーソル位置を復元
 (use-package saveplace
   :straight nil
   :hook (after-init . save-place-mode)
   :custom
-  (save-place-file (my-set-history "places")) ;; my-set-history @early-init.el
-  )
+  (save-place-file (my-set-history "places")))
 
 ;;; 他プロセスの編集をバッファに反映
 (use-package autorevert
   :straight nil
-  :hook (after-init . global-auto-revert-mode)
-  )
+  :hook (after-init . global-auto-revert-mode))
 
-;;; Auto-save-visited - 一定時間経過しても操作がない場合、バッファを自動保存
+;;; auto-save-visited - アイドル時に訪問中のファイルへ自動保存
 ;; タイマーが呼ぶ保存関数を差し替え、00-core.el の保存フックがタイマー経由の保存を
 ;; 識別できるようにする（入力途中の末尾空白を消さない・モードラインを光らせない）。
 ;; auto-save-visited-mode は run-with-idle-timer に save-some-buffers と引数を直接渡すため、
@@ -251,21 +238,18 @@ eglot 未管理のバッファでは `user-error'。"
                           (timer--args auto-save--timer))))
   :custom (auto-save-visited-interval 30)
   :hook ((after-init . auto-save-visited-mode)
-         (auto-save-visited-mode . my/auto-save-visited-mark-timer))
-  )
+         (auto-save-visited-mode . my/auto-save-visited-mark-timer)))
 
-;;; Delsel - 選択している状態で入力したときに、region を削除して挿入
+;;; delsel - 入力した文字で選択範囲を置き換える
 (use-package delsel
   :straight nil
-  :hook (after-init . delete-selection-mode)
-  )
+  :hook (after-init . delete-selection-mode))
 
-;;;;;; [Group] Window & Buffer Management - ウィンドウ・バッファ管理 ;;;;;;
+;;;;; [Group] ウィンドウ・バッファ管理 ;;;;;
 ;;; Windmove - ウィンドウ間の移動設定。Shift + 矢印キーでウィンドウ間を移動
 (use-package windmove
   :straight nil
-  :hook (after-init . windmove-default-keybindings)
-  )
+  :hook (after-init . windmove-default-keybindings))
 
 ;;; Uniquify - バッファ名のユニーク化。同名ファイルを開いた際にディレクトリ名で区別
 (use-package uniquify
@@ -274,8 +258,7 @@ eglot 未管理のバッファでは `user-error'。"
   (uniquify-buffer-name-style 'forward)
   (uniquify-separator "/")
   (uniquify-after-kill-buffer-flag t)
-  (uniquify-ignore-buffers-re "^\\*")
-  )
+  (uniquify-ignore-buffers-re "^\\*"))
 
 ;;; Tab-bar - Emacsのタブ機能をカスタマイズ
 (use-package tab-bar
@@ -305,27 +288,23 @@ eglot 未管理のバッファでは `user-error'。"
          ("6" . tab-bar-select-tab)
          ("7" . tab-bar-select-tab)
          ("8" . tab-bar-select-tab)
-         ("9" . tab-bar-select-tab))
-  )
+         ("9" . tab-bar-select-tab)))
 
-;;;;;; [Group] Performance Optimization - パフォーマンス最適化 ;;;;;;
-;;; So-long - 長い行を含むファイルを最適化
+;;;;; [Group] パフォーマンス最適化 ;;;;;
+;;; so-long - 非常に長い行があるバッファで、表示の重い機能を抑える
 (use-package so-long
   :straight nil
-  :hook (after-init . global-so-long-mode)
-  )
+  :hook (after-init . global-so-long-mode))
 
 ;;; tramp - defer で遅延読み込み
 (use-package tramp
   :straight nil
-  :defer t
-  )
+  :defer t)
 
 ;;; repeat - キーのリピート (multiple-cursors などで利用)
 (use-package repeat
   :straight nil
-  :hook (after-init . repeat-mode)
-  )
+  :hook (after-init . repeat-mode))
 
 (provide '18-built-in-package)
 ;;; 18-built-in-package.el ends here

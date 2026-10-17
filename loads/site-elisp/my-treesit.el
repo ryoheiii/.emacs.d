@@ -10,8 +10,7 @@
 ;; use-package と straight に依存しないため、パッケージを 1 つも導入していない
 ;; 環境でも単体でロードできる (emacs-setup.sh --setup-treesit がこの形で使う)。
 ;;
-;;   emacs --batch -l early-init.el -l loads/site-elisp/my-treesit.el \
-;;     -f my/treesit-install-c-grammars
+;; 通常の導入はリポジトリ直下で ./emacs-setup.sh --setup-treesit を実行する。
 ;;
 ;; 文法が無い環境では 19-language-modes.el の remap が成立せず cc-mode のまま動作する。
 ;; 自動ではインストールしない。

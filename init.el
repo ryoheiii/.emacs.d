@@ -1,6 +1,6 @@
 ;;; init.el --- Emacs 初期設定  -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; Emacs の起動時に実行する設定
+;; 自作ライブラリの検索パスと use-package を準備し、番号順に設定を読み込む。
 
 ;;; Code:
 
@@ -36,8 +36,7 @@
   ;; ロードエラーがあったときだけ *init log* を表示する (nil だと黙って握り潰される)
   (init-loader-show-log-after-init 'error-only)
   :config
-  (init-loader-load (my-set-loads "inits/"))
-  )
+  (init-loader-load (my-set-loads "inits/")))
 
 (provide 'init)
 ;;; init.el ends here

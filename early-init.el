@@ -1,17 +1,15 @@
 ;;; early-init.el --- Emacs の起動前設定  -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; Emacs の起動前に実行される設定（パッケージ管理・ディレクトリ設定）
+;; init.el より前に、保存先・個人設定・パッケージ基盤を準備する。
+;; 起動中だけ抑える GC とファイルハンドラは、対応する起動フックで復元する。
 
 ;;; Code:
 
-;;;;; [Group] Debug ;;;;;
-;; (setq debug-on-error t)
-
-;;;;; [Group] GC - 起動時の GC 抑制 ;;;;;
+;;;;; [Group] 起動時の GC 抑制 ;;;;;
 ;; 起動中は GC を完全に抑制し、emacs-startup-hook で適正値に復元（00-core.el）
 (setq gc-cons-threshold most-positive-fixnum)
 
-;;;;; [Group] Startup - file-name-handler 最適化 ;;;;;
+;;;;; [Group] file-name-handler 最適化 ;;;;;
 ;; init 読み込み中はハンドラを無効化し、引数のファイルを開く前に復元する
 ;; (バッチ実行では復元フックが発火しないため対話起動に限定する)
 (defvar my/saved-file-name-handler-alist nil)
@@ -26,28 +24,26 @@
         file-name-handler-alist nil)
   (add-hook 'after-init-hook #'my/restore-file-name-handlers -90))
 
-;;;;; [Group] Define - 定数
+;;;;; [Group] 定数 ;;;;;
 ;;; OS判定用定数
 (defconst IS-MAC (eq system-type 'darwin))
 (defconst IS-LINUX (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 (defconst IS-WINDOWS (memq system-type '(cygwin windows-nt ms-dos)))
 
-
-
-;;;;; [Group] Auto Files Place - 自動生成ファイル関連制御 ;;;;;
+;;;;; [Group] 自動生成ファイル関連制御 ;;;;;
 ;;; Emacs の各種ディレクトリとファイルパスの設定
-(defvar my-emacs-dir    (expand-file-name user-emacs-directory))      ;; /path/to/userhome/.emacs.d/
+(defvar my-emacs-dir    (expand-file-name user-emacs-directory))
 
-(defvar my-loads-dir    (expand-file-name "loads/"    my-emacs-dir))  ;; /path/to/userhome/.emacs.d/loads
-(defvar my-straight-dir (expand-file-name "straight/" my-loads-dir))  ;; /path/to/userhome/.emacs.d/loads/straight
+(defvar my-loads-dir    (expand-file-name "loads/"    my-emacs-dir))
+(defvar my-straight-dir (expand-file-name "straight/" my-loads-dir))
 
-(defvar my-custom-dir   (expand-file-name "custom/"   my-emacs-dir))  ;; /path/to/userhome/.emacs.d/custom
+(defvar my-custom-dir   (expand-file-name "custom/"   my-emacs-dir))
 
-(defvar my-var-dir      (expand-file-name "var/"      my-emacs-dir))  ;; /path/to/userhome/.emacs.d/var
-(defvar my-history-dir  (expand-file-name "hist/"     my-var-dir))    ;; /path/to/userhome/.emacs.d/var/hist/
-(defvar my-backup-dir   (expand-file-name "backup/"   my-var-dir))    ;; /path/to/userhome/.emacs.d/var/backup/
-(defvar my-package-dir  (expand-file-name "package/"  my-var-dir))    ;; /path/to/userhome/.emacs.d/var/package/
-(defvar my-db-dir       (expand-file-name "database/" my-var-dir))    ;; /path/to/userhome/.emacs.d/var/database/
+(defvar my-var-dir      (expand-file-name "var/"      my-emacs-dir))
+(defvar my-history-dir  (expand-file-name "hist/"     my-var-dir))
+(defvar my-backup-dir   (expand-file-name "backup/"   my-var-dir))
+(defvar my-package-dir  (expand-file-name "package/"  my-var-dir))
+(defvar my-db-dir       (expand-file-name "database/" my-var-dir))
 
 ;;; パス設定ヘルパ関数
 (defun my-set-emacs (&rest args) (expand-file-name (apply 'concat args) my-emacs-dir))
@@ -100,8 +96,7 @@
 ;; （use-package の :init では間に合わない — :straight が先に処理されるため）
 (setq yas-snippet-dirs (list (my-set-custom "snippets")))
 
-
-;;;;; [Group] UI Performance - 起動時の UI 最適化 ;;;;;
+;;;;; [Group] 起動時の UI 最適化 ;;;;;
 (setq frame-inhibit-implied-resize t) ; フレームの暗黙リサイズを抑制
 (setq inhibit-compacting-font-caches t) ; フォントキャッシュの圧縮を抑制
 (setq use-file-dialog nil)           ; ファイル選択ウィンドウを使用しない
@@ -117,9 +112,7 @@
       scroll-bar-mode nil)
 (blink-cursor-mode 0)                ; カーソルの点滅を止める
 
-
-
-;;;;; [Group] Package Management - パッケージ管理 ;;;;;
+;;;;; [Group] パッケージ管理 ;;;;;
 ;;; load-path 走査結果のキャッシュ (Emacs 31.1)
 ;; load/require のたびに load-path の全ディレクトリ (straight の build/ 配下と組み込み) を
 ;; 拡張子ごとに探索する処理を、ディレクトリ単位のファイル一覧キャッシュで絞り込む。

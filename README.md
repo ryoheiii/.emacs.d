@@ -56,7 +56,7 @@ emacs -nw                              # 初回は straight がパッケージ�
 | pandoc | `--setup` | Markdown のプレビューが無効 |
 | xclip | `sudo apt install xclip`（`--setup` に含まれない） | 端末でシステムクリップボードを共有できない |
 | tree-sitter 文法（C/C++） | `--setup-treesit`。tree-sitter 対応の Emacs（`--install` で作ったものは対応）、`git`、C コンパイラが必要（[詳細](docs/cpp.md#文法の導入と-cc-mode-への固定)） | cc-mode で動く |
-| Node.js | `--setup-node`（fnm / nvm で導入済みなら不要） | Copilot 関連を一切読み込まない |
+| Node.js | `--setup-node`（fnm / nvm で導入済みなら不要） | 既定の `auto` では Copilot 関連を読み込まない |
 | Copilot language server | Node.js 導入後に Emacs を再起動し、`M-x copilot-install-server` → `M-x copilot-login` | `copilot-mode` が有効化されない |
 | irony-server | `M-x irony-install-server`（`cmake` と libclang は `--setup` に含まれる） | cape + GNU Global で補完 |
 | Nerd Font | `M-x nerd-icons-install-fonts` | GUI のアイコン表示だけに影響。端末では使わない |
