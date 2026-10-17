@@ -53,7 +53,7 @@ make test-startup   # 起動確認だけ
 | `make test-deferred` | `:defer` 付きパッケージの遅延ロード後の設定と、グローバルモードの有効化 |
 | `make test-invariants` | グローバルモードのフック登録、feature のロード状態、ts モードと cc-mode のフック登録の一致、組み込みパッケージの固定 |
 | `make test-tty` | 対話画面を開かない batch 実行で、端末向け設定が読み込まれる条件を検証 |
-| `make test-tty-live` | 擬似端末（pty）で実際に `emacs -nw` を起動し、モードライン、端末初期化、`C-t`、操作検索・日本語のキー案内とヘルプ・80 桁の Git メニュー、補完ポップアップを検証 |
+| `make test-tty-live` | 擬似端末（pty）で実際に `emacs -nw` を起動し、モードライン、端末初期化、`C-t`、操作検索・日本語のキー案内とヘルプ・80 桁の Git・Copilot Chat の下位メニューと退出後のキー、補完ポップアップを検証 |
 | `make test-setup` | 隔離した HOME での `emacs-setup.sh`（引数、ダウンロードの原子性、パッケージ復元、clangd の導入と削除） |
 | `make test-guards` | テスト基盤と lint が、失敗を成功と誤判定しないことを故障注入で検査 |
 | `make test-audit` | 編集・補完・ユーティリティの入力境界とデータ保全 |

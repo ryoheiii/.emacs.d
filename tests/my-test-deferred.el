@@ -108,6 +108,10 @@
     (require feature)
     (should (eq (featurep 'magit) (eq feature 'magit)))
     (should-not (featurep 'difftastic))
+    ;; 下位メニューの説明は magit 本体より先の初回ロードでも届く。
+    (should (equal (plist-get (cdr (transient-get-suffix 'magit-diff "u"))
+                              :description)
+                   "未追加の差分"))
     ;; メニュー項目の登録と定義の取得だけでは、本体をロードしない。
     (dolist (entry '(("D" . difftastic-magit-diff)
                      ("S" . difftastic-magit-show)))
