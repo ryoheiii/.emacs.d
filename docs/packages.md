@@ -33,7 +33,7 @@ GitHub へ到達できない環境へパッケージを持ち込むときに使�
 [GitHub へ到達できない環境](../README.md#github-へ到達できない環境)。ここでは `--extract-package` の挙動と失敗時の復旧を書く。
 
 - `--extract-package` はアーカイブを展開して検証した後、既存の `loads/straight/` を `loads/straight.bak` へ退避して配置し、
-  `var/cache/eln-cache/` を破棄する（旧 `var/package/eln-cache/` と `var/packages/eln-cache/` も対象）。続けて設定を読み込んで全パッケージをリビルドし、成功したら `loads/straight.bak` を削除する。
+  `var/cache/eln-cache/` を破棄する。続けて設定を読み込んで全パッケージをリビルドし、成功したら `loads/straight.bak` を削除する。
 - 設定の読み込みエラー（`custom/custom.el` や `loads/inits/99-private.el` のものを含む）があるとリビルドを始めずに中止する。
 - リビルドに失敗すると `loads/straight.bak` が残り、残っている間は `--extract-package` を再実行できない。
   元の状態へ戻すには次を実行する。

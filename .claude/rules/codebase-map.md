@@ -7,7 +7,7 @@ globs: ["early-init.el", "init.el", "loads/**/*.el"]
 
 ## 起動シーケンス
 
-1. `early-init.el` — Emacs UI 描画前に実行する。OS 判定定数（`IS-MAC`、`IS-LINUX`、`IS-WINDOWS`）、全ディレクトリパス変数（`my-emacs-dir`、`my-loads-dir`、`my-var-dir` など）、パスヘルパーを定義する。旧配置のデータは `my-runtime.el` で移行する。さらに `package.el` の無効化、`straight.el` のブートストラップ、バックアップ／自動保存先の設定、不要な UI 要素の除去を行う。
+1. `early-init.el` — Emacs UI 描画前に実行する。OS 判定定数（`IS-MAC`、`IS-LINUX`、`IS-WINDOWS`）、全ディレクトリパス変数（`my-emacs-dir`、`my-loads-dir`、`my-var-dir` など）、パスヘルパーを定義する。保存先の準備では `my-runtime.el` を読み込む。さらに `package.el` の無効化、`straight.el` のブートストラップ、バックアップ／自動保存先の設定、不要な UI 要素の除去を行う。
 2. `init.el` — 最小限のエントリーポイントである。`loads/site-elisp/` を `load-path` に加え、straight 経由で `use-package` をインストールし、`init-loader` で `loads/inits/` 内の設定を読み込む。
 3. `loads/inits/` — `init-loader` が番号／アルファベット順に読み込むモジュール型設定ファイル群である。
 
