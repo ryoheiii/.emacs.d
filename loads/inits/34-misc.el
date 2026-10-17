@@ -8,23 +8,39 @@
 (use-package which-key
   :straight nil
   :preface
+  (defvar my/which-key--keymap nil
+    "which-key の候補を取得しているキーマップ。")
+  (defun my/which-key-with-keymap (function &optional prefix keymap filter recursive)
+    "FUNCTION による候補取得中、実際の割り当てを参照できるようにする。"
+    (let ((my/which-key--keymap
+           (or keymap
+               (make-composed-keymap
+                (append (current-active-maps t)
+                        (mapcar #'symbol-value which-key-extra-keymaps))))))
+      (funcall function prefix keymap filter recursive)))
   (defun my/which-key-group-bindings (format-function bindings &optional full-key)
     "BINDINGS の同一コマンドのキーをまとめ、説明を一度だけ表示する。
 FORMAT-FUNCTION と FULL-KEY による標準の翻訳・装飾・非表示を維持する。"
     (let ((groups (make-hash-table :test #'eq))
           rows)
       (dolist (binding bindings)
-        ;; cdr は日本語への置換前に which-key がキーマップから取得した割り当て先。
-        ;; prefix や lambda など、コマンドを特定できない表示はまとめない。
-        (let* ((command (intern-soft (cdr binding)))
+        ;; 表示用の文字列から型は復元できないため、元のキーで実体を取得する。
+        ;; シンボルコマンドだけをまとめ、マクロ・prefix・無名関数は維持する。
+        (let* ((command (and my/which-key--keymap
+                             (lookup-key my/which-key--keymap (kbd (car binding)))))
+               (command (and (symbolp command) (commandp command)
+                             (not (keymapp command)) command))
+               (command (and command
+                             (or (and which-key-compute-remaps
+                                      (command-remapping command))
+                                 command)))
                (row (car (funcall format-function (list binding) full-key)))
-               (group (and (commandp command) (not (keymapp command))
-                           (gethash command groups))))
+               (group (and command (gethash command groups))))
           (when row
             (if group
                 (setcar group (concat (car group) "/" (car row)))
               (push row rows)
-              (when (and (commandp command) (not (keymapp command)))
+              (when command
                 (puthash command row groups))))))
       (nreverse rows)))
   :custom
@@ -35,6 +51,7 @@ FORMAT-FUNCTION と FULL-KEY による標準の翻訳・装飾・非表示を維
   :hook
   (after-init . which-key-mode)          ; Emacs 起動後に which-key モードを有効化
   :config
+  (advice-add 'which-key--get-bindings :around #'my/which-key-with-keymap)
   (advice-add 'which-key--format-and-replace :around #'my/which-key-group-bindings)
   ;; コマンド名に対する表示の置換なので、モード側がキーを上書きしても誤案内しない。
   (dolist (entry (append my/key-guide-commands my/key-guide--cpp-commands

@@ -158,22 +158,26 @@
   "同一コマンドのキーをまとめ、別コマンド・prefix・非表示を区別すること。"
   :tags '(:keybinding)
   (require 'which-key)
-  (let* ((which-key-replacement-alist
-          '((("\\`hidden\\'" . nil) . t)
+  (let* ((which-key-sort-order nil)
+         (which-key-replacement-alist
+          '((("\\`h\\'" . nil) . t)
             ((nil . "\\`forward-char\\'") . (nil . "移動"))
             ((nil . "\\`backward-char\\'") . (nil . "移動"))))
-         (rows (which-key--format-and-replace
-                '(("C-f" . "forward-char") ("f" . "forward-char")
-                  ("b" . "backward-char")
-                  ("x" . "prefix") ("y" . "prefix")
-                  ("hidden" . "forward-char")))))
-    (should (equal (mapcar #'car rows) '("C-f/f" "b" "x" "y")))
-    (should (equal (mapcar #'caddr (seq-take rows 2)) '("移動" "移動"))))
+         (map (make-sparse-keymap)))
+    (dolist (key '("C-f" "f" "h"))
+      (keymap-set map key #'forward-char))
+    (keymap-set map "b" #'backward-char)
+    (keymap-set map "x" (make-sparse-keymap))
+    (keymap-set map "y" (make-sparse-keymap))
+    (let ((rows (which-key--get-bindings nil map)))
+      (should (equal (mapcar #'car rows) '("C-f/f" "b" "x" "y")))
+      (should (equal (mapcar #'caddr (seq-take rows 2)) '("移動" "移動")))))
   ;; 全キー一覧では prefix を含むキー表記も欠落しない。
-  (should (equal (caar (which-key--format-and-replace
-                       '(("C-t C-e" . "my/lsp-find-callees")
-                         ("C-t e" . "my/lsp-find-callees")) t))
-                 "C-t C-e/C-t e")))
+  (let ((map (make-sparse-keymap)))
+    (keymap-set map "C-t e" #'my/lsp-find-callees)
+    (keymap-set map "C-t C-e" #'my/lsp-find-callees)
+    (should (equal (caar (which-key--get-bindings nil map nil t))
+                   "C-t e/C-t C-e"))))
 
 (ert-deftest my-test-keybindings-which-key-overridden-command ()
   "一方のキーが別コマンドに変われば、説明文が同じでも別々に表示すること。"
@@ -192,6 +196,17 @@
       (let ((rows (which-key--get-bindings (kbd "C-t"))))
         (should (equal (mapcar #'car rows) '("e" "C-e")))
         (should (equal (mapcar #'caddr rows) '("移動" "移動")))))))
+
+(ert-deftest my-test-keybindings-which-key-binding-types ()
+  "コマンド名と同じ文字列のマクロやメニュー名を誤統合しないこと。"
+  :tags '(:keybinding)
+  (require 'which-key)
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "a") #'forward-char)
+    (define-key map (kbd "b") "forward-char")
+    (define-key map (kbd "c") '("forward-char" . backward-char))
+    (should (equal (mapcar #'car (which-key--get-bindings nil map))
+                   '("a" "b" "c")))))
 
 (ert-deftest my-test-keybindings-japanese-mode-help ()
   "モード固有のキー一覧にも日本語の説明を添えること。"
