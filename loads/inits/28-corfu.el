@@ -27,7 +27,7 @@
   (corfu-cycle t)                             ; 候補リストのループ
   (corfu-on-exact-match nil)
   (corfu-preview-current nil)                 ; 現在の候補をプレビューしない
-  (corfu-preselect 'prompt)                   ; 最初の候補を選択
+  (corfu-preselect 'prompt)                   ; プロンプトを選択（候補は C-n / C-p で選ぶ）
   (corfu-scroll-margin 2)                     ; スクロールマージン
   (corfu-separator ?\s)                       ; orderless 用のセパレータ
   (completion-ignore-case t)                  ; 大文字小文字を区別しない
