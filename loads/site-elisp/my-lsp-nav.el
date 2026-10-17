@@ -232,7 +232,7 @@ eglot の xref バックエンド (`xref-backend-apropos') は内部の要求ラ
 LSP 管理下は workspace/symbol (名前のファジー一致)、それ以外で GTAGS があれば
 GNU Global の grep 検索 (正規表現) を使う。`xref-find-apropos' を経由しないのは、
 ggtags バックエンドがカーソル位置の語が GTAGS に無いと選ばれず、Global へ
-届かないため。"
+届かないため。ggtags の引用処理を避け、検索式を Global へそのまま渡す。"
   (interactive
    (list (read-string "Find symbol (pattern): " (thing-at-point 'symbol t)
                       'my/gtags-history)))
@@ -241,7 +241,7 @@ ggtags バックエンドがカーソル位置の語が GTAGS に無いと選ば
   (let ((xrefs (cond ((my/gtags--lsp-p)
                       (my/lsp-nav--workspace-symbols pattern))
                      ((and (fboundp 'ggtags-find-project) (ggtags-find-project))
-                      (xref-backend-apropos 'ggtags pattern))
+                      (my/gtags--run "--grep" pattern))
                      (t (user-error "シンボル検索には eglot (clangd) か GTAGS が必要です")))))
     (my/lsp-nav--show (format "シンボル %s" pattern) xrefs)))
 
