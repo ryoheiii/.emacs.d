@@ -97,6 +97,14 @@
     (require (car entry))
     (should (default-value (cdr entry)))))
 
+(ert-deftest my-test-deferred-copilot-menu-alignment-before-magit ()
+  "Magit を開かなくても全角説明の列揃え設定が届くこと。"
+  :tags '(:deferred)
+  (should-not (featurep 'magit))
+  (require 'copilot-chat-transient)
+  (should transient-align-variable-pitch)
+  (should-not (featurep 'magit)))
+
 ;;; Difftastic の Magit メニュー
 (ert-deftest my-test-deferred-difftastic-magit-menu-before-load ()
   :tags '(:deferred)
@@ -108,6 +116,10 @@
     (require feature)
     (should (eq (featurep 'magit) (eq feature 'magit)))
     (should-not (featurep 'difftastic))
+    ;; 下位メニューの説明は magit 本体より先の初回ロードでも届く。
+    (should (equal (plist-get (cdr (transient-get-suffix 'magit-diff "u"))
+                              :description)
+                   "未追加の差分"))
     ;; メニュー項目の登録と定義の取得だけでは、本体をロードしない。
     (dolist (entry '(("D" . difftastic-magit-diff)
                      ("S" . difftastic-magit-show)))

@@ -207,6 +207,58 @@ prog-mode のバッファを開くたびにエラーになる。導入は M-x co
            ("C-c J m" . copilot-chat-set-model)                  ; モデル切り替え
            ("C-c J c" . copilot-chat-cancel)                     ; 応答を中断
            ("C-c J q" . copilot-chat-reset))                     ; チャットリセット
+    :init
+    ;; 遅延ロードを保ち、子メニューも初回表示から日本語にする。
+    (with-eval-after-load 'copilot-chat-transient
+      (dolist (entry
+               `(((0 0) . "操作")
+                 ((0 1) . "会話")
+                 ((0 2) . "質問")
+                 ((0 3) . "コード")
+                 ((0 4) . "補助")
+                 ("d" . "開く")
+                 ("h" . "隠す")
+                 ("x" . "リセット")
+                 ("g" . ,(my/key-guide-description 'copilot-chat-switch-to-buffer))
+                 ("q" . "戻る")
+                 ("M" . "モデル選択")
+                 ("C" . "コミット用")
+                 ("S" . ,(my/key-guide-description 'copilot-chat-save))
+                 ("L" . ,(my/key-guide-description 'copilot-chat-load))
+                 ("k" . ,(my/key-guide-description 'copilot-chat-kill-instance))
+                 ("p" . "選択に質問")
+                 ("i" . "回答を挿入")
+                 ("m" . "コミット文")
+                 ("y" . "コード挿入")
+                 ("s" . "コード送信")
+                 ("b" . ,(my/key-guide-description 'copilot-chat-transient-buffers))
+                 ("c" . ,(my/key-guide-description 'copilot-chat-transient-code))))
+        (transient-suffix-put 'copilot-chat-transient (car entry) :description (cdr entry)))
+      (dolist (entry
+               `(((0 0) . "質問に添える資料")
+                 ("a" . ,(my/key-guide-description 'copilot-chat-add-buffers))
+                 ("A" . ,(my/key-guide-description 'copilot-chat-add-buffers-in-current-window))
+                 ("d" . ,(my/key-guide-description 'copilot-chat-del-buffers))
+                 ("D" . ,(my/key-guide-description 'copilot-chat-list-clear-buffers))
+                 ("f" . ,(my/key-guide-description 'copilot-chat-add-files-under-dir))
+                 ("l" . "資料の一覧")
+                 ("c" . ,(my/key-guide-description 'copilot-chat-list-clear-buffers))
+                 ("q" . "戻る")))
+        (transient-suffix-put 'copilot-chat-transient-buffers (car entry) :description (cdr entry)))
+      (dolist (entry
+               `(((0 0) . "コード操作")
+                 ("e" . ,(my/key-guide-description 'copilot-chat-explain))
+                 ("E" . ,(my/key-guide-description 'copilot-chat-explain-symbol-at-line))
+                 ("r" . ,(my/key-guide-description 'copilot-chat-review))
+                 ("d" . ,(my/key-guide-description 'copilot-chat-doc))
+                 ("f" . ,(my/key-guide-description 'copilot-chat-fix))
+                 ("o" . ,(my/key-guide-description 'copilot-chat-optimize))
+                 ("t" . ,(my/key-guide-description 'copilot-chat-test))
+                 ("F" . ,(my/key-guide-description 'copilot-chat-explain-defun))
+                 ("c" . ,(my/key-guide-description 'copilot-chat-custom-prompt-function))
+                 ("R" . ,(my/key-guide-description 'copilot-chat-review-whole-buffer))
+                 ("q" . "戻る")))
+        (transient-suffix-put 'copilot-chat-transient-code (car entry) :description (cdr entry))))
     :custom
     (copilot-chat-default-save-dir (my-set-history "copilot-chat/"))
     (copilot-chat-token-cache (my-set-cache "copilot-chat/token"))

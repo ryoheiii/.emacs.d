@@ -110,6 +110,86 @@
           (execute-kbd-macro (kbd "C-g")))
         (set-frame-size (selected-frame) width height)))))
 
+(ert-deftest my-test-tty-live-japanese-submenus ()
+  "80 桁の実メニューを表示し、全退出後に通常の編集へ戻れること。"
+  :tags '(:tty-live)
+  (require 'magit)
+  (require 'copilot-chat-transient)
+  (let ((width (frame-width))
+        (height (frame-height))
+        (directory (make-temp-file "my-menu-git-" t)))
+    (unwind-protect
+        (let ((default-directory directory))
+          (should (zerop (call-process "git" nil nil nil "init" "-q" "-b" "fixture")))
+          (save-window-excursion
+            (with-temp-buffer
+              (rename-buffer "submenu-fixture" t)
+              (switch-to-buffer (current-buffer))
+              (set-frame-size (selected-frame) 80 24)
+              ;; コマンドループ経由で初回の入口とその子メニューを開く。
+              (dolist (entry '(("C-x M-g d" "未追加の差分")
+                               ("C-x M-g D" "再表示")
+                               ("C-x M-g c" "コミット作成")
+                               ("C-x M-g b" "ブランチ作成")
+                               ("C-x M-g b C" "作成時の設定")
+                               ("C-x M-g P" "送信先を選ぶ")
+                               ("C-x M-g F" "取得元を選ぶ")
+                               ("C-c J t" "資料操作")
+                               ("C-c J t b" "資料を追加")
+                               ("C-c J t c" "関数に質問")))
+                (erase-buffer)
+                (execute-kbd-macro (kbd (car entry)))
+                (with-current-buffer (get-buffer transient--buffer-name)
+                  (should (get-buffer-window (current-buffer)))
+                  (should (string-match-p (cadr entry) (buffer-string)))
+                  ;; 見出しとセル先頭の1空白を考慮し、列の対応を実表示幅で測る。
+                  (when (equal (car entry) "C-c J t")
+                    (dolist (column '(("操作" . "d") ("会話" . "M")
+                                      ("質問" . "p") ("コード" . "y")
+                                      ("補助" . "b")))
+                      (let ((window (get-buffer-window (current-buffer)))
+                            heading key)
+                        (goto-char (point-min))
+                        (search-forward (car column))
+                        (setq heading (car (window-text-pixel-size
+                                            window (line-beginning-position)
+                                            (match-beginning 0))))
+                        (goto-char (point-min))
+                        (search-forward (concat " " (cdr column) " "))
+                        (setq key (car (window-text-pixel-size
+                                        window (line-beginning-position)
+                                        (1+ (match-beginning 0)))))
+                        (ert-info ((format "見出し %s: %s、キー %s: %s"
+                                           (car column) heading (cdr column) key))
+                          (should (= (1+ heading) key))))))
+                  ;; align-to の表示属性も含めて測り、切り詰めの範囲外も数える。
+                  ;; tty の1ピクセルは1桁。右端の継続記号の領域は使わない。
+                  (goto-char (point-min))
+                  (while (not (eobp))
+                    (let* ((window (get-buffer-window (current-buffer)))
+                           ;; 計測はウィンドウの point を動かすことがある。
+                           (width (save-excursion
+                                    (car (window-text-pixel-size
+                                          window (line-beginning-position)
+                                          (line-end-position)
+                                          (* 2 (window-body-width window))))))
+                           (limit (save-excursion (window-max-chars-per-line window))))
+                      (ert-info ((format "メニュー %s の行 %s"
+                                         (car entry) (line-number-at-pos)))
+                        (should (<= width limit))))
+                    (forward-line 1)))
+                ;; C-g は親へ戻る。C-q は親を含めてすべて閉じる。
+                (execute-kbd-macro (kbd "C-q"))
+                (should-not (get-buffer-window transient--buffer-name))
+                (should (equal (buffer-name) "submenu-fixture"))
+                (execute-kbd-macro (kbd "a b c C-b"))
+                (should (equal (buffer-string) "abc"))
+                (should (= (point) 3))))))
+      (when (eq (key-binding (kbd "C-q")) 'transient-quit-all)
+        (execute-kbd-macro (kbd "C-q")))
+      (set-frame-size (selected-frame) width height)
+      (delete-directory directory t))))
+
 (defconst my-test-tty-live--after-init-modes
   '(doom-modeline-mode
     display-time-mode)
