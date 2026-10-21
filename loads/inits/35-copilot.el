@@ -120,6 +120,16 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
     :custom
     (copilot-idle-delay 0)                                        ; 即時補完
     (copilot-indent-offset-warning-disable t)
+    ;; 既定の 100,000 文字を超えるバッファは didOpen でカーソル周辺だけを送り、
+    ;; 以後の差分通知はその切り詰め範囲を前提にした行番号 (copilot--line-bias)
+    ;; で送るため、範囲外へ移動・編集するとサーバー側と食い違い得る。
+    ;; 併せて tty では *Warnings* ウィンドウが開く。100KB 超の C++ ソースは
+    ;; 日常的に扱うため上限を 10 倍にする。didOpen の実送信 (本文取得 + 通知) は
+    ;; バッファごとに 1 回で、実測 106KB で 0.02 秒、560KB で 0.27 秒、
+    ;; 上限付近の 997KB で 0.36 秒 (2026-10-22, WSL2)。
+    ;; 無制限 (-1) にしないのは .log が c-mode に割り当てられており、
+    ;; 巨大なログをそのまま送ってしまうため。
+    (copilot-max-char 1000000)
     (copilot-install-dir my/copilot-install-dir)                   ; language server の保存先
     :init
     (defun my/copilot-maybe-enable ()
