@@ -45,7 +45,7 @@ cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-fo
 |---|---|---|
 | 1 | `clangd` があり、プロジェクトに `compile_commands.json` または `.clangd` がある | eglot（LSP） |
 | 2 | 1 が不成立で、irony-server が導入済み（`M-x irony-install-server`） | irony |
-| 3 | どちらも無い | cape（バッファ内の単語・言語のキーワード・ファイル名）+ GNU Global のタグ補完 |
+| 3 | どちらも無い | cape（バッファ内の単語・言語のキーワード・ファイル名）+ GNU Global のタグ補完（`C-t` と共有するキャッシュ） |
 
 - 段 1 の条件を満たすプロジェクトでは、`.c` `.cc` `.C` `.cpp` `.cxx` `.h` `.hh` `.hpp` `.hxx` を開いた時点で eglot が自動起動する。
   `compile_commands.json` は各ソースのコンパイルコマンドを記録したファイルで、解析時のインクルード先やマクロを clangd に伝える。
@@ -204,6 +204,17 @@ LSP で上の例を試すときは、`void parse()` の `parse` にカーソル�
 定義・参照（`C-t d` / `C-t u`）は、eglot 管理下でカーソル位置の名前をそのまま確定したときだけ LSP で検索する。
 名前を変えたとき、LSP で見つからないとき、eglot 管理外のバッファでは GNU Global で検索する。
 `C-u C-t d` / `C-u C-t u` は常に GNU Global で検索する。`C-t v` / `C-t f` は常に GNU Global を使う。
+
+名前の候補（GNU Global に登録された全ての名前）は、検索の種類と GTAGS ごとにキャッシュする。
+一覧の取得は Emacs を起動するたび・種類ごとの初回だけで、以後はタグファイル（GTAGS / GRTAGS / GPATH）が
+更新されるまで取り直さない。保存時の自動更新や `M-x update-gtags` の後は、次の検索で取り直す。
+
+- 保持する一覧の数は `my/gtags-candidates-cache-size`（既定 2、`0` でキャッシュしない）。
+  名前が十数万ある大規模プロジェクトでは、2 件で数十 MB のメモリを使う。
+- 環境変数 `GTAGSLIBPATH` を設定しているとき（候補がほかの GTAGS にも依存する）と、リモートのファイルではキャッシュしない。
+- GNU Global のタグ補完（段 3 や、eglot が候補を返さない位置での補完）も `C-t d` と同じ一覧を使う。
+  ただし `ggtags-process-environment` を設定したプロジェクトでは ggtags 本来の補完のままとなり、この高速化は効かない。
+- 初回の一覧の取得と、一覧からの絞り込み（大規模プロジェクトでは 1 打鍵あたり数十 ms）の時間は残る。
 
 ## コードリーディング補助
 

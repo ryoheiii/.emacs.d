@@ -1136,29 +1136,32 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
 (ert-deftest my-test-cpp-config-gtags-candidate-process-input ()
   "補完は種別ごとに空 prefix で全候補を一度だけ問い合わせる."
   :tags '(:cpp-config)
-  (dolist (flag '("-d" "-r" "-s" "-P"))
-    (let (calls)
-      (cl-letf (((symbol-function 'call-process)
-                 (lambda (program _in _out _display &rest args)
-                   (should (equal program "global"))
-                   (push args calls)
-                   (insert "sample\nmemory_pool_allocate\n")
-                   0)))
-        (should (equal (sort (my/gtags--candidates flag) #'string<)
-                       '("memory_pool_allocate" "sample"))))
-      (should (equal calls (list (list "-c" flag "--" "")))))))
+  ;; 候補キャッシュ (DB の所在確認を含む) は別のテストで検査する。
+  (let ((my/gtags-candidates-cache-size 0))
+    (dolist (flag '("-d" "-r" "-s" "-P"))
+      (let (calls)
+        (cl-letf (((symbol-function 'call-process)
+                   (lambda (program _in _out _display &rest args)
+                     (should (equal program "global"))
+                     (push args calls)
+                     (insert "sample\nmemory_pool_allocate\n")
+                     0)))
+          (should (equal (sort (my/gtags--candidates flag) #'string<)
+                         '("memory_pool_allocate" "sample"))))
+        (should (equal calls (list (list "-c" flag "--" ""))))))))
 
 (ert-deftest my-test-cpp-config-gtags-candidate-process-status ()
   "候補の一致なしは空、実行失敗・異常終了は user-error にする."
   :tags '(:cpp-config)
-  (cl-letf (((symbol-function 'call-process) (lambda (&rest _) 1)))
-    (should-not (my/gtags--candidates "-d")))
-  (dolist (status '(2 "killed"))
-    (cl-letf (((symbol-function 'call-process) (lambda (&rest _) status)))
-      (should-error (my/gtags--candidates "-d") :type 'user-error)))
-  (cl-letf (((symbol-function 'call-process)
-             (lambda (&rest _) (signal 'file-missing '("global が無い")))))
-    (should-error (my/gtags--candidates "-d") :type 'user-error)))
+  (let ((my/gtags-candidates-cache-size 0))
+    (cl-letf (((symbol-function 'call-process) (lambda (&rest _) 1)))
+      (should-not (my/gtags--candidates "-d")))
+    (dolist (status '(2 "killed"))
+      (cl-letf (((symbol-function 'call-process) (lambda (&rest _) status)))
+        (should-error (my/gtags--candidates "-d") :type 'user-error)))
+    (cl-letf (((symbol-function 'call-process)
+               (lambda (&rest _) (signal 'file-missing '("global が無い")))))
+      (should-error (my/gtags--candidates "-d") :type 'user-error))))
 
 (ert-deftest my-test-cpp-config-gtags-real-candidates ()
   "実 GTAGS で定義・参照・未定義シンボル・ファイルの候補を区別する."
@@ -1181,6 +1184,446 @@ Global、xref、候補取得、補完入力の呼び出しをそれぞれ *-call
           (should (equal (my/gtags--candidates "-s") '("external_value")))
           (should (equal (my/gtags--candidates "-P") '("sample.c"))))
       (delete-directory root t))))
+
+;;;; 候補キャッシュと ggtags 補完の共有
+;; `global -c' の全件列挙は大規模 DB で 1 回 0.5 秒前後かかるため、種別と DB ごとに
+;; 保持する。`call-process' をスタブし、`-p' (DB の所在) と `-c' (列挙) を引数で区別する。
+
+(defun my-test-cpp-config--make-tag-files (dir)
+  "DIR に中身の異なる GTAGS / GRTAGS / GPATH を作る."
+  (dolist (name '("GTAGS" "GRTAGS" "GPATH"))
+    (with-temp-file (expand-file-name name dir)
+      (insert name "\n"))))
+
+(defun my-test-cpp-config--global-count (calls option)
+  "CALLS のうち OPTION (\"-p\" か \"-c\") で `global' を起動した回数を返す."
+  (cl-count option calls :key #'caar :test #'equal))
+
+(defmacro my-test-cpp-config--with-gtags-cache (&rest body)
+  "候補キャッシュを隔離し、`global' を `call-process' のスタブにして BODY を実行する.
+一時ディレクトリ root に GTAGS / GRTAGS / GPATH を作り、`default-directory' にする。
+スタブの `-p' は db-dir (t なら呼び出し時の `default-directory'、関数なら呼び出した値、
+nil なら DB なしの終了コード 3) を出力し、`-c' は c-hook を呼んでから c-output を
+終了コード c-status で返す。BODY では calls (新しい順の (引数 ディレクトリ 環境))
+を参照し、db-dir / c-output / c-status / c-hook を変更できる。環境は GTAGSROOT /
+GTAGSDBPATH / GTAGSLIBPATH の値の組。"
+  (declare (indent 0) (debug t))
+  `(let ((root (file-name-as-directory (make-temp-file "my-test-gtags-cache-" t)))
+         (process-environment (copy-sequence process-environment))
+         (my/gtags--candidates-cache nil)
+         (my/gtags--db-dirs nil)
+         (my/gtags-candidates-cache-size 2)
+         (db-dir t)
+         (c-output "sample\nmemory_pool_allocate\n")
+         (c-status 0)
+         (c-hook nil)
+         (calls nil))
+     (unwind-protect
+         (with-temp-buffer
+           (setq default-directory root)
+           (dolist (name '("GTAGSROOT" "GTAGSDBPATH" "GTAGSCONF" "GTAGSLABEL"
+                           "GTAGSLIBPATH"))
+             (setenv name nil))
+           (my-test-cpp-config--make-tag-files root)
+           (cl-letf (((symbol-function 'call-process)
+                      (lambda (program _in _out _display &rest args)
+                        (should (equal program "global"))
+                        (push (list args (expand-file-name default-directory)
+                                    (mapcar #'getenv '("GTAGSROOT" "GTAGSDBPATH"
+                                                       "GTAGSLIBPATH")))
+                              calls)
+                        (pcase (car args)
+                          ("-p"
+                           (let ((dir (cond ((eq db-dir t) default-directory)
+                                            ((functionp db-dir) (funcall db-dir))
+                                            (t db-dir))))
+                             (if (not dir)
+                                 (progn (insert "global: GTAGS not found.\n") 3)
+                               (insert (directory-file-name (expand-file-name dir)) "\n")
+                               0)))
+                          ("-c"
+                           (when c-hook (funcall c-hook))
+                           (insert c-output)
+                           c-status)
+                          (_ (ert-fail (format "想定外の global の引数: %S" args)))))))
+             ,@body))
+       (delete-directory root t))))
+
+(defmacro my-test-cpp-config--with-remote-root (remote &rest body)
+  "REMOTE が non-nil なら root 配下をリモートとみなして BODY を実行する.
+TRAMP へ接続させないため `file-remote-p' だけを差し替える。"
+  (declare (indent 1) (debug t))
+  `(cl-letf* ((real-remote-p (symbol-function 'file-remote-p))
+              ((symbol-function 'file-remote-p)
+               (lambda (file &rest args)
+                 (if (and ,remote (stringp file)
+                          (string-prefix-p root (expand-file-name file)))
+                     "/ssh:stub:"
+                   (apply real-remote-p file args)))))
+     ,@body))
+
+(ert-deftest my-test-cpp-config-gtags-cache-hit ()
+  "同じ種別・DB の 2 回目はタグファイルが変わらなければ global を起動しない."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-cache
+    (let ((first (my/gtags--candidates "-d")))
+      (should (equal first '("sample" "memory_pool_allocate")))
+      (should (equal (reverse (mapcar #'car calls))
+                     '(("-p") ("-c" "-d" "--" ""))))
+      (should (eq (my/gtags--candidates "-d") first))
+      (should (= (length calls) 2)))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-invalidate ()
+  "タグファイルの更新時刻・サイズ・削除・置き換え (inode) のいずれでも取り直す."
+  :tags '(:cpp-config)
+  (dolist (change '(mtime size delete inode))
+    (my-test-cpp-config--with-gtags-cache
+      (let ((gtags (expand-file-name "GTAGS" root)))
+        (should (equal (my/gtags--candidates "-d") '("sample" "memory_pool_allocate")))
+        (pcase change
+          ('mtime
+           (set-file-times gtags (time-add (file-attribute-modification-time
+                                            (file-attributes gtags))
+                                           10)))
+          ('size
+           (write-region "more\n" nil (expand-file-name "GRTAGS" root) t 'silent))
+          ('delete
+           (delete-file (expand-file-name "GPATH" root)))
+          ('inode
+           ;; 更新時刻とサイズを保ったまま、別のファイルで置き換える。
+           (let ((old (file-attributes gtags))
+                 (new (expand-file-name "GTAGS.new" root)))
+             (copy-file gtags new nil t)
+             (rename-file new gtags t)
+             (let ((attrs (file-attributes gtags)))
+               (should (equal (file-attribute-modification-time attrs)
+                              (file-attribute-modification-time old)))
+               (should (= (file-attribute-size attrs) (file-attribute-size old)))
+               (should-not (equal (file-attribute-inode-number attrs)
+                                  (file-attribute-inode-number old)))))))
+        (setq c-output "updated\n")
+        (should (equal (my/gtags--candidates "-d") '("updated")))
+        (should (= (my-test-cpp-config--global-count calls "-c") 2))
+        ;; 取り直した結果は再び保持する。
+        (should (equal (my/gtags--candidates "-d") '("updated")))
+        (should (= (my-test-cpp-config--global-count calls "-c") 2))))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-race ()
+  "列挙中にタグファイルが更新された結果は返すが保持せず、次回取り直す."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-cache
+    ;; 保存時の非同期更新 (global --single-update) が列挙と重なった状況
+    (setq c-hook (lambda ()
+                   (setq c-hook nil)
+                   (write-region "updated\n" nil (expand-file-name "GTAGS" root)
+                                 t 'silent)))
+    (should (equal (my/gtags--candidates "-d") '("sample" "memory_pool_allocate")))
+    (should-not my/gtags--candidates-cache)
+    (my/gtags--candidates "-d")
+    (should (= (my-test-cpp-config--global-count calls "-c") 2))
+    (should (= (length my/gtags--candidates-cache) 1))
+    (my/gtags--candidates "-d")
+    (should (= (my-test-cpp-config--global-count calls "-c") 2))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-requires-db ()
+  "DB を特定できない、GTAGSLIBPATH が空でない、リモートのときは毎回列挙する."
+  :tags '(:cpp-config)
+  (dolist (condition '(no-db libpath remote))
+    (my-test-cpp-config--with-gtags-cache
+      (my-test-cpp-config--with-remote-root (eq condition 'remote)
+        (pcase condition
+          ('no-db (setq db-dir nil))
+          ('libpath (setenv "GTAGSLIBPATH" "/usr/include")))
+        (dotimes (_ 2)
+          (should (equal (my/gtags--candidates "-d")
+                         '("sample" "memory_pool_allocate"))))
+        (should (= (my-test-cpp-config--global-count calls "-c") 2))
+        ;; DB の所在を確かめるのは、リモートでも他 DB 依存でもない場合だけ。
+        (should (= (my-test-cpp-config--global-count calls "-p")
+                   (if (eq condition 'no-db) 2 0)))
+        (should-not my/gtags--candidates-cache))))
+  ;; 空の GTAGSLIBPATH は未設定と同じく保持する。
+  (my-test-cpp-config--with-gtags-cache
+    (setenv "GTAGSLIBPATH" "")
+    (my/gtags--candidates "-d")
+    (my/gtags--candidates "-d")
+    (should (= (my-test-cpp-config--global-count calls "-c") 1))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-env-key ()
+  "GTAGSROOT 単独と GTAGSDBPATH 併用は別のエントリにし、-p が返す DB で更新を判定する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-cache
+    (let* ((dbpath (file-name-as-directory (expand-file-name "db" root)))
+           (root-env (directory-file-name root))
+           (db-env (directory-file-name dbpath))
+           (root-only (list root-env nil nil))
+           (separate (list root-env db-env nil)))
+      (make-directory dbpath)
+      (my-test-cpp-config--make-tag-files dbpath)
+      (setq db-dir (lambda () (if (getenv "GTAGSDBPATH") dbpath root)))
+      (setenv "GTAGSROOT" root-env)
+      (setq c-output "root_only\n")
+      (should (equal (my/gtags--candidates "-d") '("root_only")))
+      (setenv "GTAGSDBPATH" db-env)
+      (setq c-output "separate_db\n")
+      (should (equal (my/gtags--candidates "-d") '("separate_db")))
+      (should (equal (mapcar #'car my/gtags--candidates-cache)
+                     `(("-d" ,dbpath ,separate) ("-d" ,root ,root-only))))
+      ;; -p と -c は同じディレクトリ・同じ環境で起動する。
+      (should (equal (reverse calls)
+                     `((("-p") ,root ,root-only)
+                       (("-c" "-d" "--" "") ,root ,root-only)
+                       (("-p") ,root ,separate)
+                       (("-c" "-d" "--" "") ,root ,separate))))
+      ;; 更新の判定は -p が返した DB のタグファイルで行う。
+      (write-region "more\n" nil (expand-file-name "GTAGS" dbpath) t 'silent)
+      (setq c-output "separate_db_updated\n")
+      (should (equal (my/gtags--candidates "-d") '("separate_db_updated")))
+      (setenv "GTAGSDBPATH" nil)
+      (should (equal (my/gtags--candidates "-d") '("root_only")))
+      (should (= (my-test-cpp-config--global-count calls "-c") 3)))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-keys ()
+  "種別と DB ごとに保持し、上限を超えたら最も古く使ったものから捨てる."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-cache
+    (let ((other (file-name-as-directory
+                  (make-temp-file "my-test-gtags-cache-other-" t))))
+      (unwind-protect
+          (cl-flet ((c-count () (my-test-cpp-config--global-count calls "-c"))
+                    (keys () (mapcar (lambda (entry) (take 2 (car entry)))
+                                     my/gtags--candidates-cache)))
+            (my/gtags--candidates "-d")
+            (my/gtags--candidates "-r")
+            (should (equal (keys) `(("-r" ,root) ("-d" ,root))))
+            ;; 使ったエントリは先頭へ移る。
+            (my/gtags--candidates "-d")
+            (should (= (c-count) 2))
+            (should (equal (keys) `(("-d" ,root) ("-r" ,root))))
+            ;; 上限 2 を超えたら最も古く使った -r を捨てる。
+            (my/gtags--candidates "-s")
+            (should (equal (keys) `(("-s" ,root) ("-d" ,root))))
+            (my/gtags--candidates "-d")
+            (should (= (c-count) 3))
+            (my/gtags--candidates "-r")
+            (should (= (c-count) 4))
+            ;; 同じ種別でも DB が違えば別エントリ。
+            (my-test-cpp-config--make-tag-files other)
+            (let ((default-directory other))
+              (my/gtags--candidates "-r"))
+            (should (= (c-count) 5))
+            (should (equal (keys) `(("-r" ,other) ("-r" ,root))))
+            ;; 0 で無効化し、保持中の一覧も解放する。DB の所在も確かめない。
+            (let ((p-count (my-test-cpp-config--global-count calls "-p")))
+              (setq my/gtags-candidates-cache-size 0)
+              (my/gtags--candidates "-r")
+              (should-not my/gtags--candidates-cache)
+              (my/gtags--candidates "-r")
+              (should-not my/gtags--candidates-cache)
+              (should (= (c-count) 7))
+              (should (= (my-test-cpp-config--global-count calls "-p") p-count))))
+        (delete-directory other t)))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-same-db ()
+  "GTAGSDBPATH で分けた DB を別のサブディレクトリから引いても 1 回の列挙を共有する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-cache
+    (let* ((src (file-name-as-directory (make-temp-file "my-test-gtags-cache-src-" t)))
+           (sub-a (file-name-as-directory (expand-file-name "a" src)))
+           (sub-b (file-name-as-directory (expand-file-name "b" src))))
+      (unwind-protect
+          (progn
+            (make-directory sub-a)
+            (make-directory sub-b)
+            ;; ソースの祖先に GTAGS は無く、DB は root にある。
+            (setenv "GTAGSROOT" (directory-file-name src))
+            (setenv "GTAGSDBPATH" (directory-file-name root))
+            (setq db-dir root)
+            (let ((first (let ((default-directory sub-a))
+                           (my/gtags--candidates "-d"))))
+              (should (equal first '("sample" "memory_pool_allocate")))
+              (should (eq (let ((default-directory sub-b))
+                            (my/gtags--candidates "-d"))
+                          first)))
+            (should (= (my-test-cpp-config--global-count calls "-c") 1))
+            (should (equal (mapcar #'car my/gtags--candidates-cache)
+                           `(("-d" ,root (,(directory-file-name src)
+                                          ,(directory-file-name root) nil)))))
+            ;; DB の所在は各ディレクトリから確かめ、列挙はそのディレクトリで行う。
+            (should (equal (mapcar (lambda (call) (take 2 call)) (reverse calls))
+                           `((("-p") ,sub-a)
+                             (("-c" "-d" "--" "") ,sub-a)
+                             (("-p") ,sub-b)))))
+        (delete-directory src t)))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-errors ()
+  "列挙の失敗は保持せず次回やり直し、一致なし (終了コード 1) の空結果は保持する."
+  :tags '(:cpp-config)
+  (my-test-cpp-config--with-gtags-cache
+    (setq c-status 2)
+    (should-error (my/gtags--candidates "-d") :type 'user-error)
+    (should-not my/gtags--candidates-cache)
+    (setq c-status 0)
+    (should (equal (my/gtags--candidates "-d") '("sample" "memory_pool_allocate")))
+    (should (= (my-test-cpp-config--global-count calls "-c") 2)))
+  (my-test-cpp-config--with-gtags-cache
+    (setq c-status 1 c-output "")
+    (should-not (my/gtags--candidates "-d"))
+    (should-not (my/gtags--candidates "-d"))
+    (should (= (my-test-cpp-config--global-count calls "-c") 1))
+    (should (equal (mapcar #'car my/gtags--candidates-cache)
+                   `(("-d" ,root (nil nil nil)))))))
+
+(ert-deftest my-test-cpp-config-gtags-cache-real-refresh ()
+  "実 GTAGS を global -u で更新すると候補を取り直す (DB を環境変数で示す構成も)."
+  ;; :cpp-config を付けて make test-cpp-config から実行する (global/gtags が無ければ skip)
+  :tags '(:cpp-config :gtags-integration)
+  (skip-unless (and (executable-find "global") (executable-find "gtags")))
+  (dolist (layout '(plain gtagsroot dbpath))
+    (let ((top (file-name-as-directory (make-temp-file "my-test-gtags-refresh-" t)))
+          (process-environment (copy-sequence process-environment))
+          (my/gtags--candidates-cache nil)
+          (my/gtags--db-dirs nil)
+          (my/gtags-candidates-cache-size 2))
+      (unwind-protect
+          (let* ((src (file-name-as-directory (expand-file-name "src" top)))
+                 (db (if (eq layout 'dbpath)
+                         (file-name-as-directory (expand-file-name "db" top))
+                       src))
+                 (source (expand-file-name "sample.c" src))
+                 (gtags (expand-file-name "GTAGS" db))
+                 (default-directory src))
+            (dolist (name '("GTAGSROOT" "GTAGSDBPATH" "GTAGSCONF" "GTAGSLABEL"
+                            "GTAGSLIBPATH"))
+              (setenv name nil))
+            (make-directory src)
+            (make-directory db t)
+            (with-temp-file source
+              (insert "int first_symbol(void) { return 0; }\n"))
+            (should (zerop (call-process "gtags" nil nil nil
+                                         (directory-file-name db))))
+            (unless (eq layout 'plain)
+              (setenv "GTAGSROOT" (directory-file-name src)))
+            (when (eq layout 'dbpath)
+              (setenv "GTAGSDBPATH" (directory-file-name db)))
+            (should (equal (my/gtags--candidates "-d") '("first_symbol")))
+            (should (equal (file-truename (my/gtags--db-dir)) (file-truename db)))
+            ;; gtags は秒単位で比較するため、ソースを確実に新しくしてから差分更新する。
+            (with-temp-file source
+              (insert "int first_symbol(void) { return 0; }\n"
+                      "int second_symbol(void) { return 1; }\n"))
+            (set-file-times source (time-add (file-attribute-modification-time
+                                              (file-attributes gtags))
+                                             2))
+            (should (zerop (call-process "global" nil nil nil "-u")))
+            (set-file-times gtags (time-add (file-attribute-modification-time
+                                             (file-attributes gtags))
+                                            2))
+            (should (equal (sort (copy-sequence (my/gtags--candidates "-d")) #'string<)
+                           '("first_symbol" "second_symbol"))))
+        (delete-directory top t)))))
+
+(ert-deftest my-test-cpp-config-gtags-capf-shares-cache ()
+  "ggtags の補完範囲を、C-t d と共有する定義名のキャッシュで補完する."
+  :tags '(:cpp-config)
+  (require 'ggtags)
+  (my-test-cpp-config--with-gtags-cache
+    (insert "int me")
+    (let ((capf (my/gtags-completion-at-point)))
+      (should (= (length capf) 3))
+      (should (equal (take 2 capf) '(5 7)))
+      (should (equal (all-completions "" (nth 2 capf))
+                     '("sample" "memory_pool_allocate")))
+      (should (equal (all-completions "me" (nth 2 capf)) '("memory_pool_allocate"))))
+    (should (= (my-test-cpp-config--global-count calls "-c") 1))
+    (should (equal (car (car calls)) '("-c" "-d" "--" "")))
+    ;; C-t d の候補取得は同じ一覧を使い、global を起動しない。
+    (should (eq (my/gtags--candidates "-d") (cddr (car my/gtags--candidates-cache))))
+    (should (= (my-test-cpp-config--global-count calls "-c") 1))))
+
+(ert-deftest my-test-cpp-config-gtags-capf-delegates ()
+  "C-t と別の DB を参照しうる環境と DB が無い場合は ggtags 本来の補完へ任せる."
+  :tags '(:cpp-config)
+  (require 'ggtags)
+  (dolist (condition '(no-db remote libpath process-environment cache-disabled
+                             unresolved))
+    (my-test-cpp-config--with-gtags-cache
+      (my-test-cpp-config--with-remote-root (eq condition 'remote)
+        (let ((delegated 0))
+          (cl-letf (((symbol-function 'ggtags-completion-at-point)
+                     (lambda () (cl-incf delegated) 'ggtags)))
+            (insert "int me")
+            (pcase condition
+              ('no-db
+               (dolist (name '("GTAGS" "GRTAGS" "GPATH"))
+                 (delete-file (expand-file-name name root))))
+              ('libpath (setenv "GTAGSLIBPATH" "/usr/include"))
+              ('process-environment
+               (setq-local ggtags-process-environment
+                           (list (concat "GTAGSDBPATH="
+                                         (expand-file-name "other-db" root)))))
+              ('cache-disabled (setq my/gtags-candidates-cache-size 0))
+              ;; GTAGS はあるが global が DB を特定できない
+              ('unresolved (setq db-dir nil)))
+            (should (eq (my/gtags-completion-at-point) 'ggtags))
+            (should (= delegated 1))
+            (should (equal (mapcar #'car calls)
+                           (and (eq condition 'unresolved) '(("-p")))))
+            (should-not my/gtags--candidates-cache)))))))
+
+(ert-deftest my-test-cpp-config-gtags-capf-global-error ()
+  "打鍵中の補完では global の失敗をエラーにせず候補なしとし、次の補完で再試行する."
+  :tags '(:cpp-config)
+  (require 'ggtags)
+  (my-test-cpp-config--with-gtags-cache
+    (insert "int me")
+    (setq c-status 2)
+    (let ((table (nth 2 (my/gtags-completion-at-point))))
+      (should table)
+      (should-not (all-completions "" table))
+      (should-not (all-completions "me" table))
+      (should (= (my-test-cpp-config--global-count calls "-c") 1))
+      (should-not my/gtags--candidates-cache))
+    ;; 次の補完では改めて列挙する。
+    (should-not (all-completions "" (nth 2 (my/gtags-completion-at-point))))
+    (should (= (my-test-cpp-config--global-count calls "-c") 2))
+    (should-not my/gtags--candidates-cache)
+    (setq c-status 0)
+    (should (equal (all-completions "me" (nth 2 (my/gtags-completion-at-point)))
+                   '("memory_pool_allocate")))
+    (should (= (my-test-cpp-config--global-count calls "-c") 3))
+    (should (= (length my/gtags--candidates-cache) 1))))
+
+(ert-deftest my-test-cpp-config-gtags-capf-replaces-ggtags ()
+  "ggtags-mode の補完関数を末尾の位置のまま差し替え、無効化で取り除く."
+  :tags '(:cpp-config)
+  (require 'ggtags)
+  (should (memq 'my/ggtags-use-cached-capf ggtags-mode-hook))
+  (with-temp-buffer
+    (cl-flet ((check ()
+                (should (eq (car (last completion-at-point-functions))
+                            #'my/gtags-completion-at-point))
+                (should (= (cl-count #'my/gtags-completion-at-point
+                                     completion-at-point-functions)
+                           1))
+                (should-not (memq #'ggtags-completion-at-point
+                                  completion-at-point-functions))))
+      (ggtags-mode 1)
+      (check)
+      ;; 再有効化でも重複しない。
+      (ggtags-mode 1)
+      (check)
+      (ggtags-mode -1)
+      (should-not (memq #'my/gtags-completion-at-point completion-at-point-functions))
+      (should-not (memq #'ggtags-completion-at-point completion-at-point-functions))))
+  ;; ggtags 側の補完関数が無い版では何もしない。
+  (with-temp-buffer
+    (add-hook 'completion-at-point-functions #'ggtags-completion-at-point t t)
+    (let ((before (copy-sequence completion-at-point-functions))
+          (ggtags-mode t))
+      (cl-letf (((symbol-function 'ggtags-completion-at-point) nil))
+        (my/gtags-use-cached-capf))
+      (should (equal completion-at-point-functions before)))))
 
 ;;; LSP 階層ナビゲーション
 ;; my-lsp-nav.el は eglot を require しない。ここでは eglot の実物
