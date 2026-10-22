@@ -57,6 +57,98 @@ cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-fo
 - `C-t d` などで移動した先のプロジェクト外のファイル（`/usr/include` など）も同じ clangd の管理下に入り、移動先でも LSP で検索できる。
 - irony-server の導入先は `var/packages/irony/`。導入後に C/C++ バッファを開き直すと irony が有効になる。eglot 管理下のバッファでは irony を自動的に止める。
 
+## 大規模プロジェクト・低性能 PC での調整
+
+### 自動補完と色付け
+
+既定では Corfu は 2 文字以上入力して 0.2 秒停止後、Copilot は 0.2 秒停止後に補完を始める。
+入力中の負荷が気になる PC では、`loads/inits/99-private.el` で待ち時間を延ばせる。例えば次のようにする。
+Corfu をすぐに出したいときは `C-M-i` を使う。候補を表示した後の入力では同期的な問い合わせが残るため、
+clangd の応答が極端に遅い環境では待ち時間を延ばしてももたつく場合がある。
+
+```elisp
+(setq corfu-auto-delay 0.4
+      copilot-idle-delay 0.4)
+```
+
+semantic tokens（clangd の解析結果による色付け）は既定で ON。大きなファイルで負荷を比べるには、
+現在のバッファで `M-x eglot-semantic-tokens-mode` を実行して OFF にする。もう一度実行すると再有効化できる。
+毎回 OFF で開くには `99-private.el` に次を追加する。既に開いている管理バッファでは同じコマンドで OFF にする。
+常時 ON に戻すときは、この設定を取り除いて再起動する。
+
+```elisp
+(add-hook 'eglot-managed-mode-hook
+          (lambda () (eglot-semantic-tokens-mode -1)))
+```
+
+### clangd の負荷と索引
+
+CPU やメモリに余裕がない PC では、Emacs を起動するシェルで `CLANGD_FLAGS=-j=2` を指定すると
+clangd のワーカー数を 2 に制限できる。索引作成だけでなく対話要求の並列数も減るため、解析や応答が遅くなる場合がある。
+起動済みの Emacs には外のシェルでの変更は届かないので、次のように起動し直して比較する。
+
+```sh
+CLANGD_FLAGS=-j=2 emacs -nw
+```
+
+Emacs 側の共通の起動引数には `-j` など機種・プロジェクト依存の値を固定しない。
+コマンドライン引数は clangd の config や `CLANGD_FLAGS` より優先され、環境ごとの調整を上書きするため。
+`--background-index-priority` は clangd 16〜23 で未配線で、Linux の索引スレッドは既定で `SCHED_IDLE` を使う。
+
+索引対象を絞るには、プロジェクトの `.clangd` に条件付きフラグメントを追加する。
+`PathMatch` は `.clangd` からの相対パスに一致する正規表現で、次の例では外部コードと生成コードの
+バックグラウンド索引作成を省く。対象の名前がプロジェクト全体の検索で見つかりにくくなるため、除外範囲は絞る。
+`.cache/clangd/index` は再利用のために残す。消すと次回に索引を作り直し、起動直後の負荷が増える。
+
+```yaml
+---
+If:
+  PathMatch: [third_party/.*, generated/.*]
+Index:
+  Background: Skip
+```
+
+任意で、別の無条件フラグメントとして次も追加できる。現在のスコープから見えない名前を補完候補から減らせるが、
+未修飾の名前から広く探す補完は使いにくくなる。
+
+```yaml
+---
+Completion:
+  AllScopes: No
+```
+
+### サーバーの常駐
+
+既定の `eglot-autoshutdown t` は、最後の管理バッファを閉じると clangd も終了してメモリを解放する。
+同じプロジェクトを開き直すことが多ければ、`99-private.el` に `(setq eglot-autoshutdown nil)` を書くと
+サーバーを残して再接続時の解析待ちを減らせる。一方、閉じたプロジェクトのサーバーもメモリを使い続ける。
+不要になったら `M-x eglot-shutdown` で終了する。
+
+### 会社 PC での計測と詳細ログ
+
+会社 PC の実際のプロジェクトで `M-x profiler-start`（`cpu`）を実行し、普段遅さを感じる入力・補完・移動を再現してから
+`M-x profiler-report` で Emacs 側の時間を確認する。記録を終えたら `M-x profiler-stop`。
+同じファイル・操作で調整前後を比べる。clangd 側の詳細が必要なときはログも確認する。
+
+通常は `--log=error` でエラーだけを記録する。stderr バッファは `eglot-events-buffer-config` のサイズ設定でも切り詰められない。
+コマンドラインの `--log=error` が優先されるため、`CLANGD_FLAGS` では詳細ログへ変更できない。
+`99-private.el` に次を書いて読み込んだら、管理バッファで `M-x eglot-shutdown` → `M-x eglot` と実行し、
+新しい引数で接続し直す（`eglot-reconnect` は以前の起動引数を再利用する）。Emacs の再起動でも反映できる。
+現在の clangd 引数のうち `--log=error` だけを `--log=verbose` に置き換え、ほかの引数を保つ。
+
+```elisp
+(with-eval-after-load 'eglot
+  (let ((entry (assoc '(c-mode c-ts-mode c++-mode c++-ts-mode)
+                      eglot-server-programs)))
+    (setcdr entry
+            (mapcar (lambda (arg)
+                      (if (equal arg "--log=error") "--log=verbose" arg))
+                    (cdr entry)))))
+```
+
+`M-x eglot-stderr-buffer` で詳細ログを見る。`eglot-report-progress nil` による進捗通知の抑制も再接続後から効く。
+調査が済んだら上のログ設定を取り除いて Emacs を再起動し、エラーログだけに戻す。
+
 ## タグナビゲーション
 
 キーは [キーバインド一覧の C/C++ タグナビゲーション](keybindings.md#cc-タグナビゲーション) を参照。
