@@ -26,6 +26,13 @@
     (should (equal completion-styles '(orderless-fast basic)))
     (should (memq 'corfu-auto--post-command post-command-hook))))
 
+(ert-deftest my-test-deferred-copilot-idle-delay ()
+  "Copilot は入力停止から 0.2 秒待って補完する。"
+  :tags '(:deferred)
+  (skip-unless (my/copilot-available-p))
+  (require 'copilot)
+  (should (= copilot-idle-delay 0.2)))
+
 ;;; 組み込みコマンドの初回ロード
 (ert-deftest my-test-deferred-ediff-settings ()
   :tags '(:deferred)

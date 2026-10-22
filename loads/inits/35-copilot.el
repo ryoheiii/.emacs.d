@@ -118,7 +118,9 @@ copilot 本体をロードせずに判定するため、`copilot-server-executab
            ("C-c j d" . copilot-diagnose)                         ; 診断情報
            ("C-c j e" . copilot-select-completion-model))         ; モデル選択
     :custom
-    (copilot-idle-delay 0)                                        ; 即時補完
+    ;; サーバー側のデバウンスは既定 0。0.2 秒待つと、71 打鍵の実測で発火が 71 回から 1 回に減った。
+    ;; Copilot 同梱 NES の既定 200 ms と同じ待ち時間にし、連続入力中の要求をまとめる。
+    (copilot-idle-delay 0.2)
     (copilot-indent-offset-warning-disable t)
     ;; 既定の 100,000 文字を超えるバッファは didOpen でカーソル周辺だけを送り、
     ;; 以後の差分通知はその切り詰め範囲を前提にした行番号 (copilot--line-bias)
