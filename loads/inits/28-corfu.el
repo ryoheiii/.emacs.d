@@ -20,8 +20,10 @@
    ("M-p"   . nil))
   :custom
   (corfu-auto t)                              ; 自動補完
-  (corfu-auto-delay 0)                        ; 入力後すぐに補完を表示
-  (corfu-auto-prefix 2)                       ; 基本値は 2 文字（27-consult.el のフックでは 1 文字）
+  ;; 0 秒では post-command 内で clangd を同期待ちし、文字の描画も遅れる。
+  ;; 実効値はここに一本化し、低性能 PC では 99-private.el の setq で待ち時間を延ばす。
+  (corfu-auto-delay 0.2)                      ; 入力が止まってから補完を表示
+  (corfu-auto-prefix 2)                       ; 2 文字以上で自動補完
   (corfu-cycle t)                             ; 候補リストのループ
   (corfu-on-exact-match nil)
   (corfu-preview-current nil)                 ; 現在の候補をプレビューしない

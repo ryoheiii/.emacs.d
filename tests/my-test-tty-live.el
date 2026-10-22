@@ -649,6 +649,26 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
             (should (equal (buffer-string) "alpha")))
         (corfu-quit)))))
 
+(ert-deftest my-test-tty-live-corfu-auto-waits ()
+  "連続入力中は CAPF を呼ばず、入力停止後に一度だけ自動補完を始める。"
+  :tags '(:tty-live)
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (corfu-mode 1)
+      (let ((calls 0))
+        (setq-local completion-at-point-functions
+                    (list (lambda () (cl-incf calls) nil)))
+        (unwind-protect
+            (progn
+              (execute-kbd-macro "abcdef")
+              (should (equal (buffer-string) "abcdef"))
+              (should (= calls 0))
+              (sit-for (+ corfu-auto-delay 0.3))
+              (should (= calls 1)))
+          (cancel-timer corfu-auto--timer)
+          (corfu-quit))))))
+
 ;; 候補の説明を tty 子フレームへ描画できること。フック登録の検査だけでは、
 ;; 説明の取得から popupinfo の子フレーム生成・表示までの経路の故障を検出できない
 (ert-deftest my-test-tty-live-corfu-popupinfo-frame ()

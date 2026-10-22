@@ -101,9 +101,8 @@
       (orderless-matching-styles '(orderless-flex)))
 
     (defun my/setup-corfu-for-orderless ()
-      (setq-local corfu-auto-delay 0
-                  corfu-auto-prefix 1
-                  completion-styles '(orderless-fast basic)))
+      ;; 補完スタイルだけを設定する。自動補完の待ち時間・文字数は 28-corfu.el で設定する。
+      (setq-local completion-styles '(orderless-fast basic)))
 
     (add-hook 'corfu-mode-hook #'my/setup-corfu-for-orderless)))
 
