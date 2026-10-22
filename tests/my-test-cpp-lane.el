@@ -24,6 +24,7 @@
                             '(my-test-cpp-config-treesit-grammar-dir-isolated))
                           (unless (and (executable-find "global") (executable-find "gtags"))
                             '(my-test-cpp-config-gtags-real-candidates
+                              my-test-cpp-config-gtags-cache-real-refresh
                               my-test-cpp-config-lsp-workspace-symbol-real-gtags-regexp))
                           (unless (executable-find "clangd")
                             '(my-test-cpp-config-lsp-live-clangd)))))

@@ -155,12 +155,21 @@ irony 本体の `irony--locate-server-executable' と同じ探索経路を使う
 (use-package ggtags
   :straight t
   :defer t
+  ;; :hook から参照する関数はここで定義する (:init だと多重定義警告が出る)
+  :preface
+  (declare-function my/gtags-use-cached-capf "my-gtags")
+  (defun my/ggtags-use-cached-capf ()
+    "ggtags の補完を、C-t と候補キャッシュを共有する補完へ差し替える.
+本体は my-gtags.el の `my/gtags-use-cached-capf' (:config で読み込み済み)。"
+    (my/gtags-use-cached-capf))
   ;; ts モードは c-mode/c++-mode のフックを継承しないため個別に登録する
   ;; （C-t タグナビゲーションの不変条件を ts モードでも維持するために必須）
   :hook ((c-mode      . ggtags-mode)
          (c++-mode    . ggtags-mode)
          (c-ts-mode   . ggtags-mode)
-         (c++-ts-mode . ggtags-mode))
+         (c++-ts-mode . ggtags-mode)
+         ;; 補完の差し替えは ggtags-mode 経由なので 4 モードすべてに効く
+         (ggtags-mode . my/ggtags-use-cached-capf))
   :bind (:map ggtags-mode-map
               ("C-t d"   . my/gtags-find-definition)     ; 関数の定義場所の検索 (define)
               ("C-t C-d" . my/gtags-find-definition)
