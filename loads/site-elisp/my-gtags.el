@@ -243,8 +243,10 @@ GTAGSROOT / GTAGSDBPATH / GTAGSLIBPATH の順。"
 (defun my/gtags--candidates (flag)
   "FLAG の検索で使う名前を取得する.
 空 prefix で一度だけ全候補を取得し、途中一致・複数語の絞り込みは
-Emacs の補完スタイルに任せる。結果は種別と DB ごとに保持し、タグファイルが
-変わるまで `global' を起動せずに同じリストを返す (呼び出し側で変更しない)。
+Emacs の補完スタイルに任せる。結果は種別と DB ごとに保持し、保持されている間は
+タグファイルが変わるまで `global' を起動せずに同じリストを返す (呼び出し側で
+変更しない)。保持数 `my/gtags-candidates-cache-size' を超えると最も古く使った
+一覧から捨て、次に使うときに取り直す。
 失敗 (`user-error') と、列挙中にタグファイルが変わった結果は保持しない。"
   (my/gtags--cache-trim)
   (if (not (my/gtags--cacheable-p))
