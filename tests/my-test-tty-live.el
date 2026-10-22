@@ -601,6 +601,14 @@ completing-read、Vertico、Consult、xref 履歴は実際の実装を使う。"
       (should-not (bound-and-true-p corfu-terminal-mode))
     (should (default-value 'corfu-terminal-mode))))
 
+(ert-deftest my-test-tty-live-goggles-pulse-disabled ()
+  "tty では編集箇所の強調を残し、パルスの再描画を止める。"
+  :tags '(:tty-live)
+  (with-temp-buffer
+    (prog-mode)
+    (should (bound-and-true-p goggles-mode))
+    (should-not (default-value 'goggles-pulse))))
+
 (defun my-test-tty-live--xclip-expected-p ()
   "現在の端末環境で xclip-mode が有効になるべき場合は non-nil を返す。"
   (and (not (display-graphic-p))
