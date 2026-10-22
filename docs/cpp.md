@@ -45,16 +45,109 @@ cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-fo
 |---|---|---|
 | 1 | `clangd` があり、プロジェクトに `compile_commands.json` または `.clangd` がある | eglot（LSP） |
 | 2 | 1 が不成立で、irony-server が導入済み（`M-x irony-install-server`） | irony |
-| 3 | どちらも無い | cape（バッファ内の単語・言語のキーワード・ファイル名）+ GNU Global のタグ補完 |
+| 3 | どちらも無い | cape（バッファ内の単語・言語のキーワード・ファイル名）+ GNU Global のタグ補完（`C-t` と共有するキャッシュ） |
 
 - 段 1 の条件を満たすプロジェクトでは、`.c` `.cc` `.C` `.cpp` `.cxx` `.h` `.hh` `.hpp` `.hxx` を開いた時点で eglot が自動起動する。
   `compile_commands.json` は各ソースのコンパイルコマンドを記録したファイルで、解析時のインクルード先やマクロを clangd に伝える。
   上位ディレクトリと `build/` 配下から探す。この設定では生成しないので、CMake などのビルド系で作る。`.clangd` は clangd 用の設定ファイル。
 - 補完を確定しても `#include` は自動挿入しない。
+- clangd は `--log=error` で起動する。詳細ログは `99-private.el` で引数を上書きし、再接続後に `M-x eglot-stderr-buffer` で見る（[調整手順](#大規模プロジェクト低性能-pc-での調整)）。
 - 解析によるエラー・警告の表示（flymake）は既定で無効。有効にするには `loads/inits/99-private.el` で `eglot-stay-out-of` から `flymake` を外す。
   inlay hints も既定で無効（[inlay hints](#inlay-hints)）。
 - `C-t d` などで移動した先のプロジェクト外のファイル（`/usr/include` など）も同じ clangd の管理下に入り、移動先でも LSP で検索できる。
 - irony-server の導入先は `var/packages/irony/`。導入後に C/C++ バッファを開き直すと irony が有効になる。eglot 管理下のバッファでは irony を自動的に止める。
+
+## 大規模プロジェクト・低性能 PC での調整
+
+### 自動補完と色付け
+
+既定では Corfu は 2 文字以上入力して 0.2 秒停止後、Copilot は 0.2 秒停止後に補完を始める。
+入力中の負荷が気になる PC では、`loads/inits/99-private.el` で待ち時間を延ばせる。例えば次のようにする。
+Corfu をすぐに出したいときは `C-M-i` を使う。候補を表示した後の入力では同期的な問い合わせが残るため、
+clangd の応答が極端に遅い環境では待ち時間を延ばしてももたつく場合がある。
+
+```elisp
+(setq corfu-auto-delay 0.4
+      copilot-idle-delay 0.4)
+```
+
+semantic tokens（clangd の解析結果による色付け）は既定で ON。大きなファイルで負荷を比べるには、
+現在のバッファで `M-x eglot-semantic-tokens-mode` を実行して OFF にする。もう一度実行すると再有効化できる。
+毎回 OFF で開くには `99-private.el` に次を追加する。既に開いている管理バッファでは同じコマンドで OFF にする。
+常時 ON に戻すときは、この設定を取り除いて再起動する。
+
+```elisp
+(add-hook 'eglot-managed-mode-hook
+          (lambda () (eglot-semantic-tokens-mode -1)))
+```
+
+### clangd の負荷と索引
+
+CPU やメモリに余裕がない PC では、Emacs を起動するシェルで `CLANGD_FLAGS=-j=2` を指定すると
+clangd のワーカー数を 2 に制限できる。索引作成だけでなく対話要求の並列数も減るため、解析や応答が遅くなる場合がある。
+起動済みの Emacs には外のシェルでの変更は届かないので、次のように起動し直して比較する。
+
+```sh
+CLANGD_FLAGS=-j=2 emacs -nw
+```
+
+Emacs 側の共通の起動引数には `-j` など機種・プロジェクト依存の値を固定しない。
+コマンドライン引数は clangd の config や `CLANGD_FLAGS` より優先され、環境ごとの調整を上書きするため。
+`--background-index-priority` は clangd 16〜23 で未配線で、Linux の索引スレッドは既定で `SCHED_IDLE` を使う。
+
+索引対象を絞るには、プロジェクトの `.clangd` に条件付きフラグメントを追加する。
+`PathMatch` は `.clangd` からの相対パスに一致する正規表現で、次の例では外部コードと生成コードの
+バックグラウンド索引作成を省く。対象の名前がプロジェクト全体の検索で見つかりにくくなるため、除外範囲は絞る。
+`.cache/clangd/index` は再利用のために残す。消すと次回に索引を作り直し、起動直後の負荷が増える。
+
+```yaml
+---
+If:
+  PathMatch: [third_party/.*, generated/.*]
+Index:
+  Background: Skip
+```
+
+任意で、別の無条件フラグメントとして次も追加できる。現在のスコープから見えない名前を補完候補から減らせるが、
+未修飾の名前から広く探す補完は使いにくくなる。
+
+```yaml
+---
+Completion:
+  AllScopes: No
+```
+
+### サーバーの常駐
+
+既定の `eglot-autoshutdown t` は、最後の管理バッファを閉じると clangd も終了してメモリを解放する。
+同じプロジェクトを開き直すことが多ければ、`99-private.el` に `(setq eglot-autoshutdown nil)` を書くと
+サーバーを残して再接続時の解析待ちを減らせる。一方、閉じたプロジェクトのサーバーもメモリを使い続ける。
+不要になったら `M-x eglot-shutdown` で終了する。
+
+### 会社 PC での計測と詳細ログ
+
+会社 PC の実際のプロジェクトで `M-x profiler-start`（`cpu`）を実行し、普段遅さを感じる入力・補完・移動を再現してから
+`M-x profiler-report` で Emacs 側の時間を確認する。記録を終えたら `M-x profiler-stop`。
+同じファイル・操作で調整前後を比べる。clangd 側の詳細が必要なときはログも確認する。
+
+通常は `--log=error` でエラーだけを記録する。stderr バッファは `eglot-events-buffer-config` のサイズ設定でも切り詰められない。
+コマンドラインの `--log=error` が優先されるため、`CLANGD_FLAGS` では詳細ログへ変更できない。
+`99-private.el` に次を書いて読み込んだら、管理バッファで `M-x eglot-shutdown` → `M-x eglot` と実行し、
+新しい引数で接続し直す（`eglot-reconnect` は以前の起動引数を再利用する）。Emacs の再起動でも反映できる。
+現在の clangd 引数のうち `--log=error` だけを `--log=verbose` に置き換え、ほかの引数を保つ。
+
+```elisp
+(with-eval-after-load 'eglot
+  (let ((entry (assoc '(c-mode c-ts-mode c++-mode c++-ts-mode)
+                      eglot-server-programs)))
+    (setcdr entry
+            (mapcar (lambda (arg)
+                      (if (equal arg "--log=error") "--log=verbose" arg))
+                    (cdr entry)))))
+```
+
+`M-x eglot-stderr-buffer` で詳細ログを見る。`eglot-report-progress nil` による進捗通知の抑制も再接続後から効く。
+調査が済んだら上のログ設定を取り除いて Emacs を再起動し、エラーログだけに戻す。
 
 ## タグナビゲーション
 
@@ -112,6 +205,17 @@ LSP で上の例を試すときは、`void parse()` の `parse` にカーソル�
 名前を変えたとき、LSP で見つからないとき、eglot 管理外のバッファでは GNU Global で検索する。
 `C-u C-t d` / `C-u C-t u` は常に GNU Global で検索する。`C-t v` / `C-t f` は常に GNU Global を使う。
 
+名前の候補（GNU Global に登録された全ての名前）は、検索の種類と GTAGS ごとにキャッシュする。
+一覧の取得は Emacs を起動するたび・種類ごとの初回だけで、キャッシュに保持されている間はタグファイル（GTAGS / GRTAGS / GPATH）が
+更新されるまで取り直さない。保持数を超えると最も古く使った一覧から捨て、次に使うときに取り直す。保存時の自動更新や `M-x update-gtags` の後は、次の検索で取り直す。
+
+- 保持する一覧の数は `my/gtags-candidates-cache-size`（既定 2、`0` でキャッシュしない）。
+  名前が十数万ある大規模プロジェクトでは、2 件で数十 MB のメモリを使う。
+- 環境変数 `GTAGSLIBPATH` を設定しているとき（候補がほかの GTAGS にも依存する）と、リモートのファイルではキャッシュしない。
+- GNU Global のタグ補完（段 3 や、eglot が候補を返さない位置での補完）も `C-t d` と同じ一覧を使う。
+  ただし `ggtags-process-environment` を設定したプロジェクトでは ggtags 本来の補完のままとなり、この高速化は効かない。
+- 初回の一覧の取得と、一覧からの絞り込み（大規模プロジェクトでは 1 打鍵あたり数十 ms）の時間は残る。
+
 ## コードリーディング補助
 
 ### 呼び出し階層・型階層・ヘッダ/ソース切替・横断シンボル検索
@@ -148,3 +252,5 @@ inlay hints は、コードに書かれていない引数名や、`auto` から�
 C/C++ の各ウィンドウ上端（header-line）に、プロジェクト内のファイルの場所と、カーソル位置が属する名前空間・クラス・メソッド
 （`namespace > Class > method`）を表示する。長いファイルで「今どのクラスの関数を読んでいるか」を確認できる。
 パスは eglot 管理下で最も正確になる。表示は文字だけなので、端末でもそのまま使える。
+eglot 管理下では、入力を再開すると更新を中断して直前のパスを表示したまま次の停止で更新する
+（0 件の結果と入力が重なった場合も直前のパスを保持する）。

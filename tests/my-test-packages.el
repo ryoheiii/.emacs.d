@@ -36,6 +36,10 @@
     copilot
     copilot-chat
     breadcrumb
+    eglot
+    ggtags
+    my-gtags
+    my-lsp-nav
     ;; c-ts-mode.el をロードすると treesit.el まで読み込まれる。
     ;; ts モードのバッファを開くまで不要なので、起動経路では絶対にロードしない。
     c-ts-mode

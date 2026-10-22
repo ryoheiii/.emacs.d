@@ -22,8 +22,10 @@
 (use-package goggles
   :straight t
   :hook ((prog-mode text-mode) . goggles-mode)
-  :config
-  (setq-default goggles-pulse t))
+  :custom
+  ;; pulsar と同様、tty ではパルスを止める。補完確定・yank・undo ごとに
+  ;; 0.03 秒 × 10 回の全面再描画が起きるため。編集箇所のハイライト自体は残す。
+  (goggles-pulse (display-graphic-p)))
 
 ;;; 余白と本文の配置
 ;;;; spacious-padding - 画面に余白を付ける

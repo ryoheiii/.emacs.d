@@ -11,6 +11,28 @@
 (require 'ert)
 (require 'cl-lib)
 
+;;; 補完の起動待ち
+(ert-deftest my-test-deferred-corfu-auto-settings ()
+  "Corfu の自動補完設定をフックで上書きせず、補完スタイルだけをローカルにする。"
+  :tags '(:deferred)
+  (require 'corfu)
+  (with-temp-buffer
+    (corfu-mode 1)
+    (should (= corfu-auto-delay 0.2))
+    (should (= corfu-auto-prefix 2))
+    (should-not (local-variable-p 'corfu-auto-delay))
+    (should-not (local-variable-p 'corfu-auto-prefix))
+    (should (local-variable-p 'completion-styles))
+    (should (equal completion-styles '(orderless-fast basic)))
+    (should (memq 'corfu-auto--post-command post-command-hook))))
+
+(ert-deftest my-test-deferred-copilot-idle-delay ()
+  "Copilot は入力停止から 0.2 秒待って補完する。"
+  :tags '(:deferred)
+  (skip-unless (my/copilot-available-p))
+  (require 'copilot)
+  (should (= copilot-idle-delay 0.2)))
+
 ;;; 組み込みコマンドの初回ロード
 (ert-deftest my-test-deferred-ediff-settings ()
   :tags '(:deferred)

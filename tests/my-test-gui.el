@@ -144,6 +144,15 @@
   (should (bound-and-true-p doom-modeline-mode))
   (should-not (string-empty-p (format-mode-line mode-line-format))))
 
+(ert-deftest my-test-gui-goggles-pulse-enabled ()
+  "GUI では編集箇所の強調をパルスで表示する。"
+  :tags '(:gui)
+  (should (display-graphic-p))
+  (with-temp-buffer
+    (prog-mode)
+    (should (bound-and-true-p goggles-mode))
+    (should (default-value 'goggles-pulse))))
+
 (ert-deftest my-test-gui-corfu-commit ()
   :tags '(:gui)
   (save-window-excursion
@@ -176,7 +185,7 @@
   (let ((status 1))
     (condition-case err
         (let ((stats (ert-run-tests-batch '(tag :gui))))
-          (when (and (= (ert-stats-total stats) 7)
+          (when (and (= (ert-stats-total stats) 8)
                      (= (ert-stats-skipped stats) 0)
                      (= (ert-stats-completed-unexpected stats) 0)
                      (null (my-test-startup-check-warnings)))

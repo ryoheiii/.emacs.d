@@ -7,8 +7,10 @@
 ;; 遅延ロード先とプラットフォーム固有定義をコンパイラへ伝える。
 (declare-function eglot-managed-p "eglot")
 (declare-function eglot-inlay-hints-mode "eglot")
+(declare-function eglot--signal-textDocument/didChange "eglot")
 (defvar eglot-inlay-hints-mode)
 (defvar eglot-ignored-server-capabilities)
+(defvar imenu--index-alist)
 (defvar my/auto-save-visited-in-progress)
 
 ;;; 差分・比較
@@ -103,6 +105,26 @@
          (eglot-managed-mode . my/eglot-cc-suppress-irony))
   ;; :hook から参照する関数は :preface で定義する (:init だと多重定義警告が出る)
   :preface
+  (defun my/eglot-imenu-keep-index (orig &rest args)
+    "breadcrumb の非必須更新を入力で中断し、直前の索引を保持する。
+ORIG は eglot-imenu、ARGS はその引数。公開契約の返り値は alist または nil
+なので、while-no-input の t は中断として扱う。nil と入力保留の組合せは
+取消を推定するヒューリスティックであり、0 件の結果と入力が重なる場合も
+次の停止まで直前のパスを保持する。breadcrumb 以外の呼び出しは素通しする。"
+    (if (and non-essential (bound-and-true-p breadcrumb-local-mode))
+        (let ((prev (and (consp imenu--index-alist)
+                         (car imenu--index-alist)
+                         imenu--index-alist)))
+          ;; 未送信の変更は中断可能区間へ入る前に送り、タイマーの順序に依存しない。
+          (eglot--signal-textDocument/didChange)
+          (let ((res (while-no-input (apply orig args))))
+            (cond
+             ((eq res t) prev)
+             ((and (null res)
+                   (or unread-command-events (input-pending-p)))
+              prev)
+             (t res))))
+      (apply orig args)))
   (defconst my/eglot-cc-file-regexp "\\.\\(c\\|cc\\|C\\|cpp\\|cxx\\|h\\|hh\\|hpp\\|hxx\\)\\'"
     "eglot を自動起動してよい C/C++ 実ソースの拡張子。.log/.cfg (c-mode 割当) を除外する.")
   (defun my/eglot-cc-project-p ()
@@ -156,6 +178,9 @@ eglot 未管理のバッファでは `user-error'。"
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-config '(:size 0 :format full))
+  ;; doom-modeline-lsp t では進捗を表示しないため、通知自体を要求しない。
+  ;; initialize の workDoneProgress が false になり、clangd にも再接続後から反映される。
+  (eglot-report-progress nil)
   ;; inlay hints は既定 OFF。C-t l (my/eglot-inlay-hints-toggle) でバッファ単位に ON にできる
   (eglot-ignored-server-capabilities '(:inlayHintProvider :documentHighlightProvider))
   (eglot-stay-out-of '(flymake))       ; 使用感維持。診断が欲しくなったらここから外す
@@ -165,14 +190,22 @@ eglot 未管理のバッファでは `user-error'。"
   (eglot-extend-to-xref t)
   (eldoc-echo-area-use-multiline-p nil)
   :config
+  (unless (advice-member-p #'my/eglot-imenu-keep-index 'eglot-imenu)
+    (advice-add 'eglot-imenu :around #'my/eglot-imenu-keep-index))
   ;; clangd 起動引数 (Doom :lang cc 準拠)。--header-insertion=never は補完確定時の
   ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用。
   ;; --limit-references=0 は参照検索 (C-t u / C-t c の LSP 経路) の既定上限 1000 件を外す。
   ;; --limit-results はコード補完の候補数上限 (100) も兼ねるため変えない
+  ;; stderr バッファは events の :size 0 でも切り詰められないため、エラーログだけにする。
+  ;; 詳細ログは 99-private.el で引数の --log=error を --log=verbose に上書きし、
+  ;; 再接続後に M-x eglot-stderr-buffer で見る (docs/cpp.md を参照)。
+  ;; --background-index-priority は clangd 16〜23 で未配線の死にフラグ。
+  ;; Linux の索引スレッドは既定 SCHED_IDLE。-j は config を上書きするため固定しない。
   (add-to-list 'eglot-server-programs
                '((c-mode c-ts-mode c++-mode c++-ts-mode)
                  . ("clangd" "--background-index" "--header-insertion=never"
-                    "--header-insertion-decorators=0" "--limit-references=0"))))
+                    "--header-insertion-decorators=0" "--limit-references=0"
+                    "--log=error"))))
 
 ;;; 検索
 ;;;; grep - ファイルの内容を検索
