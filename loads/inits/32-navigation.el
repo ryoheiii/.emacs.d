@@ -73,7 +73,9 @@
 ;; なし) は変えない。which-function-mode (モードライン) は維持する。
 ;; 表示は文字と face だけで tty でも動く。更新は編集後 breadcrumb-idle-time (1 秒) の
 ;; idle timer で imenu を再走査する方式 (post-command-hook / jit-lock は使わない)。
-;; eglot 管理下は eglot-imenu が範囲付きの index を返すため正確なパス
+;; breadcrumb.el の bc-idle-time は read-symbol-shorthands により breadcrumb-idle-time になる。
+;; eglot 管理下では入力で更新を中断し、直前のパスを保持する。
+;; eglot-imenu が範囲付きの index を返すため正確なパス
 ;; (namespace > Class > method) になる。ts モードだけの treesit-simple-imenu は
 ;; 位置しか持たないため「point 以前の最後のリーフ」になり、カテゴリ名 (Function など)
 ;; も先頭に出る。cc-mode は正規表現の imenu。

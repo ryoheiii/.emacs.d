@@ -1684,6 +1684,13 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
               (let ((imenu-auto-rescan t))
                 (imenu--make-index-alist t))
               (should (string-match-p "caller"
+                                      (substring-no-properties (breadcrumb-imenu-crumbs))))
+              ;; idle timer と同じ束縛でも、実 clangd の索引でパスを更新できる。
+              (should (bound-and-true-p breadcrumb-local-mode))
+              (let ((non-essential t)
+                    (imenu-auto-rescan t))
+                (imenu--make-index-alist t))
+              (should (string-match-p "caller"
                                       (substring-no-properties (breadcrumb-imenu-crumbs)))))))
       (when server
         (ignore-errors (eglot-shutdown server nil nil t)))
@@ -1790,6 +1797,132 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
         (set-buffer-modified-p nil)
         (kill-buffer buffer))
       (delete-file file))))
+
+;;; 読解補助 (breadcrumb の索引更新)
+(cl-defun my-test-cpp-config--eglot-imenu
+    (&key response input-before input-after ((:non-essential idle) t)
+          (breadcrumb t) (index '(("prev" . 1))))
+  "eglot-imenu の結果と呼び出し順を返す。
+RESPONSE は DocumentSymbol 応答、INDEX は直前の索引。
+INPUT-BEFORE は要求前からの入力保留を表す。INPUT-AFTER が unread なら
+要求中にイベントを積み、pending なら要求後の input-pending-p を真にする。
+NON-ESSENTIAL と BREADCRUMB は advice の適用条件を指定する。"
+  (require 'eglot)
+  (require 'breadcrumb)
+  (let ((non-essential idle)
+        (saved-events unread-command-events)
+        calls requested)
+    (unwind-protect
+        (with-temp-buffer
+          (insert "int fresh() {}\n")
+          (setq-local breadcrumb-local-mode breadcrumb)
+          (setq-local imenu--index-alist index)
+          (setq unread-command-events nil)
+          (cl-letf (((symbol-function 'eglot--current-server-or-lose)
+                     (lambda () (push 'server calls) 'stub-server))
+                    ((symbol-function 'eglot--TextDocumentIdentifier)
+                     (lambda ()
+                       (push 'identifier calls)
+                       '(:uri "file:///stub.cpp")))
+                    ((symbol-function 'eglot--request)
+                     (lambda (server method params &rest args)
+                       (push 'request calls)
+                       (setq requested t)
+                       (should (eq server 'stub-server))
+                       (should (eq method :textDocument/documentSymbol))
+                       (should (equal params '(:textDocument (:uri "file:///stub.cpp"))))
+                       (should (eq (plist-get args :cancel-on-input) non-essential))
+                       (when (eq input-after 'unread)
+                         (push ?x unread-command-events))
+                       response))
+                    ((symbol-function 'eglot--signal-textDocument/didChange)
+                     (lambda ()
+                       ;; throw-on-input が nil なら中断可能区間の外。
+                       (push (list 'did-change (not (null throw-on-input))) calls)))
+                    ((symbol-function 'input-pending-p)
+                     (lambda (&rest _)
+                       (or input-before
+                           (and requested (eq input-after 'pending))))))
+            (list (eglot-imenu) (nreverse calls))))
+      (setq unread-command-events saved-events))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-advice-registered ()
+  "T6(a): eglot のロード後に索引保持 advice が登録される。"
+  :tags '(:cpp-config)
+  (require 'eglot)
+  (should (advice-member-p #'my/eglot-imenu-keep-index 'eglot-imenu)))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-canceled ()
+  "T6(b): nil 応答と入力保留が重なると直前の索引を返す。"
+  :tags '(:cpp-config)
+  (dolist (input '(unread pending))
+    (ert-info ((format "入力の保留先: %s" input))
+      (pcase-let ((`(,result ,calls)
+                   (my-test-cpp-config--eglot-imenu :input-after input)))
+        (should (equal result '(("prev" . 1))))
+        (should (equal calls '((did-change nil) server identifier request)))))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-empty ()
+  "T6(c): 入力なしの空応答は nil を返す。"
+  :tags '(:cpp-config)
+  (should-not (car (my-test-cpp-config--eglot-imenu))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-input-pending-before ()
+  "T6(d): 入力が先に保留されていれば要求せず直前の索引を返す。"
+  :tags '(:cpp-config)
+  (pcase-let ((`(,result ,calls)
+               (my-test-cpp-config--eglot-imenu :input-before t)))
+    (should (equal result '(("prev" . 1))))
+    (should (= (cl-count 'request calls) 0))
+    (should (equal calls '((did-change nil))))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-document-symbol ()
+  "T6(e): 実 eglot の DocumentSymbol 変換を通して新しい索引を返す。"
+  :tags '(:cpp-config)
+  (pcase-let ((`(,result ,calls)
+               (my-test-cpp-config--eglot-imenu
+                :response
+                [(:name "fresh" :kind 12
+                  :range (:start (:line 0 :character 0)
+                          :end (:line 0 :character 14))
+                  :selectionRange (:start (:line 0 :character 4)
+                                   :end (:line 0 :character 9)))])))
+    (should (equal result '(("fresh" . 1))))
+    (should (equal (get-text-property 0 'imenu-region (caar result)) '(1 . 15)))
+    (should (equal calls '((did-change nil) server identifier request)))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-essential ()
+  "T6(f): 明示的な索引取得では入力保留があっても元の nil を返す。"
+  :tags '(:cpp-config)
+  (pcase-let ((`(,result ,calls)
+               (my-test-cpp-config--eglot-imenu
+                :non-essential nil :input-after 'unread)))
+    (should-not result)
+    (should (equal calls '(server identifier request)))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-without-breadcrumb ()
+  "T6(g): breadcrumb が無効なら non-essential でも素通しする。"
+  :tags '(:cpp-config)
+  (pcase-let ((`(,result ,calls)
+               (my-test-cpp-config--eglot-imenu
+                :breadcrumb nil :input-after 'unread)))
+    (should-not result)
+    (should (equal calls '(server identifier request)))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-flush-before-request ()
+  "T6(h): didChange は中断可能区間の外で、要求より先に 1 回送る。"
+  :tags '(:cpp-config)
+  (pcase-let ((`(,result ,calls) (my-test-cpp-config--eglot-imenu)))
+    (should-not result)
+    (should (equal calls '((did-change nil) server identifier request)))))
+
+(ert-deftest my-test-cpp-config-eglot-imenu-placeholder ()
+  "T6(i): (nil) プレースホルダは直前の索引として保持しない。"
+  :tags '(:cpp-config)
+  (should-not (car (my-test-cpp-config--eglot-imenu
+                   :index '(nil) :input-before t)))
+  (should-not (car (my-test-cpp-config--eglot-imenu
+                   :index '(nil) :input-after 'unread))))
 
 ;;; 読解補助 (inlay hints)
 ;; 既定 OFF のまま、C-t l でバッファ単位に ON/OFF できること。eglot 本体の
