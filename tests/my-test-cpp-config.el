@@ -1693,17 +1693,24 @@ jsonrpc-process-connection を実際に作り、要求層をスタブせずに�
       (delete-directory root t))))
 
 (ert-deftest my-test-cpp-config-clangd-args ()
-  "clangd の起動引数と xref 追従の設定を固定する."
+  "clangd の起動引数、エラーログへの制限と xref 追従の設定を固定する。"
   :tags '(:cpp-config)
   (let ((entry (assoc '(c-mode c-ts-mode c++-mode c++-ts-mode) eglot-server-programs)))
     (should entry)
     (should (equal (cadr entry) "clangd"))
     (should (member "--header-insertion=never" (cdr entry)))
     (should (member "--limit-references=0" (cdr entry)))
+    (should (member "--log=error" (cdr entry)))
     ;; --limit-results は補完候補数の上限も兼ねるため触らない
     (should-not (seq-some (lambda (arg) (string-prefix-p "--limit-results" arg))
                           (cdr entry))))
   (should eglot-extend-to-xref))
+
+(ert-deftest my-test-cpp-config-eglot-report-progress-disabled ()
+  "表示に使わない eglot の進捗通知を要求しない。"
+  :tags '(:cpp-config)
+  (require 'eglot)
+  (should-not (default-value 'eglot-report-progress)))
 
 ;;; 読解補助 (outline)
 ;; outline-minor-mode は treesit 連動の見出しが取れる ts モードだけで有効化する。

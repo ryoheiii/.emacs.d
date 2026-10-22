@@ -51,6 +51,7 @@ cc-mode を使い続けるには `custom/custom.el` に `(setq my/use-treesit-fo
   `compile_commands.json` は各ソースのコンパイルコマンドを記録したファイルで、解析時のインクルード先やマクロを clangd に伝える。
   上位ディレクトリと `build/` 配下から探す。この設定では生成しないので、CMake などのビルド系で作る。`.clangd` は clangd 用の設定ファイル。
 - 補完を確定しても `#include` は自動挿入しない。
+- clangd は `--log=error` で起動する。詳細ログは `99-private.el` で引数を上書きし、再接続後に `M-x eglot-stderr-buffer` で見る（[調整手順](#大規模プロジェクト低性能-pc-での調整)）。
 - 解析によるエラー・警告の表示（flymake）は既定で無効。有効にするには `loads/inits/99-private.el` で `eglot-stay-out-of` から `flymake` を外す。
   inlay hints も既定で無効（[inlay hints](#inlay-hints)）。
 - `C-t d` などで移動した先のプロジェクト外のファイル（`/usr/include` など）も同じ clangd の管理下に入り、移動先でも LSP で検索できる。

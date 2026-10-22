@@ -156,6 +156,9 @@ eglot 未管理のバッファでは `user-error'。"
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-config '(:size 0 :format full))
+  ;; doom-modeline-lsp t では進捗を表示しないため、通知自体を要求しない。
+  ;; initialize の workDoneProgress が false になり、clangd にも再接続後から反映される。
+  (eglot-report-progress nil)
   ;; inlay hints は既定 OFF。C-t l (my/eglot-inlay-hints-toggle) でバッファ単位に ON にできる
   (eglot-ignored-server-capabilities '(:inlayHintProvider :documentHighlightProvider))
   (eglot-stay-out-of '(flymake))       ; 使用感維持。診断が欲しくなったらここから外す
@@ -169,10 +172,16 @@ eglot 未管理のバッファでは `user-error'。"
   ;; #include 自動挿入を止めるために必須 (使用感維持)。--clang-tidy は診断が増えるため不採用。
   ;; --limit-references=0 は参照検索 (C-t u / C-t c の LSP 経路) の既定上限 1000 件を外す。
   ;; --limit-results はコード補完の候補数上限 (100) も兼ねるため変えない
+  ;; stderr バッファは events の :size 0 でも切り詰められないため、エラーログだけにする。
+  ;; 詳細ログは 99-private.el で引数の --log=error を --log=verbose に上書きし、
+  ;; 再接続後に M-x eglot-stderr-buffer で見る (docs/cpp.md を参照)。
+  ;; --background-index-priority は clangd 16〜23 で未配線の死にフラグ。
+  ;; Linux の索引スレッドは既定 SCHED_IDLE。-j は config を上書きするため固定しない。
   (add-to-list 'eglot-server-programs
                '((c-mode c-ts-mode c++-mode c++-ts-mode)
                  . ("clangd" "--background-index" "--header-insertion=never"
-                    "--header-insertion-decorators=0" "--limit-references=0"))))
+                    "--header-insertion-decorators=0" "--limit-references=0"
+                    "--log=error"))))
 
 ;;; 検索
 ;;;; grep - ファイルの内容を検索
